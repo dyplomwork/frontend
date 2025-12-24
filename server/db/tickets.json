@@ -1,0 +1,12 @@
+[
+  {
+    "id": "2b7a322e7926877a4a81fed042ddd40d",
+    "userId": "shara_admin",
+    "nickname": "SHARA",
+    "type": "withdraw",
+    "amount": 100,
+    "status": "pending",
+    "createdAt": "2025-12-20T13:54:35.105Z",
+    "resolvedAt": null
+  }
+]
