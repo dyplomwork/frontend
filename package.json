@@ -3,13 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "predev": "node scripts/killPort.mjs 3001",
-    "setup:api": "npm --prefix server install",
-    "dev": "npm run setup:api && npm run predev && concurrently -n web,api -c auto \"vite\" \"npm run dev:api\"",
+    "dev": "vite",
     "build": "node scripts/generateSitemap.mjs && vite-ssg build",
     "preview": "vite preview",
-    "dev:api": "node --watch --watch-path=server server/index.js",
-    "build:api": "npm --prefix server install",
     "typecheck": "vue-tsc --noEmit",
     "lint": "eslint . --ext .ts,.vue --max-warnings=0",
     "format": "prettier . --write",
@@ -18,17 +14,13 @@
   "dependencies": {
     "pinia": "^2.2.6",
     "vue": "^3.5.0",
-    "vue-router": "^4.4.5",
-    "pg": "^8.13.1",
-    "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2"
+    "vue-router": "^4.4.5"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.6.0",
     "@typescript-eslint/parser": "^8.6.0",
     "@unhead/vue": "^1.11.7",
     "@vitejs/plugin-vue": "^5.2.0",
-    "concurrently": "^9.0.1",
     "eslint": "^9.10.0",
     "eslint-plugin-vue": "^9.28.0",
     "prettier": "^3.3.3",
