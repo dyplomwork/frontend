@@ -4,12 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c7c88f2a-ad0b-424b-ac99-30439a06c014" name="Changes" comment="refactor: remove backend and prepare frontend for microservices">
+    <list default="true" id="c7c88f2a-ad0b-424b-ac99-30439a06c014" name="Changes" comment="refactor: fix v1">
+      <change beforePath="$PROJECT_DIR$/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/.env.example" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/stores/auth.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/stores/auth.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/LoginView.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/LoginView.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/RegisterView.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/RegisterView.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/App.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/sfx.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/sfx.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/DiceView.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/DiceView.vue" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -31,6 +33,17 @@
     &quot;accountId&quot;: &quot;ef375b0f-a973-42fa-9b9d-fbda4a0f95b3&quot;
   }
 }</component>
+  <component name="KubernetesApiPersistence"><![CDATA[{}]]></component>
+  <component name="KubernetesApiProvider"><![CDATA[{
+  "configuredContexts": [
+    {
+      "name": "default@scxdrop",
+      "kubeConfigUrl": "file://C:/Users/going/.kube/config",
+      "currentNamespace": "frontend"
+    }
+  ],
+  "isMigrated": true
+}]]></component>
   <component name="ProjectColorInfo">{
   &quot;customColor&quot;: &quot;&quot;,
   &quot;associatedIndex&quot;: 3
@@ -85,7 +98,7 @@
       <workItem from="1766617885663" duration="174000" />
       <workItem from="1766618879046" duration="3852000" />
       <workItem from="1766753226147" duration="602000" />
-      <workItem from="1766754573743" duration="503000" />
+      <workItem from="1766754573743" duration="2322000" />
     </task>
     <task id="LOCAL-00001" summary="Bug Redact">
       <option name="closed" value="true" />
@@ -127,7 +140,23 @@
       <option name="project" value="LOCAL" />
       <updated>1766619523337</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="refactor: login + register">
+      <option name="closed" value="true" />
+      <created>1766755231632</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1766755231632</updated>
+    </task>
+    <task id="LOCAL-00007" summary="refactor: fix v1">
+      <option name="closed" value="true" />
+      <created>1766755375818</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1766755375818</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -159,6 +188,8 @@
     <MESSAGE value="Db connect" />
     <MESSAGE value="Fix" />
     <MESSAGE value="refactor: remove backend and prepare frontend for microservices" />
-    <option name="LAST_COMMIT_MESSAGE" value="refactor: remove backend and prepare frontend for microservices" />
+    <MESSAGE value="refactor: login + register" />
+    <MESSAGE value="refactor: fix v1" />
+    <option name="LAST_COMMIT_MESSAGE" value="refactor: fix v1" />
   </component>
 </project>

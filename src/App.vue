@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter, RouterView, RouterLink } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { isSfxOn, setSfxOn, sfx } from './utils/sfx'
+import { initBgm, isBgmOn, toggleBgm } from './utils/bgm'
 import AppFooter from './components/AppFooter.vue'
 import AdminFab from './components/AdminFab.vue'
 import SeoHead from './components/SeoHead.vue'
@@ -14,9 +15,15 @@ const auth = useAuthStore()
 const LS_SIDEBAR = 'sopov_sidebar_open_v1'
 const sidebarOpen = ref(false)
 
+const bgmOn = ref(true)
+
 onMounted(() => {
   // load sidebar state
   sidebarOpen.value = localStorage.getItem(LS_SIDEBAR) === '1'
+
+  // background music preference + init
+  bgmOn.value = isBgmOn()
+  initBgm()
 })
 
 function toggleSidebar(){
@@ -31,6 +38,12 @@ function toggleSfx(){
   // do not play click if SFX is off; icon should still toggle.
   sfxOn.value = !sfxOn.value
 }
+
+function toggleMusic(){
+  // Keep the action silent (BGM is separate from SFX).
+  bgmOn.value = toggleBgm()
+}
+
 const isAdmin = computed(() => auth.user?.role === 'admin')
 
 function goLogin(){ sfx('click'); router.push('/login') }
@@ -81,6 +94,9 @@ function logout(){ sfx('click'); auth.logout(); router.push('/') }
         </nav>
 
       <div class="side-bottom">
+        <button class="icon-btn" @click="toggleMusic" :title="bgmOn ? 'Music on' : 'Music off'">
+          <span class="ic">{{ bgmOn ? '🎵' : '🔕' }}</span>
+        </button>
         <button class="icon-btn" @click="toggleSfx" :title="sfxOn ? 'SFX on' : 'SFX off'">
           <span class="ic">{{ sfxOn ? '🔊' : '🔇' }}</span>
         </button>

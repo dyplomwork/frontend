@@ -40,7 +40,8 @@ const profitOnWin = computed(() => {
 const needle = ref(50)
 const bump = ref(false)
 const flashZone = ref<'win'|'lose'|''>('')
-const hitPoint = ref(false)
+
+const resultLabel = computed(() => needle.value.toFixed(2))
 
 let raf: number | null = null
 let lastTick = 0
@@ -55,10 +56,6 @@ function flash(kind: 'win'|'lose'){
   window.setTimeout(() => { flashZone.value = '' }, 520)
 }
 
-function flashHit(){
-  hitPoint.value = true
-  window.setTimeout(() => { hitPoint.value = false }, 520)
-}
 
 async function play(){
   if(running.value) return
@@ -80,7 +77,7 @@ async function play(){
   const start = needle.value
 
   // Stake-like tick cadence: 12–18 ticks over the animation.
-  const TOTAL_TICKS = 16
+  const TOTAL_TICKS = 10
   lastTick = 0
 
   const step = (t: number) => {
@@ -103,8 +100,6 @@ async function play(){
     stopAnim()
     lastRoll.value = target
     sfx('dice_stop')
-
-    flashHit()
 
     bump.value = false
     requestAnimationFrame(() => {
@@ -173,20 +168,31 @@ onBeforeUnmount(() => stopAnim())
         <div class="red" :style="{ width: rollOver + '%' }" />
         <div class="green" :style="{ width: (100-rollOver) + '%' }" />
 
+        <!-- Roll-over selector (thumb) and result knob share the same track -->
+        <input
+          class="bar-slider"
+          type="range"
+          min="1"
+          max="99"
+          step="0.01"
+          v-model.number="rollOver"
+          @change="sfx('click')"
+          :disabled="running"
+          aria-label="Roll Over"
+        />
+
         <div class="roll-label" :style="{ left: rollOver + '%' }" aria-hidden="true">
           Roll Over
         </div>
         <div class="roll-line" :style="{ left: rollOver + '%' }" aria-hidden="true" />
 
         <div
-          v-if="lastRoll !== null && hitPoint"
-          class="hit"
-          :class="flashZone"
+          class="result-knob"
+          :class="[flashZone, { bump }]"
           :style="{ left: needle + '%' }"
+          :data-v="resultLabel"
           aria-hidden="true"
         />
-
-        <div class="needle" :class="{ bump }" :style="{ left: needle + '%' }" aria-hidden="true" />
       </div>
 
       <div class="scale">
@@ -194,18 +200,8 @@ onBeforeUnmount(() => stopAnim())
       </div>
 
       <div class="controls">
-        <input
-          class="slider"
-          type="range"
-          min="1"
-          max="99"
-          step="0.01"
-          v-model.number="rollOver"
-          @input="sfx('click')"
-          :disabled="running"
-        />
         <div class="hint muted">
-          Выигрыш, если стрелка остановилась <b class="text">справа</b> от линии Roll Over.
+          Выигрыш, если результат <b class="text">справа</b> от линии Roll Over.
         </div>
       </div>
 
@@ -238,6 +234,46 @@ onBeforeUnmount(() => stopAnim())
   overflow: hidden;
   background: rgba(255,255,255,.03);
   box-shadow: inset 0 0 0 1px rgba(0,0,0,.25), inset 0 10px 18px rgba(0,0,0,.28);
+}
+
+/* Roll-over selector sits ON the same bar */
+.bar-slider{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:30px;
+  margin:0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  z-index: 5;
+}
+.bar-slider::-webkit-slider-runnable-track{
+  height: 30px;
+  background: transparent;
+  border: none;
+}
+.bar-slider::-webkit-slider-thumb{
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(245,197,66,.96);
+  border: 2px solid rgba(0,0,0,.55);
+  box-shadow: 0 10px 16px rgba(0,0,0,.45), 0 0 18px rgba(245,197,66,.18);
+}
+.bar-slider::-moz-range-track{
+  height: 30px;
+  background: transparent;
+  border: none;
+}
+.bar-slider::-moz-range-thumb{
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(245,197,66,.96);
+  border: 2px solid rgba(0,0,0,.55);
+  box-shadow: 0 10px 16px rgba(0,0,0,.45), 0 0 18px rgba(245,197,66,.18);
 }
 .bar::after{
   content:"";
@@ -311,7 +347,40 @@ onBeforeUnmount(() => stopAnim())
   border-bottom: 16px solid rgba(245,197,66,.95);
   filter: drop-shadow(0 8px 12px rgba(0,0,0,.55));
 }
-.needle.bump{ animation: bump 220ms ease-out; }
+
+/* Result knob (visible and on the same bar) */
+.result-knob{
+  position:absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.92);
+  border: 2px solid rgba(0,0,0,.55);
+  box-shadow: 0 10px 16px rgba(0,0,0,.45), 0 0 26px rgba(255,255,255,.18);
+  z-index: 4;
+}
+.result-knob.win{ box-shadow: 0 10px 16px rgba(0,0,0,.45), 0 0 26px rgba(0,231,1,.28); }
+.result-knob.lose{ box-shadow: 0 10px 16px rgba(0,0,0,.45), 0 0 26px rgba(255,59,87,.28); }
+.result-knob::after{
+  content: attr(data-v);
+  position:absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .02em;
+  color: rgba(255,255,255,.92);
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.32);
+  text-shadow: 0 8px 16px rgba(0,0,0,.55);
+  white-space: nowrap;
+}
+.result-knob.bump{ animation: bump 220ms ease-out; }
 @keyframes bump{ 0%{ transform: translateX(-50%) translateY(0); } 50%{ transform: translateX(-50%) translateY(2px); } 100%{ transform: translateX(-50%) translateY(0); } }
 
 .bar.win{ box-shadow: inset 0 0 0 1px rgba(0,0,0,.25), inset 0 10px 18px rgba(0,0,0,.28), 0 0 28px rgba(0,231,1,.16); }

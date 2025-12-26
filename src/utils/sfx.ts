@@ -87,7 +87,7 @@ export function sfx(
   // This keeps tick sounds from spamming on slower devices.
   const now = performance.now()
   const minInterval: Partial<Record<Parameters<typeof sfx>[0], number>> = {
-    dice_tick: 120,
+    dice_tick: 180,
     plinko_tick: 70,
     spin: 90,
   }
