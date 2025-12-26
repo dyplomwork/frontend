@@ -90,7 +90,7 @@ async function loadUsers() {
   msg.value = ''
   loadingUsers.value = true
   try {
-    const res = await api<{ ok: boolean; users: AdminUser[] }>('/api/v1/accounts/admin/users', { method: 'GET' })
+    const res = await api<{ ok: boolean; users: AdminUser[] }>('/api/v1/admin/users', { method: 'GET' })
     users.value = Array.isArray(res.users) ? res.users : []
   } catch (e: any) {
     err.value = e?.message || 'Не удалось загрузить пользователей'
@@ -104,7 +104,7 @@ async function loadTickets() {
   msg.value = ''
   loadingTickets.value = true
   try {
-    const res = await api<{ ok: boolean; tickets: Ticket[] }>('/api/v1/accounts/admin/tickets', { method: 'GET' })
+    const res = await api<{ ok: boolean; tickets: Ticket[] }>('/api/v1/admin/tickets', { method: 'GET' })
     tickets.value = Array.isArray(res.tickets) ? res.tickets : []
   } catch (e: any) {
     err.value = e?.message || 'Не удалось загрузить тикеты'
@@ -133,7 +133,7 @@ async function saveUser(id: string) {
   }
 
   try {
-    await api<{ ok: boolean; user: AdminUser }>(`/api/v1/accounts/admin/users/${id}`, {
+    await api<{ ok: boolean; user: AdminUser }>(`/api/v1/admin/users/${id}`, {
       method: 'PATCH',
       body: { nickname, role: editRole.value, balance }
     })
@@ -156,7 +156,7 @@ async function deleteUser(id: string) {
   err.value = ''
   if (!confirm('Удалить пользователя? Это действие нельзя отменить.')) return
   try {
-    await api<{ ok: boolean }>(`/api/v1/accounts/admin/users/${id}`, { method: 'DELETE' })
+    await api<{ ok: boolean }>(`/api/v1/admin/users/${id}`, { method: 'DELETE' })
     users.value = users.value.filter(u => u.id !== id)
     msg.value = 'Пользователь удалён'
     if (editingId.value === id) editingId.value = null
@@ -169,7 +169,7 @@ async function approveTicket(id: string) {
   msg.value = ''
   err.value = ''
   try {
-    await api<{ ok: boolean; ticket?: Ticket }>(`/api/v1/accounts/admin/tickets/${id}/approve`, { method: 'POST' })
+    await api<{ ok: boolean; ticket?: Ticket }>(`/api/v1/admin/tickets/${id}/approve`, { method: 'POST' })
     const t = tickets.value.find(x => x.id === id)
     if (t) t.status = 'approved'
     msg.value = 'Тикет подтверждён'
@@ -182,7 +182,7 @@ async function rejectTicket(id: string) {
   msg.value = ''
   err.value = ''
   try {
-    await api<{ ok: boolean; ticket?: Ticket }>(`/api/v1/accounts/admin/tickets/${id}/reject`, { method: 'POST' })
+    await api<{ ok: boolean; ticket?: Ticket }>(`/api/v1/admin/tickets/${id}/reject`, { method: 'POST' })
     const t = tickets.value.find(x => x.id === id)
     if (t) t.status = 'rejected'
     msg.value = 'Тикет отклонён'
