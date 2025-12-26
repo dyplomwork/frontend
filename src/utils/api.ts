@@ -49,11 +49,12 @@ function joinUrl(base: string, path: string): string {
 
 function resolveServiceBase(path: string): string {
   // Expecting /api/<service>/...
+  console.log('VITE_API_BASE_URL =', (import.meta as any)?.env?.VITE_API_BASE_URL)
   const m = path.match(/^\/api\/([^\/]+)/)
   const service = m?.[1]?.toUpperCase()
   if(!service) return getEnv('VITE_API_BASE_URL')
 
-  const override = getEnv(`VITE_API_${service}_URL`)
+  const override = getEnv(`VITE_API_BASE_URL`)
   if(override) return override
   return getEnv('VITE_API_BASE_URL')
 }

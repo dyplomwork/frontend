@@ -4,12 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c7c88f2a-ad0b-424b-ac99-30439a06c014" name="Changes" comment="feat(ui): add background music and redesign dice slider; fix auth api domain">
-      <change afterPath="$PROJECT_DIR$/public/audio/bgm.mp3" afterDir="false" />
+    <list default="true" id="c7c88f2a-ad0b-424b-ac99-30439a06c014" name="Changes" comment="feat(ui/audio): add bgm volume control and hide slider when sidebar is closed">
+      <change beforePath="$PROJECT_DIR$/.env.example" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/App.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.vue" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/style.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utils/bgm.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/bgm.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/api.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -78,6 +79,11 @@
     ]
   }
 }]]></component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="G:\SC.CASINO\site\public\audio" />
+    </key>
+  </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
@@ -100,7 +106,7 @@
       <workItem from="1766617885663" duration="174000" />
       <workItem from="1766618879046" duration="3852000" />
       <workItem from="1766753226147" duration="602000" />
-      <workItem from="1766754573743" duration="2943000" />
+      <workItem from="1766754573743" duration="5618000" />
     </task>
     <task id="LOCAL-00001" summary="Bug Redact">
       <option name="closed" value="true" />
@@ -166,7 +172,15 @@
       <option name="project" value="LOCAL" />
       <updated>1766772147857</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="feat(ui/audio): add bgm volume control and hide slider when sidebar is closed">
+      <option name="closed" value="true" />
+      <created>1766772771102</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1766772771102</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -201,6 +215,7 @@
     <MESSAGE value="refactor: login + register" />
     <MESSAGE value="refactor: fix v1" />
     <MESSAGE value="feat(ui): add background music and redesign dice slider; fix auth api domain" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat(ui): add background music and redesign dice slider; fix auth api domain" />
+    <MESSAGE value="feat(ui/audio): add bgm volume control and hide slider when sidebar is closed" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat(ui/audio): add bgm volume control and hide slider when sidebar is closed" />
   </component>
 </project>
