@@ -5,7 +5,6 @@ import { useAuthStore } from './stores/auth'
 import { isSfxOn, setSfxOn, sfx } from './utils/sfx'
 import { getBgmVolume, initBgm, isBgmOn, setBgmVolume, toggleBgm } from './utils/bgm'
 import AppFooter from './components/AppFooter.vue'
-import AdminFab from './components/AdminFab.vue'
 import SeoHead from './components/SeoHead.vue'
 
 const router = useRouter()
@@ -65,7 +64,7 @@ function toggleSfx(){
 }
 
 
-const isAdmin = computed(() => auth.user?.role === 'admin')
+
 
 function goLogin(){ sfx('click'); router.push('/login') }
 function goRegister(){ sfx('click'); router.push('/register') }
