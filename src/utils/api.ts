@@ -56,7 +56,7 @@ function resolveServiceBase(path: string): string {
 
   const override = getEnv(`VITE_API_BASE_URL`)
   if(override) return override
-  return getEnv('VITE_API_BASE_URL')
+  return 'https://api.scxdrop.online'
 }
 
 export type ApiCallOptions = RequestInit & {
@@ -84,7 +84,7 @@ export async function api<T>(path: string, opts: ApiCallOptions = {}): Promise<T
   }
   if(token) headers['Authorization'] = `Bearer ${token}`
 
-  const baseUrl = opts.baseUrl ?? resolveServiceBase(path)
+  const baseUrl = resolveServiceBase(path)
   const url = joinUrl(baseUrl, path)
 
   const { baseUrl: _ignored, ...fetchOpts } = opts
