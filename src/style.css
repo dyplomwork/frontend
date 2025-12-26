@@ -348,3 +348,39 @@ h1,h2,h3{ font-weight: 900; }
   .stake-topbar{ grid-template-columns: 160px 1fr 200px; }
   .search{ display:none; }
 }
+.bgm-vol {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 6px;
+  width: 190px;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.bgm-vol.off {
+  opacity: 0.55;
+}
+
+.bgm-vol__range {
+  width: 120px;
+}
+
+.bgm-vol__pct {
+  width: 44px;
+  text-align: right;
+  font-size: 12px;
+  opacity: 0.85;
+  user-select: none;
+}
+/* Fade animation for volume slider */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateX(-6px);
+}

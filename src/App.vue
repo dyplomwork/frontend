@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter, RouterView, RouterLink } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { isSfxOn, setSfxOn, sfx } from './utils/sfx'
-import { initBgm, isBgmOn, toggleBgm } from './utils/bgm'
+import { getBgmVolume, initBgm, isBgmOn, setBgmVolume, toggleBgm } from './utils/bgm'
 import AppFooter from './components/AppFooter.vue'
 import AdminFab from './components/AdminFab.vue'
 import SeoHead from './components/SeoHead.vue'
@@ -16,6 +16,31 @@ const LS_SIDEBAR = 'sopov_sidebar_open_v1'
 const sidebarOpen = ref(false)
 
 const bgmOn = ref(true)
+
+const bgmVol = ref(0.15)
+
+onMounted(() => {
+  // load sidebar state
+  sidebarOpen.value = localStorage.getItem(LS_SIDEBAR) === '1'
+
+  // background music preference + init
+  bgmOn.value = isBgmOn()
+  bgmVol.value = getBgmVolume()
+  initBgm()
+})
+
+function toggleMusic(){
+  // Keep the action silent (BGM is separate from SFX).
+  bgmOn.value = toggleBgm()
+  // если включили — применим текущую громкость сразу
+  if (bgmOn.value) setBgmVolume(bgmVol.value)
+}
+
+function onBgmVolInput(e: Event) {
+  const v = Number((e.target as HTMLInputElement).value)
+  bgmVol.value = v
+  setBgmVolume(v)
+}
 
 onMounted(() => {
   // load sidebar state
@@ -39,10 +64,6 @@ function toggleSfx(){
   sfxOn.value = !sfxOn.value
 }
 
-function toggleMusic(){
-  // Keep the action silent (BGM is separate from SFX).
-  bgmOn.value = toggleBgm()
-}
 
 const isAdmin = computed(() => auth.user?.role === 'admin')
 
@@ -94,10 +115,46 @@ function logout(){ sfx('click'); auth.logout(); router.push('/') }
         </nav>
 
       <div class="side-bottom">
-        <button class="icon-btn" @click="toggleMusic" :title="bgmOn ? 'Music on' : 'Music off'">
+        <!-- BGM toggle -->
+        <button
+          class="icon-btn"
+          @click="toggleMusic"
+          :title="bgmOn ? 'Music on' : 'Music off'"
+        >
           <span class="ic">{{ bgmOn ? '🎵' : '🔕' }}</span>
         </button>
-        <button class="icon-btn" @click="toggleSfx" :title="sfxOn ? 'SFX on' : 'SFX off'">
+
+        <!-- BGM Volume (ONLY when sidebar is open) -->
+        <transition name="fade">
+          <div
+            v-if="sidebarOpen"
+            class="bgm-vol"
+            :class="{ off: !bgmOn }"
+            :title="bgmOn ? 'Music volume' : 'Music is off'"
+          >
+            <input
+              class="bgm-vol__range"
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              :value="bgmVol"
+              @input="onBgmVolInput"
+              :disabled="!bgmOn"
+              aria-label="Background music volume"
+            />
+            <span class="bgm-vol__pct">
+        {{ Math.round(bgmVol * 100) }}%
+      </span>
+          </div>
+        </transition>
+
+        <!-- SFX toggle -->
+        <button
+          class="icon-btn"
+          @click="toggleSfx"
+          :title="sfxOn ? 'SFX on' : 'SFX off'"
+        >
           <span class="ic">{{ sfxOn ? '🔊' : '🔇' }}</span>
         </button>
       </div>

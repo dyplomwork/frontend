@@ -4,14 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c7c88f2a-ad0b-424b-ac99-30439a06c014" name="Changes" comment="refactor: fix v1">
-      <change beforePath="$PROJECT_DIR$/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/.env.example" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+    <list default="true" id="c7c88f2a-ad0b-424b-ac99-30439a06c014" name="Changes" comment="feat(ui): add background music and redesign dice slider; fix auth api domain">
+      <change afterPath="$PROJECT_DIR$/public/audio/bgm.mp3" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/App.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utils/sfx.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/sfx.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/views/DiceView.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/DiceView.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/style.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/utils/bgm.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/utils/bgm.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -49,6 +47,9 @@
   &quot;associatedIndex&quot;: 3
 }</component>
   <component name="ProjectId" id="377LIkj03wz0sru6CYlQbDhcHPY" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
@@ -66,6 +67,7 @@
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
+    "prettierjs.PrettierConfiguration.Package": "G:\\SC.CASINO\\site\\node_modules\\prettier",
     "settings.editor.selected.configurable": "preferences.pluginManager",
     "ts.external.directory.path": "G:\\SC.CASINO\\site\\node_modules\\typescript\\lib",
     "vue.rearranger.settings.migration": "true"
@@ -98,7 +100,7 @@
       <workItem from="1766617885663" duration="174000" />
       <workItem from="1766618879046" duration="3852000" />
       <workItem from="1766753226147" duration="602000" />
-      <workItem from="1766754573743" duration="2322000" />
+      <workItem from="1766754573743" duration="2943000" />
     </task>
     <task id="LOCAL-00001" summary="Bug Redact">
       <option name="closed" value="true" />
@@ -156,7 +158,15 @@
       <option name="project" value="LOCAL" />
       <updated>1766755375818</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="feat(ui): add background music and redesign dice slider; fix auth api domain">
+      <option name="closed" value="true" />
+      <created>1766772147857</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1766772147857</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -190,6 +200,7 @@
     <MESSAGE value="refactor: remove backend and prepare frontend for microservices" />
     <MESSAGE value="refactor: login + register" />
     <MESSAGE value="refactor: fix v1" />
-    <option name="LAST_COMMIT_MESSAGE" value="refactor: fix v1" />
+    <MESSAGE value="feat(ui): add background music and redesign dice slider; fix auth api domain" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat(ui): add background music and redesign dice slider; fix auth api domain" />
   </component>
 </project>
