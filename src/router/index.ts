@@ -123,8 +123,7 @@ export const routes = [
     name: 'admin',
     component: AdminView,
     meta: {
-      requiresAdmin: true,
-      title: 'Admin — Casino Simulator',
+            title: 'Admin — Casino Simulator',
       description: 'Admin panel.'
     }
   }

@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter, RouterView, RouterLink } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { isSfxOn, setSfxOn, sfx } from './utils/sfx'
-import { getBgmVolume, initBgm, isBgmOn, setBgmVolume, toggleBgm } from './utils/bgm'
+import { getBgmVolume, initBgm, isBgmOn, setBgmVolume } from './utils/bgm'
 import AppFooter from './components/AppFooter.vue'
 import SeoHead from './components/SeoHead.vue'
 
@@ -15,40 +15,49 @@ const LS_SIDEBAR = 'sopov_sidebar_open_v1'
 const sidebarOpen = ref(false)
 
 const bgmOn = ref(true)
-
 const bgmVol = ref(0.15)
 
 onMounted(() => {
-  // load sidebar state
   sidebarOpen.value = localStorage.getItem(LS_SIDEBAR) === '1'
 
-  // background music preference + init
+
   bgmOn.value = isBgmOn()
   bgmVol.value = getBgmVolume()
   initBgm()
+
+
+  if (!bgmOn.value) {
+    bgmVol.value = 0
+    setBgmVolume(0)
+  } else {
+
+    setBgmVolume(bgmVol.value)
+  }
 })
 
-function toggleMusic(){
-  // Keep the action silent (BGM is separate from SFX).
-  bgmOn.value = toggleBgm()
-  // если включили — применим текущую громкость сразу
-  if (bgmOn.value) setBgmVolume(bgmVol.value)
+
+function toggleMusicIcon(){
+
+  if (bgmVol.value > 0 && bgmOn.value) {
+    bgmVol.value = 0
+    bgmOn.value = false
+    setBgmVolume(0)
+    return
+  }
+
+
+  bgmVol.value = 0.2
+  bgmOn.value = true
+  setBgmVolume(0.2)
 }
+
 
 function onBgmVolInput(e: Event) {
   const v = Number((e.target as HTMLInputElement).value)
   bgmVol.value = v
+  bgmOn.value = v > 0
   setBgmVolume(v)
 }
-
-onMounted(() => {
-  // load sidebar state
-  sidebarOpen.value = localStorage.getItem(LS_SIDEBAR) === '1'
-
-  // background music preference + init
-  bgmOn.value = isBgmOn()
-  initBgm()
-})
 
 function toggleSidebar(){
   sfx('click')
@@ -59,17 +68,14 @@ function toggleSidebar(){
 const sfxOn = ref(isSfxOn())
 watch(sfxOn, (v) => setSfxOn(!!v), { immediate: true })
 function toggleSfx(){
-  // do not play click if SFX is off; icon should still toggle.
   sfxOn.value = !sfxOn.value
 }
-
-
-
 
 function goLogin(){ sfx('click'); router.push('/login') }
 function goRegister(){ sfx('click'); router.push('/register') }
 function logout(){ sfx('click'); auth.logout(); router.push('/') }
 </script>
+
 
 <template>
   <SeoHead />
@@ -114,10 +120,15 @@ function logout(){ sfx('click'); auth.logout(); router.push('/') }
         </nav>
 
       <div class="side-bottom">
-        <!-- Music block: icon ALWAYS visible inside bgm-vol -->
+
         <div class="bgm-vol" :class="{ off: !bgmOn }" :title="bgmOn ? 'Music volume' : 'Music is off'">
-          <span class="ic">{{ bgmOn ? '🎵' : '🔕' }}</span>
-          <!-- ONLY slider part hides when sidebar is closed -->
+          <button
+            class="bgm-icon-btn"
+            @click.stop="toggleMusicIcon"
+            :title="bgmOn ? 'Mute music' : 'Unmute music'"
+          >
+            <span class="ic">{{ bgmOn ? '🎵' : '🔕' }}</span>
+          </button>
           <transition name="fade">
             <div v-if="sidebarOpen" class="bgm-vol__content">
               <div class="bgm-vol__top">
@@ -141,7 +152,7 @@ function logout(){ sfx('click'); auth.logout(); router.push('/') }
           </transition>
         </div>
 
-        <!-- SFX toggle UNDER music block -->
+
         <button class="icon-btn" @click="toggleSfx" :title="sfxOn ? 'SFX on' : 'SFX off'">
           <span class="ic">{{ sfxOn ? '🔊' : '🔇' }}</span>
         </button>
@@ -150,7 +161,7 @@ function logout(){ sfx('click'); auth.logout(); router.push('/') }
 
     </aside>
 
-    <!-- Main -->
+
     <div class="stake-main">
       <header class="stake-topbar">
         <div class="top-left">
@@ -180,7 +191,17 @@ function logout(){ sfx('click'); auth.logout(); router.push('/') }
       </main>
 
       <AppFooter class="stake-footer" />
-      <AdminFab v-if="isAdmin" />
     </div>
   </div>
 </template>
+<style>
+.bgm-icon-btn{
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  line-height: 1;
+}
+.bgm-icon-btn:focus{ outline: none; }
+</style>

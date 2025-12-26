@@ -4,7 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c7c88f2a-ad0b-424b-ac99-30439a06c014" name="Changes" comment="fix(api): load VITE_API_BASE_URL from env and use it for requests" />
+    <list default="true" id="c7c88f2a-ad0b-424b-ac99-30439a06c014" name="Changes" comment="fix(View): fix ProfileView">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/App.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/router/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/router/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/AdminView.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/AdminView.vue" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -74,6 +79,8 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="G:\SC.CASINO\site\src\router" />
+      <recent name="G:\SC.CASINO\site\src\views" />
       <recent name="G:\SC.CASINO\site\public\audio" />
     </key>
   </component>
@@ -99,7 +106,7 @@
       <workItem from="1766617885663" duration="174000" />
       <workItem from="1766618879046" duration="3852000" />
       <workItem from="1766753226147" duration="602000" />
-      <workItem from="1766754573743" duration="5980000" />
+      <workItem from="1766754573743" duration="19102000" />
     </task>
     <task id="LOCAL-00001" summary="Bug Redact">
       <option name="closed" value="true" />
@@ -181,7 +188,87 @@
       <option name="project" value="LOCAL" />
       <updated>1766775633518</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="fix(api): fix = Nahui ENV">
+      <option name="closed" value="true" />
+      <created>1766775898577</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1766775898577</updated>
+    </task>
+    <task id="LOCAL-00012" summary="fix(api): fix = Nahui ENV">
+      <option name="closed" value="true" />
+      <created>1766777300624</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1766777300624</updated>
+    </task>
+    <task id="LOCAL-00013" summary="fix(api): fix = EBAT KOPAT">
+      <option name="closed" value="true" />
+      <created>1766777691340</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1766777691340</updated>
+    </task>
+    <task id="LOCAL-00014" summary="fix(api): fix = EBAT KOPAT">
+      <option name="closed" value="true" />
+      <created>1766777849686</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1766777849686</updated>
+    </task>
+    <task id="LOCAL-00015" summary="fix(api): fix = EBAT KOPAT2">
+      <option name="closed" value="true" />
+      <created>1766777999257</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1766777999257</updated>
+    </task>
+    <task id="LOCAL-00016" summary="fix(api): fix = auth\">
+      <option name="closed" value="true" />
+      <created>1766778510329</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1766778510329</updated>
+    </task>
+    <task id="LOCAL-00017" summary="fix(api): fix = application/json">
+      <option name="closed" value="true" />
+      <created>1766781176025</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1766781176025</updated>
+    </task>
+    <task id="LOCAL-00018" summary="fix(auth): sync user balance via GET /users/me/balance">
+      <option name="closed" value="true" />
+      <created>1766783308064</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1766783308064</updated>
+    </task>
+    <task id="LOCAL-00019" summary="fix(auth): sync user balance via GET /users/me/balance">
+      <option name="closed" value="true" />
+      <created>1766784002666</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1766784002666</updated>
+    </task>
+    <task id="LOCAL-00020" summary="fix(View): fix ProfileView">
+      <option name="closed" value="true" />
+      <created>1766787376225</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1766787376225</updated>
+    </task>
+    <option name="localTasksCounter" value="21" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -218,6 +305,13 @@
     <MESSAGE value="feat(ui): add background music and redesign dice slider; fix auth api domain" />
     <MESSAGE value="feat(ui/audio): add bgm volume control and hide slider when sidebar is closed" />
     <MESSAGE value="fix(api): load VITE_API_BASE_URL from env and use it for requests" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix(api): load VITE_API_BASE_URL from env and use it for requests" />
+    <MESSAGE value="fix(api): fix = Nahui ENV" />
+    <MESSAGE value="fix(api): fix = EBAT KOPAT" />
+    <MESSAGE value="fix(api): fix = EBAT KOPAT2" />
+    <MESSAGE value="fix(api): fix = auth\" />
+    <MESSAGE value="fix(api): fix = application/json" />
+    <MESSAGE value="fix(auth): sync user balance via GET /users/me/balance" />
+    <MESSAGE value="fix(View): fix ProfileView" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix(View): fix ProfileView" />
   </component>
 </project>
