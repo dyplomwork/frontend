@@ -6,19 +6,11 @@ import { api } from '../utils/api'
 import { sfx } from '../utils/sfx'
 
 type BetKey =
-    | `n:${number}` // straight up 0..36
-    | 'red'
-    | 'black'
-    | 'even'
-    | 'odd'
-    | 'low'
-    | 'high'
-    | 'Диапазон1'
-    | 'Диапазон2'
-    | 'Диапазон3'
-    | 'Ряд1'
-    | 'Ряд2'
-    | 'Ряд3'
+  | `n:${number}`
+  | 'red' | 'black' | 'even' | 'odd'
+  | 'low' | 'high'
+  | 'Диапазон1' | 'Диапазон2' | 'Диапазон3'
+  | 'Ряд1' | 'Ряд2' | 'Ряд3'
 
 const auth = useAuthStore()
 
@@ -66,14 +58,33 @@ function colorOf(n: number) {
   return redSet.has(n) ? 'red' : 'black'
 }
 
+// --- Hover helpers: highlight covered numbers when hovering outside-bet buttons ---
+const hoverBet = ref<BetKey | ''>('')
+function setHover(key: BetKey | '') { hoverBet.value = key }
+
+function numbersForOutsideBet(key: BetKey): number[] {
+  switch (key) {
+    case 'Диапазон1': return Array.from({ length: 12 }, (_, i) => i + 1)
+    case 'Диапазон2': return Array.from({ length: 12 }, (_, i) => i + 13)
+    case 'Диапазон3': return Array.from({ length: 12 }, (_, i) => i + 25)
+    case 'Ряд1': return Array.from({ length: 12 }, (_, i) => (i + 1) * 3) // 3..36 step 3
+    case 'Ряд2': return Array.from({ length: 12 }, (_, i) => 2 + i * 3)   // 2..35 step 3
+    case 'Ряд3': return Array.from({ length: 12 }, (_, i) => 1 + i * 3)   // 1..34 step 3
+    case 'red': return Array.from(redSet)
+    case 'black': return Array.from({ length: 36 }, (_, i) => i + 1).filter(n => !redSet.has(n))
+    default: return []
+  }
+}
+
+const hoverNums = computed(() => {
+  if (!hoverBet.value) return new Set<number>()
+  return new Set(numbersForOutsideBet(hoverBet.value as BetKey))
+})
+
 const totalBet = computed(() => Object.values(bets.value).reduce((a, b) => a + b, 0))
 
 function addBet(key: BetKey) {
   if (spinning.value) return
-  if (!auth.user) {
-    message.value = 'Нужен вход'
-    return
-  }
   message.value = ''
   const cur = bets.value[key] ?? 0
   bets.value[key] = cur + chip.value
@@ -102,7 +113,7 @@ function clearAll() {
 function payoutFor(key: BetKey, win: number) {
   if (key.startsWith('n:')) {
     const n = Number(key.slice(2))
-    return n === win ? 36 : 0 // includes stake => 35:1 profit
+    return n === win ? 36 : 0
   }
   if (key === 'red') return colorOf(win) === 'red' ? 2 : 0
   if (key === 'black') return colorOf(win) === 'black' ? 2 : 0
@@ -119,47 +130,11 @@ function payoutFor(key: BetKey, win: number) {
   return 0
 }
 
-const wheelDeg = ref(0)
-const idlePausedUntil = ref(0)
-function pauseIdle(ms = 10_000) {
-  idlePausedUntil.value = Date.now() + ms
-}
-
-// Slow idle spin
-let rafId: number | null = null
-function startIdleSpin() {
-  const tick = () => {
-    const now = Date.now()
-    const paused = now < idlePausedUntil.value
-
-    if (!spinning.value && !paused) {
-      wheelDeg.value = (wheelDeg.value + 0.15) % 360
-    }
-
-    rafId = requestAnimationFrame(tick)
-  }
-  rafId = requestAnimationFrame(tick)
-}
-
-function stopIdleSpin() {
-  if (rafId !== null) {
-    cancelAnimationFrame(rafId)
-    rafId = null
-  }
-}
-
-onMounted(() => startIdleSpin())
-onBeforeUnmount(() => {
-  stopIdleSpin()
-  if (tapTimer !== null) window.clearTimeout(tapTimer)
-  if (winTimer !== null) window.clearTimeout(winTimer)
-  if (wheelFlashTimer !== null) window.clearTimeout(wheelFlashTimer)
-})
-
-// Keep as plain array (avoids accidental ref misuse)
+/** ✅ IMPORTANT: European wheel (0 только один раз) */
 const wheelNumbers: number[] = [
-  0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 0, 5, 24, 16, 33, 1, 20, 14, 31, 9,
-  22, 18, 29, 7, 28, 12, 35, 3, 26,
+  0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30,
+  8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29,
+  7, 28, 12, 35, 3, 26
 ]
 const SLICE_COUNT = computed(() => wheelNumbers.length)
 const SLICE_ANGLE = computed(() => 360 / SLICE_COUNT.value)
@@ -172,7 +147,8 @@ function polar(cx: number, cy: number, r: number, deg: number) {
   return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) }
 }
 function sliceAngles(i: number) {
-  const a0 = -90 + i * SLICE_ANGLE.value
+  // Offset by half-slice so that slice centers align neatly and the pointer hits centers reliably.
+  const a0 = -90 - SLICE_ANGLE.value / 2 + i * SLICE_ANGLE.value
   const a1 = a0 + SLICE_ANGLE.value
   return { a0, a1, mid: (a0 + a1) / 2 }
 }
@@ -189,26 +165,74 @@ function labelPos(i: number) {
   const p = polar(100, 100, 68, mid)
   return { x: p.x, y: p.y }
 }
+
+// Wheel labels should always face "outward" from the wheel center.
+function labelRot(i: number) {
+  return sliceAngles(i).mid + 90
+}
 function sliceColor(n: number) {
   if (n === 0) return '#1cb96a'
   return redSet.has(n) ? '#ff3b57' : '#1d2731'
 }
-function angleForNumberCentered(n: number){
-  const idx = wheelNumbers.indexOf(n)
-  if(idx < 0) return 0
 
-  const slice = 360 / wheelNumbers.length
-
-  // mid angle of slice in "slicePath" coordinates
-  const mid = (idx + 0.5) * slice
-
-  // pointer is at top (12 o'clock) => target angle = -90
-  // rotate wheel by -mid to bring mid to top
-  const pointerOffset = 1 // if you ever move pointer, adjust this
-
-  return -mid + pointerOffset
+function normalizeDeg(d: number){
+  return ((d % 360) + 360) % 360
 }
 
+/** какой угол (0..360) должен иметь wheelDeg, чтобы число было строго под указателем */
+function desiredWheelDegForNumber(n: number){
+  const idx = wheelNumbers.indexOf(n)
+  if (idx < 0) return 0
+
+  // With the half-slice offset above, the center angle for slice idx is:
+  //   mid = -90 + idx * SLICE_ANGLE
+  // Pointer is at -90 => wheelDeg + mid = -90 => wheelDeg = -idx*SLICE_ANGLE
+  return normalizeDeg(-idx * SLICE_ANGLE.value)
+}
+
+function labelRotation(i: number){
+  // Make numbers always face "outwards" of the wheel (radial orientation).
+  // top slice (mid=-90) => rot=0; right (mid=0)=>90; bottom (mid=90)=>180
+  const mid = sliceAngles(i).mid
+  return mid + 90
+}
+
+
+/** 🔥 highlight winning slice for 1s */
+const highlightIdx = ref<number | null>(null)
+let highlightTimer: number | null = null
+function highlightNumber(n: number) {
+  const idx = wheelNumbers.indexOf(n)
+  highlightIdx.value = idx >= 0 ? idx : null
+  if (highlightTimer !== null) window.clearTimeout(highlightTimer)
+  highlightTimer = window.setTimeout(() => {
+    highlightIdx.value = null
+  }, 1000)
+}
+
+const wheelDeg = ref(0)
+const idlePausedUntil = ref(0)
+function pauseIdle(ms = 10_000) {
+  idlePausedUntil.value = Date.now() + ms
+}
+
+// Idle spin
+let rafId: number | null = null
+function startIdleSpin() {
+  const tick = () => {
+    const now = Date.now()
+    const paused = now < idlePausedUntil.value
+    if (!spinning.value && !paused) wheelDeg.value = (wheelDeg.value + 0.15) % 360
+    rafId = requestAnimationFrame(tick)
+  }
+  rafId = requestAnimationFrame(tick)
+}
+function stopIdleSpin() {
+  if (rafId !== null) {
+    cancelAnimationFrame(rafId)
+    rafId = null
+  }
+}
 
 const lastNumbers = ref<number[]>([])
 const wheelFlash = ref(false)
@@ -219,73 +243,87 @@ function flashWheel() {
   wheelFlashTimer = window.setTimeout(() => (wheelFlash.value = false), 420)
 }
 
+onMounted(() => startIdleSpin())
+onBeforeUnmount(() => {
+  stopIdleSpin()
+  if (tapTimer !== null) window.clearTimeout(tapTimer)
+  if (winTimer !== null) window.clearTimeout(winTimer)
+  if (wheelFlashTimer !== null) window.clearTimeout(wheelFlashTimer)
+  if (highlightTimer !== null) window.clearTimeout(highlightTimer)
+})
+
+/** ✅ TEMP: allow spin regardless of auth/bets/balance */
+const TEMP_ALLOW_FREE_SPIN = true
+
 async function spin() {
   if (spinning.value) return
-  if (!auth.user) {
-    message.value = 'Нужен вход'
-    return
-  }
-  if (totalBet.value <= 0) {
-    message.value = 'Сделай ставку'
-    return
-  }
-  if (auth.user.balance < totalBet.value) {
-    message.value = 'Недостаточно баланса'
-    return
-  }
 
   spinning.value = true
   message.value = ''
   lastNumber.value = null
   winKeys.value = new Set()
+  pauseIdle(1_000)
 
   try {
-
-    const res = await api<{
-      ok: boolean
-      winNumber: number
-      color: 'red'|'black'|'green'
-      totalBet: number
-      totalReturn: number
-      net: number
-      balance: number
-    }>('/api/roulette/spin', {
-      method: 'POST',
-      body: JSON.stringify({ bets: bets.value })
-    })
-
     sfx('spin')
 
-    const win = res.winNumber
-    const base = angleForNumberCentered(win)
-    const extra = 360 * (6 + Math.floor(Math.random() * 3))
-    wheelDeg.value = extra + base
+    let win: number
 
-    await new Promise(r => setTimeout(r, 3200))
+    if (TEMP_ALLOW_FREE_SPIN) {
+      // локально (не зависит ни от чего)
+      win = wheelNumbers[Math.floor(Math.random() * wheelNumbers.length)]
+    } else {
+      // обычный режим
+      if (!auth.user) { message.value = 'Нужен вход'; return }
+      if (totalBet.value <= 0) { message.value = 'Сделай ставку'; return }
+      if (auth.user.balance < totalBet.value) { message.value = 'Недостаточно баланса'; return }
+
+      const res = await api<{
+        ok: boolean
+        winNumber: number
+        totalBet: number
+        totalReturn: number
+        net: number
+        balance: number
+      }>('/api/roulette/spin', {
+        method: 'POST',
+        body: JSON.stringify({ bets: bets.value })
+      })
+
+      win = res.winNumber
+
+      // баланс обновим
+      if (auth.user) {
+        auth.user = { ...auth.user, balance: res.balance }
+        localStorage.setItem('casino_sim_user_v1', JSON.stringify(auth.user))
+      }
+    }
+
+
+    const extra = 360 * (7 + Math.floor(Math.random() * 3))
+
+    const current = normalizeDeg(wheelDeg.value)
+    const desired = desiredWheelDegForNumber(win)
+
+// коррекция, чтобы попасть точно в сектор
+    const correction = desired - current
+
+    wheelDeg.value = wheelDeg.value + extra + correction
+
+
+
+    await new Promise(r => setTimeout(r, 3600))
     sfx('stop')
+    wheelDeg.value = desiredWheelDegForNumber(win)
 
     lastNumber.value = win
     lastNumbers.value = [win, ...lastNumbers.value].slice(0, 30)
+
     flashWheel()
+    highlightNumber(win)     // ✅ подсветка сектора на 1s
     setWinKeysFor(win)
 
-    // обновим баланс в auth-store
-    if (auth.user) {
-      auth.user = { ...auth.user, balance: res.balance }
-      localStorage.setItem('casino_sim_user_v1', JSON.stringify(auth.user))
-    }
-
-    if (res.net > 0) {
-      sfx('win')
-      message.value = `Выпало ${win} — выигрыш +${Math.round(res.net * 100) / 100}`
-    } else if (res.net < 0) {
-      sfx('lose')
-      message.value = `Выпало ${win} — проигрыш ${Math.round(res.net * 100) / 100}`
-    } else {
-      message.value = `Выпало ${win}`
-    }
-
-pauseIdle(1_000)
+    message.value = `Выпало ${win}`
   } catch (e: any) {
     message.value = e?.message ? String(e.message) : 'Ошибка'
   } finally {
@@ -312,11 +350,11 @@ function betOf(key: BetKey) {
           <div class="label">Chip Value</div>
           <div class="chip-row">
             <button
-                v-for="c in chips"
-                :key="c"
-                class="chip"
-                :class="{ on: chip === c }"
-                @click="chip = c; sfx('click')"
+              v-for="c in chips"
+              :key="c"
+              class="chip"
+              :class="{ on: chip === c }"
+              @click="chip = c; sfx('click')"
             >
               {{ c }}
             </button>
@@ -335,7 +373,8 @@ function betOf(key: BetKey) {
           </div>
         </div>
 
-        <button class="btn btn-primary" :disabled="spinning || totalBet <= 0" @click="spin">
+        <!-- ✅ TEMP: always enabled -->
+        <button class="btn btn-primary" :disabled="spinning" @click="spin">
           {{ spinning ? 'Spinning...' : 'Play' }}
         </button>
 
@@ -349,27 +388,28 @@ function betOf(key: BetKey) {
           <div class="pointer" aria-hidden="true"></div>
 
           <div
-              class="wheel-svg"
-              :class="[{ spinning }, { flash: wheelFlash }]"
-              :style="{ transform: `rotate(${wheelDeg}deg)` }"
+            class="wheel-svg"
+            :class="[{ spinning }, { flash: wheelFlash }]"
+            :style="{ transform: `rotate(${wheelDeg}deg)` }"
           >
             <svg class="wheel-svg__el" viewBox="0 0 200 200" aria-hidden="true">
               <g>
                 <path
-                    v-for="(n, i) in wheelNumbers"
-                    :key="`s-${i}`"
-                    :d="slicePath(i)"
-                    :fill="sliceColor(n)"
+                  v-for="(n, i) in wheelNumbers"
+                  :key="`s-${i}`"
+                  :d="slicePath(i)"
+                  :fill="sliceColor(n)"
+                  :class="{ 'slice-win': highlightIdx === i }"
                 />
                 <text
-                    v-for="(n, i) in wheelNumbers"
-                    :key="`t-${i}`"
-                    :x="labelPos(i).x"
-                    :y="labelPos(i).y"
-                    text-anchor="middle"
-                    dominant-baseline="middle"
-                    class="wheel-label"
-                    :transform="`rotate(${-wheelDeg} ${labelPos(i).x} ${labelPos(i).y})`"
+                  v-for="(n, i) in wheelNumbers"
+                  :key="`t-${i}`"
+                  :x="labelPos(i).x"
+                  :y="labelPos(i).y"
+                  text-anchor="middle"
+                  dominant-baseline="middle"
+                  class="wheel-label"
+                  :transform="`rotate(${labelRot(i)} ${labelPos(i).x} ${labelPos(i).y})`"
                 >
                   {{ n }}
                 </text>
@@ -383,15 +423,14 @@ function betOf(key: BetKey) {
           </div>
         </div>
 
-        <!-- moved history under wheel -->
         <div class="history-under" v-if="lastNumbers.length">
           <div class="history-title">Last</div>
           <div class="history-row">
             <span
-                v-for="(n, idx) in lastNumbers"
-                :key="idx"
-                class="history-pill"
-                :class="colorOf(n)"
+              v-for="(n, idx) in lastNumbers"
+              :key="idx"
+              class="history-pill"
+              :class="colorOf(n)"
             >
               {{ n }}
             </span>
@@ -401,12 +440,11 @@ function betOf(key: BetKey) {
 
       <div class="board">
         <div class="grid grid-vertical">
-          <!-- top: 0 + numbers -->
           <div class="main-table">
             <button
-                class="cell-zero"
-                :class="{ win: isWinKey('n:0'), tap: tappedKey === 'n:0' }"
-                @click="addBet('n:0')"
+              class="cell-zero"
+              :class="{ win: isWinKey('n:0'), tap: tappedKey === 'n:0' }"
+              @click="addBet('n:0')"
             >
               0
               <span class="chip-badge" v-if="betOf('n:0')">{{ betOf('n:0') }}</span>
@@ -415,18 +453,19 @@ function betOf(key: BetKey) {
             <div class="nums">
               <div class="row" v-for="(row, ri) in numGrid" :key="ri">
                 <button
-                    v-for="n in row"
-                    :key="n"
-                    class="cell"
-                    :class="[
+                  v-for="n in row"
+                  :key="n"
+                  class="cell"
+                  :class="[
                     colorOf(n),
                     {
                       win: isWinKey(`n:${n}` as any),
                       has: !!betOf(`n:${n}` as any),
                       tap: tappedKey === `n:${n}`,
+                      hover: hoverNums.has(n),
                     },
                   ]"
-                    @click="addBet(`n:${n}` as any)"
+                  @click="addBet(`n:${n}` as any)"
                 >
                   {{ n }}
                   <span class="chip-badge" v-if="betOf(`n:${n}` as any)">{{ betOf(`n:${n}` as any) }}</span>
@@ -435,61 +474,39 @@ function betOf(key: BetKey) {
             </div>
           </div>
 
-          <!-- bottom: side bets -->
           <div class="side-table">
             <div class="col-bets">
-              <button
-                  class="cell out"
-                  :class="{ win: isWinKey('Ряд1'), has: !!betOf('Ряд1'), tap: tappedKey === 'Ряд1' }"
-                  @click="addBet('Ряд1')"
-              >
-                2:1
-                <span class="chip-badge" v-if="betOf('Ряд1')">{{ betOf('Ряд1') }}</span>
+              <button class="cell out" :class="{ win: isWinKey('Ряд1'), has: !!betOf('Ряд1'), tap: tappedKey === 'Ряд1' }" @click="addBet('Ряд1')" @mouseenter="setHover('Ряд1')" @mouseleave="setHover('')">
+                2:1 <span class="chip-badge" v-if="betOf('Ряд1')">{{ betOf('Ряд1') }}</span>
               </button>
-              <button
-                  class="cell out"
-                  :class="{ win: isWinKey('Ряд2'), has: !!betOf('Ряд2'), tap: tappedKey === 'Ряд2' }"
-                  @click="addBet('Ряд2')"
-              >
-                2:1
-                <span class="chip-badge" v-if="betOf('Ряд2')">{{ betOf('Ряд2') }}</span>
+              <button class="cell out" :class="{ win: isWinKey('Ряд2'), has: !!betOf('Ряд2'), tap: tappedKey === 'Ряд2' }" @click="addBet('Ряд2')" @mouseenter="setHover('Ряд2')" @mouseleave="setHover('')">
+                2:1 <span class="chip-badge" v-if="betOf('Ряд2')">{{ betOf('Ряд2') }}</span>
               </button>
-              <button
-                  class="cell out"
-                  :class="{ win: isWinKey('Ряд3'), has: !!betOf('Ряд3'), tap: tappedKey === 'Ряд3' }"
-                  @click="addBet('Ряд3')"
-              >
-                2:1
-                <span class="chip-badge" v-if="betOf('Ряд3')">{{ betOf('Ряд3') }}</span>
+              <button class="cell out" :class="{ win: isWinKey('Ряд3'), has: !!betOf('Ряд3'), tap: tappedKey === 'Ряд3' }" @click="addBet('Ряд3')" @mouseenter="setHover('Ряд3')" @mouseleave="setHover('')">
+                2:1 <span class="chip-badge" v-if="betOf('Ряд3')">{{ betOf('Ряд3') }}</span>
               </button>
             </div>
 
             <div class="col-bets">
-              <button
-                  class="cell big"
-                  :class="{ win: isWinKey('Диапазон1'), has: !!betOf('Диапазон1'), tap: tappedKey === 'Диапазон1' }"
-                  @click="addBet('Диапазон1')"
-              >
-                1 to 12
-                <span class="chip-badge" v-if="betOf('Диапазон1')">{{ betOf('Диапазон1') }}</span>
+              <button class="cell big" :class="{ win: isWinKey('Диапазон1'), has: !!betOf('Диапазон1'), tap: tappedKey === 'Диапазон1' }" @click="addBet('Диапазон1')" @mouseenter="setHover('Диапазон1')" @mouseleave="setHover('')">
+                1 to 12 <span class="chip-badge" v-if="betOf('Диапазон1')">{{ betOf('Диапазон1') }}</span>
               </button>
-              <button
-                  class="cell big"
-                  :class="{ win: isWinKey('Диапазон2'), has: !!betOf('Диапазон2'), tap: tappedKey === 'Диапазон2' }"
-                  @click="addBet('Диапазон2')"
-              >
-                13 to 24
-                <span class="chip-badge" v-if="betOf('Диапазон2')">{{ betOf('Диапазон2') }}</span>
+              <button class="cell big" :class="{ win: isWinKey('Диапазон2'), has: !!betOf('Диапазон2'), tap: tappedKey === 'Диапазон2' }" @click="addBet('Диапазон2')" @mouseenter="setHover('Диапазон2')" @mouseleave="setHover('')">
+                13 to 24 <span class="chip-badge" v-if="betOf('Диапазон2')">{{ betOf('Диапазон2') }}</span>
               </button>
-              <button
-                  class="cell big"
-                  :class="{ win: isWinKey('Диапазон3'), has: !!betOf('Диапазон3'), tap: tappedKey === 'Диапазон3' }"
-                  @click="addBet('Диапазон3')"
-              >
-                25 to 36
-                <span class="chip-badge" v-if="betOf('Диапазон3')">{{ betOf('Диапазон3') }}</span>
+              <button class="cell big" :class="{ win: isWinKey('Диапазон3'), has: !!betOf('Диапазон3'), tap: tappedKey === 'Диапазон3' }" @click="addBet('Диапазон3')" @mouseenter="setHover('Диапазон3')" @mouseleave="setHover('')">
+                25 to 36 <span class="chip-badge" v-if="betOf('Диапазон3')">{{ betOf('Диапазон3') }}</span>
               </button>
+            </div>
 
+            <!-- NEW: Color bets -->
+            <div class="col-bets">
+              <button class="cell big bet-red" :class="{ win: isWinKey('red'), has: !!betOf('red'), tap: tappedKey === 'red' }" @click="addBet('red')" @mouseenter="setHover('red')" @mouseleave="setHover('')">
+                RED <span class="chip-badge" v-if="betOf('red')">{{ betOf('red') }}</span>
+              </button>
+              <button class="cell big bet-black" :class="{ win: isWinKey('black'), has: !!betOf('black'), tap: tappedKey === 'black' }" @click="addBet('black')" @mouseenter="setHover('black')" @mouseleave="setHover('')">
+                BLACK <span class="chip-badge" v-if="betOf('black')">{{ betOf('black') }}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -527,6 +544,34 @@ function betOf(key: BetKey) {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+/* Realistic-ish chip buttons */
+.chip{
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background:
+    radial-gradient(18px 18px at 32% 30%, rgba(255,255,255,0.28), rgba(255,255,255,0) 60%),
+    radial-gradient(48px 48px at 50% 50%, rgba(245,197,66,0.18), rgba(0,0,0,0) 60%),
+    rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.92);
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow:
+    inset 0 0 0 2px rgba(0,0,0,0.35),
+    0 10px 22px rgba(0,0,0,0.45);
+  transition: transform 0.12s ease, filter 0.12s ease, box-shadow 0.18s ease;
+}
+.chip:hover{ transform: translateY(-1px); filter: brightness(1.08); }
+.chip.on{
+  box-shadow:
+    inset 0 0 0 2px rgba(0,0,0,0.35),
+    0 0 0 1px rgba(245,197,66,0.55),
+    0 0 24px rgba(245,197,66,0.22),
+    0 12px 26px rgba(0,0,0,0.50);
+  filter: brightness(1.12);
 }
 
 .amount-total {
@@ -737,6 +782,15 @@ function betOf(key: BetKey) {
 .cell.black {
   background: rgba(44, 58, 72, 0.88);
 }
+
+/* Outside-bet red/black buttons */
+.cell.bet-red{
+  background: rgba(255, 58, 84, 0.86);
+  color: #081018;
+}
+.cell.bet-black{
+  background: rgba(44, 58, 72, 0.92);
+}
 .cell.out {
   width: var(--cell);
   height: var(--cell);
@@ -757,6 +811,13 @@ function betOf(key: BetKey) {
 
 .cell.has {
   box-shadow: inset 0 0 0 1px rgba(245, 197, 66, 0.28);
+}
+.cell.hover{
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.10),
+    0 0 0 1px rgba(245,197,66,0.35),
+    0 0 26px rgba(245,197,66,0.12);
+  filter: brightness(1.08);
 }
 .cell.win,
 .cell-zero.win {
@@ -850,5 +911,15 @@ function betOf(key: BetKey) {
   fill: rgba(255, 255, 255, 0.92);
   font-weight: 800;
   font-size: 8px;
+}
+.slice-win{
+  filter: brightness(1.25);
+  stroke: rgba(245,197,66,.95);
+  stroke-width: 2.2;
+  animation: winPulse 260ms ease-in-out infinite alternate;
+}
+@keyframes winPulse{
+  from { filter: brightness(1.15); }
+  to { filter: brightness(1.38); }
 }
 </style>
