@@ -61,7 +61,7 @@ function resolveServiceBase(path: string): string {
   }
 
   // 2) global base
-  return getEnv('VITE_API_BASE_URL') || ''
+  return 'https://api.scxdrop.online'
 }
 
 export type ApiCallOptions = RequestInit & {
