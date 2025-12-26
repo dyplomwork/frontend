@@ -3,8 +3,11 @@ FROM node:20-alpine AS build
 WORKDIR /app
 
 COPY package.json ./
+COPY src ./src
 
-RUN npm install | npm ci
+RUN npm install
+
+RUN npm ci
 
 COPY . .
 RUN npm run build
