@@ -1,47 +1,122 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, ref } from 'vue'
+import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 
 const login = ref('')
 const password = ref('')
 const error = ref('')
 
-async function submit(){
+const canSubmit = computed(() => login.value.trim().length > 0 && password.value.length > 0 && !auth.loading)
+
+async function submit() {
   error.value = ''
-  const res = await auth.login(login.value, password.value).catch((e:any)=>({ ok:false, message:e?.message }))
-  if(!res.ok){
-    error.value = (res as any).message || 'Ошибка'
-    return
+  try {
+    const res = await auth.login(login.value.trim(), password.value)
+    if (!res.ok) {
+      error.value = (res as any).message || 'Не удалось войти'
+      return
+    }
+    const next = (route.query.next as string | undefined) || '/profile'
+    await router.replace(next)
+  } catch (e: any) {
+    error.value = e?.message || 'Ошибка входа'
   }
-  router.push({ name: 'home' })
 }
 </script>
 
 <template>
-  <div class="grid" style="gap:16px;">
-    <div class="card" style="max-width:520px; margin: 0 auto;">
-      <h2 style="margin:0;">Вход</h2>
-      <p class="muted" style="margin-top:8px;">Введи email и пароль.</p>
+  <div class="auth">
+    <div class="card">
+      <div class="head">
+        <h1>Вход</h1>
+        <p class="muted">Введи никнейм или Discord и пароль.</p>
+      </div>
 
-      <form class="grid" style="gap:12px; margin-top:16px;" @submit.prevent="submit">
+      <form class="form" @submit.prevent="submit">
         <label class="field">
-          <span class="muted">Email</span>
-          <input v-model="login" type="email" autocomplete="email" placeholder="you@example.com" required />
+          <span class="label">Никнейм или Discord</span>
+          <input v-model="login" type="text" autocomplete="username" placeholder="nickname / discord" required />
         </label>
 
         <label class="field">
-          <span class="muted">Пароль</span>
-          <input v-model="password" type="password" autocomplete="current-password" placeholder="пароль" required />
+          <span class="label">Пароль</span>
+          <input v-model="password" type="password" autocomplete="current-password" placeholder="••••••••" required />
         </label>
 
-        <div v-if="error" class="notice error">{{ error }}</div>
+        <div v-if="error" class="notice error" role="alert">{{ error }}</div>
 
-        <button class="btn primary" type="submit">Войти</button>
+        <button class="btn primary" type="submit" :disabled="!canSubmit">
+          {{ auth.loading ? 'Входим…' : 'Войти' }}
+        </button>
+
+        <p class="hint">
+          Нет аккаунта?
+          <RouterLink class="link" :to="{ name: 'register' }">Регистрация</RouterLink>
+        </p>
       </form>
     </div>
   </div>
 </template>
+
+<style scoped>
+.auth{
+  min-height: calc(100vh - 72px);
+  display:grid;
+  place-items:center;
+  padding: 28px 14px;
+}
+.card{
+  width: min(460px, 100%);
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.03);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 16px 50px rgba(0,0,0,.35);
+}
+.head h1{
+  margin: 0 0 6px;
+  font-size: 22px;
+}
+.muted{ color: var(--muted); margin:0; }
+.form{ margin-top: 14px; display:flex; flex-direction:column; gap: 12px; }
+.field{ display:flex; flex-direction:column; gap: 6px; }
+.label{ font-size: 13px; color: var(--muted); }
+input{
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  padding: 0 12px;
+  outline: none;
+}
+input:focus{ border-color: var(--border2); background: rgba(255,255,255,.06); }
+.notice{
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,.04);
+  font-size: 13px;
+}
+.notice.error{ border-color: rgba(255,59,87,.35); background: rgba(255,59,87,.10); }
+.btn.primary{
+  height: 44px;
+  border-radius: 12px;
+}
+.btn.primary:disabled{
+  opacity: .6;
+  cursor: not-allowed;
+}
+.hint{
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+.link{ color: var(--text); text-decoration: underline; }
+</style>

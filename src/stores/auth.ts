@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { api, ApiError } from '../utils/api'
+import { api } from '../utils/api'
 
 export type Role = 'guest' | 'user' | 'admin'
 
@@ -60,9 +60,9 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    async register(payload: { email: string; password: string; nickname?: string; discord?: string }){
+    async register(payload: { nickname: string; discord: string; password: string }){
       if(!isBrowser()) return { ok: false as const }
-      const res = await api<{ ok:boolean; token: string; user: User }>('/api/auth/register', {
+      const res = await api<{ ok:boolean; token: string; user: User }>('/api/accaunts/register', {
         method: 'POST',
         body: JSON.stringify(payload)
       })
@@ -74,7 +74,7 @@ export const useAuthStore = defineStore('auth', {
 
     async login(login: string, password: string){
       if(!isBrowser()) return { ok: false as const }
-      const res = await api<{ ok:boolean; token: string; user: User }>('/api/auth/login', {
+      const res = await api<{ ok:boolean; token: string; user: User }>('/api/v1/accaunts/login', {
         method: 'POST',
         body: JSON.stringify({ login, password })
       })
