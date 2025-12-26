@@ -12,7 +12,6 @@ const isBrowser = () => typeof window !== 'undefined' && typeof localStorage !==
 
 /**
  * Token storage key. Keep this stable so you can swap backends without breaking existing sessions.
- * If your new backend uses a different token strategy, change the auth store instead of this key.
  */
 const LS_TOKEN = 'casino_sim_token_v1'
 
@@ -29,14 +28,12 @@ const LS_TOKEN = 'casino_sim_token_v1'
  *   - VITE_API_TICKETS_URL
  *   - VITE_API_ADMIN_URL
  *
- * How routing works:
- * - If you call api('/api/auth/login', ...) → service = 'auth' → uses VITE_API_AUTH_URL if provided
- * - Otherwise it falls back to VITE_API_BASE_URL
- *
- * If none are set, requests stay relative (same-origin), which is convenient for local dev/proxying.
+ * Routing:
+ * - If you call api('/api/auth/login', ...) → service='AUTH' → uses VITE_API_AUTH_URL if set
+ * - Otherwise falls back to VITE_API_BASE_URL
+ * - If none are set, request stays relative (same-origin) — удобно для dev/proxy.
  */
 function getEnv(key: string): string {
-  // Vite exposes env vars on import.meta.env
   return (import.meta as any)?.env?.[key] ?? ''
 }
 
@@ -47,16 +44,24 @@ function joinUrl(base: string, path: string): string {
   return `${b}${p}`
 }
 
+function getToken(): string {
+  if(!isBrowser()) return ''
+  return localStorage.getItem(LS_TOKEN) ?? ''
+}
+
 function resolveServiceBase(path: string): string {
   // Expecting /api/<service>/...
-  console.log('VITE_API_BASE_URL =', (import.meta as any)?.env?.VITE_API_BASE_URL)
   const m = path.match(/^\/api\/([^\/]+)/)
   const service = m?.[1]?.toUpperCase()
-  if(!service) return getEnv('VITE_API_BASE_URL')
 
-  const override = getEnv(`VITE_API_BASE_URL`)
-  if(override) return override
-  return 'https://api.scxdrop.online'
+  // 1) per-service override: VITE_API_<SERVICE>_URL
+  if(service) {
+    const perService = getEnv(`VITE_API_${service}_URL`)
+    if(perService) return perService
+  }
+
+  // 2) global base
+  return getEnv('VITE_API_BASE_URL') || ''
 }
 
 export type ApiCallOptions = RequestInit & {
@@ -65,32 +70,57 @@ export type ApiCallOptions = RequestInit & {
    * If provided, it overrides env-based routing.
    */
   baseUrl?: string
+
+  /**
+   * If true, do NOT attach Authorization header even if token exists.
+   * Useful for login/register endpoints.
+   */
+  noAuth?: boolean
 }
 
 /**
  * Minimal fetch wrapper with:
- * - JSON headers
+ * - conditional JSON Content-Type
  * - Bearer token (if present)
  * - microservice base-url routing
  */
 export async function api<T>(path: string, opts: ApiCallOptions = {}): Promise<T> {
   if(!isBrowser()) throw new ApiError(0, 'API is not available during SSR/prerender')
 
-  const token = localStorage.getItem(LS_TOKEN)
+  const headers: Record<string, string> = { ...(opts.headers as any || {}) }
 
-  const headers: Record<string,string> = {
-    'Content-Type': 'application/json',
-    ...(opts.headers as any || {})
+  const hasBody = Object.prototype.hasOwnProperty.call(opts, 'body') && opts.body != null
+
+  // ставим JSON Content-Type только если body есть и это НЕ FormData и НЕ строка
+  if (hasBody && !(opts.body instanceof FormData) && typeof opts.body !== 'string') {
+    headers['Content-Type'] = headers['Content-Type'] || 'application/json'
   }
-  if(token) headers['Authorization'] = `Bearer ${token}`
 
-  const baseUrl = resolveServiceBase(path)
+  // auth header (если не отключено)
+  const token = getToken()
+  if(!opts.noAuth && token && !headers['Authorization']) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
+  const baseUrl = opts.baseUrl ?? resolveServiceBase(path)
   const url = joinUrl(baseUrl, path)
 
-  const { baseUrl: _ignored, ...fetchOpts } = opts
+  const { baseUrl: _ignoredBaseUrl, noAuth: _ignoredNoAuth, ...fetchOpts } = opts
   const res = await fetch(url, { ...fetchOpts, headers })
 
-  const data = await res.json().catch(()=> ({}))
-  if(!res.ok) throw new ApiError(res.status, data?.message || `HTTP ${res.status}`, data)
+  // Try JSON first, fallback to text
+  const raw = await res.text().catch(() => '')
+  let data: any = {}
+  if(raw) {
+    try { data = JSON.parse(raw) } catch { data = raw }
+  }
+
+  if(!res.ok) {
+    const msg =
+      (typeof data === 'object' && data && (data.message || data.error)) ||
+      `HTTP ${res.status}`
+    throw new ApiError(res.status, msg, data)
+  }
+
   return data as T
 }
