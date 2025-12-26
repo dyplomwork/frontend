@@ -62,7 +62,7 @@ export const useAuthStore = defineStore('auth', {
 
     async register(payload: { nickname: string; discord: string; password: string }){
       if(!isBrowser()) return { ok: false as const }
-      const res = await api<{ ok:boolean; token: string; user: User }>('/api/v1/accaunts/register', {
+      const res = await api<{ ok:boolean; token: string; user: User }>('/api/v1/accounts/register', {
         method: 'POST',
         body: JSON.stringify(payload)
       })
@@ -74,7 +74,7 @@ export const useAuthStore = defineStore('auth', {
 
     async login(login: string, password: string){
       if(!isBrowser()) return { ok: false as const }
-      const res = await api<{ ok:boolean; token: string; user: User }>('/api/v1/accaunts/login', {
+      const res = await api<{ ok:boolean; token: string; user: User }>('/api/v1/accounts/login', {
         method: 'POST',
         body: JSON.stringify({ login, password })
       })
