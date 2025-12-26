@@ -24,50 +24,56 @@ const winChance = computed(() => {
   return Math.max(1, Math.min(95, c))
 })
 const multiplier = computed(() => {
-  // multiplier = (100 / winChance) * (1 - houseEdge)
   const m = (100 / winChance.value) * (1 - HOUSE_EDGE)
   return Math.max(1, Math.round(m * 10000) / 10000)
 })
-const winnings = computed(() => {
-  return Math.round((bet.value * multiplier.value) * 10000) / 10000
-})
-
-const profitOnWin = computed(() => {
-  return Math.round((bet.value * (multiplier.value - 1)) * 10000) / 10000
-})
+const winnings = computed(() => Math.round(bet.value * multiplier.value * 10000) / 10000)
+const profitOnWin = computed(() => Math.round(bet.value * (multiplier.value - 1) * 10000) / 10000)
 
 // UI needle position (0..100)
 const needle = ref(50)
 const bump = ref(false)
-const flashZone = ref<'win'|'lose'|''>('')
+const flashZone = ref<'win' | 'lose' | ''>('')
 
 const resultLabel = computed(() => needle.value.toFixed(2))
 
 let raf: number | null = null
 let lastTick = 0
 
-function stopAnim(){
-  if(raf !== null){ cancelAnimationFrame(raf); raf = null }
+function stopAnim() {
+  if (raf !== null) {
+    cancelAnimationFrame(raf)
+    raf = null
+  }
   lastTick = 0
 }
 
-function flash(kind: 'win'|'lose'){
+function flash(kind: 'win' | 'lose') {
   flashZone.value = kind
-  window.setTimeout(() => { flashZone.value = '' }, 520)
+  window.setTimeout(() => {
+    flashZone.value = ''
+  }, 520)
 }
 
-
-async function play(){
-  if(running.value) return
+async function play() {
+  if (running.value) return
   message.value = ''
-  if(!auth.user){ message.value = 'Нужен вход'; return }
-  if(bet.value <= 0){ message.value = 'Укажи Amount'; return }
-  if(auth.user.balance < bet.value){ message.value = 'Недостаточно баланса'; return }
+  if (!auth.user) {
+    message.value = 'Нужен вход'
+    return
+  }
+  if (bet.value <= 0) {
+    message.value = 'Укажи Amount'
+    return
+  }
+  if (auth.user.balance < bet.value) {
+    message.value = 'Недостаточно баланса'
+    return
+  }
 
   running.value = true
   lastRoll.value = null
 
-  // pay bet upfront
   await auth.applyBalance(-bet.value)
   sfx('click')
 
@@ -76,23 +82,22 @@ async function play(){
   const t0 = performance.now()
   const start = needle.value
 
-  // Stake-like tick cadence: 12–18 ticks over the animation.
+  // tick cadence
   const TOTAL_TICKS = 10
   lastTick = 0
 
   const step = (t: number) => {
     const p = Math.min(1, (t - t0) / duration)
-    // easeOutCubic
-    const e = 1 - Math.pow(1 - p, 3)
+    const e = 1 - Math.pow(1 - p, 3) // easeOutCubic
     needle.value = start + (target - start) * e
 
     const curTick = Math.floor(e * TOTAL_TICKS)
-    if(curTick > lastTick){
+    if (curTick > lastTick) {
       lastTick = curTick
       sfx('dice_tick')
     }
 
-    if(p < 1){
+    if (p < 1) {
       raf = requestAnimationFrame(step)
       return
     }
@@ -108,12 +113,12 @@ async function play(){
     })
 
     const isWin = target >= Number(rollOver.value)
-    if(isWin){
+    if (isWin) {
       void auth.applyBalance(winnings.value)
       sfx('win')
       flash('win')
       message.value = `Победа: +${profitOnWin.value.toFixed(2)} (x${multiplier.value})`
-    }else{
+    } else {
       sfx('lose')
       flash('lose')
       message.value = 'Проигрыш'
@@ -136,8 +141,8 @@ onBeforeUnmount(() => stopAnim())
         :disabled="running"
         :message="message"
         play-text="Play"
-        @half="amount = Math.max(0, (Number(amount)||0)/2)"
-        @double="amount = (Number(amount)||0)*2"
+        @half="amount = Math.max(0, (Number(amount) || 0) / 2)"
+        @double="amount = (Number(amount) || 0) * 2"
         @play="play"
       >
         <template #summary>
@@ -164,11 +169,24 @@ onBeforeUnmount(() => stopAnim())
     </template>
 
     <div class="dial">
-      <div class="bar" :class="flashZone">
-        <div class="red" :style="{ width: rollOver + '%' }" />
-        <div class="green" :style="{ width: (100-rollOver) + '%' }" />
+      <!-- TOP SCALE (Stake-like) -->
+      <div class="scale-top" aria-hidden="true">
+        <div class="tick" style="left: 0%"><span>0</span></div>
+        <div class="tick" style="left: 25%"><span>25</span></div>
+        <div class="tick" style="left: 50%"><span>50</span></div>
+        <div class="tick" style="left: 75%"><span>75</span></div>
+        <div class="tick" style="left: 100%"><span>100</span></div>
+      </div>
 
-        <!-- Roll-over selector (thumb) and result knob share the same track -->
+      <div class="bar stake" :class="flashZone">
+        <!-- inner track -->
+        <div class="track">
+          <div class="split red" :style="{ width: rollOver + '%' }" />
+          <div class="split green" :style="{ width: (100 - rollOver) + '%' }" />
+          <div class="track-shine" aria-hidden="true" />
+        </div>
+
+        <!-- (Invisible) native slider for interaction -->
         <input
           class="bar-slider"
           type="range"
@@ -176,27 +194,27 @@ onBeforeUnmount(() => stopAnim())
           max="99"
           step="0.01"
           v-model.number="rollOver"
-          @change="sfx('click')"
+          @input="sfx('click')"
           :disabled="running"
           aria-label="Roll Over"
         />
 
-        <div class="roll-label" :style="{ left: rollOver + '%' }" aria-hidden="true">
-          Roll Over
+        <!-- Visual thumb (Stake-like) -->
+        <div class="roll-thumb" :style="{ left: rollOver + '%' }" aria-hidden="true">
+          <div class="thumb-icon" />
         </div>
+
+        <!-- RollOver marker -->
         <div class="roll-line" :style="{ left: rollOver + '%' }" aria-hidden="true" />
 
+        <!-- Result puck -->
         <div
-          class="result-knob"
+          class="result-puck"
           :class="[flashZone, { bump }]"
           :style="{ left: needle + '%' }"
           :data-v="resultLabel"
           aria-hidden="true"
         />
-      </div>
-
-      <div class="scale">
-        <span>0</span><span>25</span><span>50</span><span>75</span><span>100</span>
       </div>
 
       <div class="controls">
@@ -208,186 +226,297 @@ onBeforeUnmount(() => stopAnim())
       <div v-if="lastRoll !== null" class="last">
         Last roll: <b>{{ lastRoll.toFixed(2) }}</b>
       </div>
+
+      <!-- небольшая “фишка”: мини-легенда -->
+      <div class="legend" aria-hidden="true">
+        <span class="pill red">Lose</span>
+        <span class="pill green">Win</span>
+      </div>
     </div>
   </GameLayout>
 </template>
 
 <style scoped>
-.summary{
+/* ===== Summary panel ===== */
+.summary {
   margin-top: 14px;
-  border: 1px solid rgba(255,255,255,.06);
-  background: rgba(0,0,0,.18);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.18);
   border-radius: 14px;
   padding: 12px;
-  display:flex;
-  flex-direction:column;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
 }
-.row-between{ display:flex; align-items:center; justify-content:space-between; gap: 10px; }
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
 
-.dial{ width: min(900px, 100%); margin: 0 auto; }
-.bar{
+/* ===== Dial wrapper ===== */
+.dial {
+  width: min(920px, 100%);
+  margin: 0 auto;
   position: relative;
-  height: 30px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.08);
-  overflow: hidden;
-  background: rgba(255,255,255,.03);
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,.25), inset 0 10px 18px rgba(0,0,0,.28);
+  padding-top: 28px; /* space for top ticks */
 }
 
-/* Roll-over selector sits ON the same bar */
-.bar-slider{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:30px;
-  margin:0;
-  background: transparent;
-  -webkit-appearance: none;
-  appearance: none;
-  z-index: 5;
+/* ===== Stake-like top ticks ===== */
+.scale-top {
+  position: absolute;
+  top: 0;
+  left: 8px;
+  right: 8px;
+  height: 22px;
+  pointer-events: none;
 }
-.bar-slider::-webkit-slider-runnable-track{
-  height: 30px;
-  background: transparent;
-  border: none;
-}
-.bar-slider::-webkit-slider-thumb{
-  -webkit-appearance: none;
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  background: rgba(245,197,66,.96);
-  border: 2px solid rgba(0,0,0,.55);
-  box-shadow: 0 10px 16px rgba(0,0,0,.45), 0 0 18px rgba(245,197,66,.18);
-}
-.bar-slider::-moz-range-track{
-  height: 30px;
-  background: transparent;
-  border: none;
-}
-.bar-slider::-moz-range-thumb{
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  background: rgba(245,197,66,.96);
-  border: 2px solid rgba(0,0,0,.55);
-  box-shadow: 0 10px 16px rgba(0,0,0,.45), 0 0 18px rgba(245,197,66,.18);
-}
-.bar::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  border-radius: 999px;
-  box-shadow:
-    inset 18px 0 22px rgba(0,0,0,.32),
-    inset -18px 0 22px rgba(0,0,0,.18);
-}
-.red{
-  height:100%;
-  background-image:
-    linear-gradient(90deg, rgba(255,59,87,.92), rgba(255,59,87,.58)),
-    repeating-linear-gradient(135deg, rgba(255,255,255,.05) 0 1px, rgba(0,0,0,0) 1px 5px);
-  background-blend-mode: normal, multiply;
-}
-.green{
-  height:100%;
-  background-image: linear-gradient(90deg, rgba(0,231,1,.55), rgba(0,231,1,.92));
-}
-
-.roll-label{
-  position:absolute;
-  top: -26px;
+.tick {
+  position: absolute;
+  top: 0;
   transform: translateX(-50%);
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: .02em;
-  color: rgba(255,255,255,.86);
-  text-shadow: 0 8px 16px rgba(0,0,0,.5);
-  padding: 4px 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.08);
-  background: rgba(0,0,0,.28);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
-
-.roll-line{
-  position:absolute;
-  top: -8px;
-  width: 2px;
-  height: 46px;
-  transform: translateX(-1px);
-  background: rgba(255,255,255,.34);
-  box-shadow: 0 0 0 1px rgba(0,0,0,.25);
-}
-
-.hit{
-  position:absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: rgba(255,255,255,.92);
-  box-shadow: 0 0 0 2px rgba(0,0,0,.45), 0 0 18px rgba(255,255,255,.22);
-  z-index: 3;
-}
-.hit.win{ box-shadow: 0 0 0 2px rgba(0,0,0,.45), 0 0 18px rgba(0,231,1,.35); }
-.hit.lose{ box-shadow: 0 0 0 2px rgba(0,0,0,.45), 0 0 18px rgba(255,59,87,.35); }
-
-.needle{
-  position:absolute;
-  top: -18px;
-  transform: translateX(-50%);
+.tick::after {
+  content: "";
   width: 0;
   height: 0;
-  border-left: 10px solid transparent;
-  border-right: 10px solid transparent;
-  border-bottom: 16px solid rgba(245,197,66,.95);
-  filter: drop-shadow(0 8px 12px rgba(0,0,0,.55));
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 10px solid rgba(255, 255, 255, 0.18);
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
+}
+.tick span {
+  font-size: 13px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 10px 18px rgba(0, 0, 0, 0.55);
 }
 
-/* Result knob (visible and on the same bar) */
-.result-knob{
-  position:absolute;
+/* ===== Main bar ===== */
+.bar.stake {
+  position: relative;
+  height: 44px;
+  border-radius: 999px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(14, 24, 34, 0.72);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.25),
+    inset 0 16px 26px rgba(0, 0, 0, 0.35),
+    0 18px 40px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+/* inner track */
+.track {
+  position: relative;
+  height: 100%;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 10px 18px rgba(0, 0, 0, 0.25);
+  display: flex;
+}
+
+/* split zones */
+.split {
+  height: 100%;
+}
+.split.red {
+  background-image:
+    linear-gradient(90deg, rgba(255, 64, 87, 0.92), rgba(255, 64, 87, 0.45)),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0 1px, rgba(0, 0, 0, 0) 1px 6px);
+  background-blend-mode: normal, multiply;
+}
+.split.green {
+  flex: 1;
+  background-image:
+    linear-gradient(90deg, rgba(0, 231, 1, 0.40), rgba(0, 231, 1, 0.92)),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0 1px, rgba(0, 0, 0, 0) 1px 8px);
+  background-blend-mode: normal, multiply;
+}
+
+/* subtle moving sheen */
+.track-shine {
+  position: absolute;
+  inset: -40% -60%;
+  background: linear-gradient(115deg, rgba(255,255,255,0) 38%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0) 62%);
+  transform: translateX(-40%);
+  animation: shine 3.6s linear infinite;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.55;
+}
+@keyframes shine {
+  0% { transform: translateX(-40%); }
+  100% { transform: translateX(40%); }
+}
+
+/* ===== Invisible slider (only for input) ===== */
+.bar-slider {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  opacity: 0;
+  z-index: 6;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.bar-slider::-webkit-slider-runnable-track { height: 44px; background: transparent; }
+.bar-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 54px; height: 36px; }
+.bar-slider::-moz-range-track { height: 44px; background: transparent; border: none; }
+.bar-slider::-moz-range-thumb { width: 54px; height: 36px; border: none; background: transparent; }
+
+/* ===== Visual RollOver thumb (Stake-ish blue handle) ===== */
+.roll-thumb {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 54px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(105, 190, 255, 0.95), rgba(58, 145, 255, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 14px 26px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  z-index: 7;
+  pointer-events: none;
+}
+.roll-thumb::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 9px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0));
+  pointer-events: none;
+}
+.thumb-icon {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+.thumb-icon::before,
+.thumb-icon::after {
+  content: "";
+  width: 4px;
+  height: 14px;
+  border-radius: 999px;
+  background: rgba(10, 26, 40, 0.85);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+  display: inline-block;
+}
+.thumb-icon::before { transform: translateX(-4px); }
+.thumb-icon::after { transform: translateX(4px); }
+
+/* RollOver vertical line */
+.roll-line {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  transform: translateX(-1px);
+  background: rgba(255, 255, 255, 0.32);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.28);
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* ===== Result puck (white circle) ===== */
+.result-puck {
+  position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
   width: 22px;
   height: 22px;
   border-radius: 999px;
-  background: rgba(255,255,255,.92);
-  border: 2px solid rgba(0,0,0,.55);
-  box-shadow: 0 10px 16px rgba(0,0,0,.45), 0 0 26px rgba(255,255,255,.18);
+  background: rgba(255, 255, 255, 0.92);
+  border: 2px solid rgba(0, 0, 0, 0.55);
+  box-shadow: 0 10px 16px rgba(0, 0, 0, 0.45), 0 0 26px rgba(255, 255, 255, 0.18);
   z-index: 4;
+  pointer-events: none;
 }
-.result-knob.win{ box-shadow: 0 10px 16px rgba(0,0,0,.45), 0 0 26px rgba(0,231,1,.28); }
-.result-knob.lose{ box-shadow: 0 10px 16px rgba(0,0,0,.45), 0 0 26px rgba(255,59,87,.28); }
-.result-knob::after{
+.result-puck.win { box-shadow: 0 10px 16px rgba(0,0,0,.45), 0 0 26px rgba(0,231,1,.28); }
+.result-puck.lose{ box-shadow: 0 10px 16px rgba(0,0,0,.45), 0 0 26px rgba(255,64,87,.28); }
+
+.result-puck::after {
   content: attr(data-v);
-  position:absolute;
-  top: -30px;
+  position: absolute;
+  top: -34px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 12px;
   font-weight: 900;
-  letter-spacing: .02em;
-  color: rgba(255,255,255,.92);
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.92);
   padding: 4px 8px;
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.08);
-  background: rgba(0,0,0,.32);
-  text-shadow: 0 8px 16px rgba(0,0,0,.55);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.32);
+  text-shadow: 0 8px 16px rgba(0, 0, 0, 0.55);
   white-space: nowrap;
 }
-.result-knob.bump{ animation: bump 220ms ease-out; }
-@keyframes bump{ 0%{ transform: translateX(-50%) translateY(0); } 50%{ transform: translateX(-50%) translateY(2px); } 100%{ transform: translateX(-50%) translateY(0); } }
 
-.bar.win{ box-shadow: inset 0 0 0 1px rgba(0,0,0,.25), inset 0 10px 18px rgba(0,0,0,.28), 0 0 28px rgba(0,231,1,.16); }
-.bar.lose{ box-shadow: inset 0 0 0 1px rgba(0,0,0,.25), inset 0 10px 18px rgba(0,0,0,.28), 0 0 28px rgba(255,59,87,.16); }
-.scale{ display:flex; justify-content:space-between; margin-top: 10px; color: rgba(255,255,255,.85); font-weight: 800; }
-.controls{ margin-top: 16px; }
-.slider{ width:100%; }
-.hint{ margin-top: 10px; }
-.last{ margin-top: 14px; color: rgba(255,255,255,.85); }
+.result-puck.bump { animation: bump 220ms ease-out; }
+@keyframes bump {
+  0% { transform: translate(-50%, -50%); }
+  50% { transform: translate(-50%, calc(-50% + 2px)); }
+  100% { transform: translate(-50%, -50%); }
+}
+
+/* Win/Lose glow around bar */
+.bar.win {
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.25),
+    inset 0 16px 26px rgba(0, 0, 0, 0.35),
+    0 0 34px rgba(0, 231, 1, 0.14),
+    0 18px 40px rgba(0, 0, 0, 0.35);
+}
+.bar.lose {
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.25),
+    inset 0 16px 26px rgba(0, 0, 0, 0.35),
+    0 0 34px rgba(255, 64, 87, 0.14),
+    0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+/* ===== Text areas ===== */
+.controls { margin-top: 16px; }
+.hint { margin-top: 10px; }
+.last { margin-top: 14px; color: rgba(255, 255, 255, 0.85); }
+
+/* small extra polish */
+.legend {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  opacity: 0.9;
+}
+.pill {
+  font-size: 12px;
+  font-weight: 900;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.22);
+}
+.pill.red { color: rgba(255, 160, 171, 0.95); }
+.pill.green { color: rgba(160, 255, 160, 0.95); }
+
+/* Reduce motion-friendly: if you already have a global flag/class, можешь завязать на неё */
+@media (prefers-reduced-motion: reduce) {
+  .track-shine { animation: none; opacity: 0.25; }
+}
 </style>

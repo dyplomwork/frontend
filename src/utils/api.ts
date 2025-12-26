@@ -1,7 +1,7 @@
 export class ApiError extends Error {
   status: number
   data: any
-  constructor(status: number, message: string, data?: any){
+  constructor(status: number, message: string, data?: any) {
     super(message)
     this.status = status
     this.data = data
@@ -10,112 +10,94 @@ export class ApiError extends Error {
 
 const isBrowser = () => typeof window !== 'undefined' && typeof localStorage !== 'undefined'
 
-/**
- * Token storage key. Keep this stable so you can swap backends without breaking existing sessions.
- */
 const LS_TOKEN = 'casino_sim_token_v1'
 
-/**
- * Backend wiring (microservices-friendly)
- *
- * - VITE_API_BASE_URL: default base URL for all requests. Example: https://api.example.com
- * - Optional per-service overrides:
- *   - VITE_API_AUTH_URL
- *   - VITE_API_BALANCE_URL
- *   - VITE_API_CASES_URL
- *   - VITE_API_PLINKO_URL
- *   - VITE_API_ROULETTE_URL
- *   - VITE_API_TICKETS_URL
- *   - VITE_API_ADMIN_URL
- *
- * Routing:
- * - If you call api('/api/auth/login', ...) → service='AUTH' → uses VITE_API_AUTH_URL if set
- * - Otherwise falls back to VITE_API_BASE_URL
- * - If none are set, request stays relative (same-origin) — удобно для dev/proxy.
- */
 function getEnv(key: string): string {
   return (import.meta as any)?.env?.[key] ?? ''
 }
 
 function joinUrl(base: string, path: string): string {
-  if(!base) return path
+  if (!base) return path
   const b = base.endsWith('/') ? base.slice(0, -1) : base
   const p = path.startsWith('/') ? path : `/${path}`
   return `${b}${p}`
 }
 
 function getToken(): string {
-  if(!isBrowser()) return ''
+  if (!isBrowser()) return ''
   return localStorage.getItem(LS_TOKEN) ?? ''
 }
 
 function resolveServiceBase(path: string): string {
-  // Expecting /api/<service>/...
-  const m = path.match(/^\/api\/([^\/]+)/)
-  const service = m?.[1]?.toUpperCase()
+  // твой текущий base
+  return getEnv('VITE_API_BASE_URL') || 'https://api.scxdrop.online'
+}
 
-  // 1) per-service override: VITE_API_<SERVICE>_URL
-  if(service) {
-    const perService = getEnv(`VITE_API_${service}_URL`)
-    if(perService) return perService
-  }
-
-  // 2) global base
-  return 'https://api.scxdrop.online'
+function looksLikeJsonString(s: string): boolean {
+  const t = s.trim()
+  return (t.startsWith('{') && t.endsWith('}')) || (t.startsWith('[') && t.endsWith(']'))
 }
 
 export type ApiCallOptions = RequestInit & {
-  /**
-   * Force a specific base URL for this call (useful for one-off calls or migrations).
-   * If provided, it overrides env-based routing.
-   */
   baseUrl?: string
-
-  /**
-   * If true, do NOT attach Authorization header even if token exists.
-   * Useful for login/register endpoints.
-   */
   noAuth?: boolean
+  /**
+   * Если true — принудительно считаем body JSON
+   * (даже если это строка)
+   */
+  json?: boolean
 }
 
 /**
  * Minimal fetch wrapper with:
- * - conditional JSON Content-Type
+ * - JSON body support (object -> JSON.stringify)
+ * - correct Content-Type for JSON strings
  * - Bearer token (if present)
- * - microservice base-url routing
  */
 export async function api<T>(path: string, opts: ApiCallOptions = {}): Promise<T> {
-  if(!isBrowser()) throw new ApiError(0, 'API is not available during SSR/prerender')
+  if (!isBrowser()) throw new ApiError(0, 'API is not available during SSR/prerender')
 
   const headers: Record<string, string> = { ...(opts.headers as any || {}) }
 
   const hasBody = Object.prototype.hasOwnProperty.call(opts, 'body') && opts.body != null
 
-  // ставим JSON Content-Type только если body есть и это НЕ FormData и НЕ строка
-  if (hasBody && !(opts.body instanceof FormData) && typeof opts.body !== 'string') {
-    headers['Content-Type'] = headers['Content-Type'] || 'application/json'
+  // ---- JSON handling (FIX) ----
+  let body = opts.body as any
+
+  const wantsJson =
+    !!opts.json ||
+    (hasBody && typeof body === 'string' && looksLikeJsonString(body)) ||
+    (hasBody && typeof body === 'object' && !(body instanceof FormData) && !(body instanceof Blob) && !(body instanceof ArrayBuffer))
+
+  // если body — объект и это JSON, сериализуем
+  if (hasBody && wantsJson && typeof body === 'object' && !(body instanceof FormData)) {
+    body = JSON.stringify(body)
   }
 
-  // auth header (если не отключено)
+  // если это JSON (строка или сериализованный объект) — ставим Content-Type
+  if (hasBody && wantsJson && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json;charset=UTF-8'
+  }
+  // ---- /JSON handling ----
+
   const token = getToken()
-  if(!opts.noAuth && token && !headers['Authorization']) {
+  if (!opts.noAuth && token && !headers['Authorization']) {
     headers['Authorization'] = `Bearer ${token}`
   }
 
   const baseUrl = opts.baseUrl ?? resolveServiceBase(path)
   const url = joinUrl(baseUrl, path)
 
-  const { baseUrl: _ignoredBaseUrl, noAuth: _ignoredNoAuth, ...fetchOpts } = opts
-  const res = await fetch(url, { ...fetchOpts, headers })
+  const { baseUrl: _ignoredBaseUrl, noAuth: _ignoredNoAuth, json: _ignoredJson, ...fetchOpts } = opts
+  const res = await fetch(url, { ...fetchOpts, body, headers })
 
-  // Try JSON first, fallback to text
   const raw = await res.text().catch(() => '')
   let data: any = {}
-  if(raw) {
+  if (raw) {
     try { data = JSON.parse(raw) } catch { data = raw }
   }
 
-  if(!res.ok) {
+  if (!res.ok) {
     const msg =
       (typeof data === 'object' && data && (data.message || data.error)) ||
       `HTTP ${res.status}`
