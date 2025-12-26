@@ -203,7 +203,7 @@ onMounted(async () => {
         <div class="row-between" style="gap:12px;">
           <div class="grid" style="gap:4px;">
             <h2 style="margin:0;">Admin Panel</h2>
-            <div class="muted">Users & Tickets (v1 / microservices)</div>
+            <div class="muted">Users & Tickets </div>
           </div>
 
           <div class="row" style="gap:10px; flex-wrap:wrap;">

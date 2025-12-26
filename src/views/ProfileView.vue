@@ -11,7 +11,10 @@ const amount2 = ref<number>(100)
 const message = ref('')
 
 const loading = computed(() => tickets.loading)
-const pending = computed(() => tickets.mine.filter(t => t.status === 'pending'))
+const mineSafe = computed(() => tickets.mine ?? [])
+const pending = computed(() => mineSafe.value.filter(t => t.status === 'pending'))
+
+
 
 async function loadMineSafe(){
   // грузим только когда есть вход
@@ -110,10 +113,10 @@ async function refreshAll(){
       </div>
 
       <div v-if="loading" class="muted" style="margin-top:12px;">Загрузка...</div>
-      <div v-else-if="tickets.mine.length === 0" class="muted" style="margin-top:12px;">Тикетов пока нет.</div>
+      <div v-else-if="mineSafe.length === 0" class="muted" style="margin-top:12px;">Тикетов пока нет.</div>
 
       <div v-else class="grid" style="gap:10px; margin-top:12px;">
-        <div v-for="t in tickets.mine" :key="String(t.id)" class="card2 row-between" style="gap:12px;">
+        <div v-for="t in mineSafe" :key="String(t.id)" class="card2 row-between" style="gap:12px;">
           <div class="grid" style="gap:4px;">
             <b>#{{ String(t.id).slice(0,6) }} • {{ t.type === 'deposit' ? 'Пополнение' : 'Вывод' }}</b>
             <span class="muted">{{ t.createdAt ? new Date(t.createdAt).toLocaleString() : '-' }}</span>
