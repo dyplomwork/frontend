@@ -90,7 +90,7 @@ export const useAuthStore = defineStore('auth', {
         return
       }
       try{
-        await api('/api/v1/accaunts/logout', { method: 'POST' })
+        await api('/api/v1/accounts/logout', { method: 'POST' })
       }catch{
         // ignore
       }
