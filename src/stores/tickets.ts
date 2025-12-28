@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { api } from '../utils/api'
 export type TicketType = 'DEPOSIT' | 'WITHDRAW'
-export type TicketStatus = 'pending' | 'approved' | 'rejected'
+export type TicketStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 
 export type Ticket = {
   id: string

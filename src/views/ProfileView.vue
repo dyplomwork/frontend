@@ -45,7 +45,7 @@ async function requestDeposit(){
   if(!auth.user){ message.value = 'Нужен вход'; return }
   if(amount.value <= 0){ message.value = 'Сумма должна быть больше 0'; return }
   try{
-    await tickets.create('deposit', amount.value)
+    await tickets.create('DEPOSIT', amount.value)
     message.value = 'Заявка на пополнение отправлена в админку.'
     await loadMineSafe()
   }catch{
@@ -58,7 +58,7 @@ async function requestWithdraw(){
   if(!auth.user){ message.value = 'Нужен вход'; return }
   if(amount2.value <= 0){ message.value = 'Сумма должна быть больше 0'; return }
   try{
-    await tickets.create('withdraw', amount2.value)
+    await tickets.create('WITHDRAW', amount2.value)
     message.value = 'Заявка на вывод отправлена в админку.'
     await loadMineSafe()
   }catch{
