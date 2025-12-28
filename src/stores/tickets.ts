@@ -29,7 +29,7 @@ export const useTicketsStore = defineStore('tickets', {
   actions: {
     async create(type: TicketType, amount: number){
       if(!isBrowser()) return
-      await api('/api/v1/ticket/me', { method:'POST', body: JSON.stringify({ type, amount }) })
+      await api('/api/v1/tickets/me', { method:'POST', body: JSON.stringify({ type, amount }) })
       await this.fetchMine()
     },
     async fetchMine(){
