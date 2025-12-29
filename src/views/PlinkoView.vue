@@ -41,9 +41,12 @@ const baseTables: Record<string, number[]> = {
 }
 
 const table = computed(() => {
-  const key = `${difficulty.value}:${rows.value}`
-  const t = baseTables[key]
-  // safety: if table isn't correct length, build a fallback
+  const t = api<number[]>('/api/v1/plinko/game/multipliers',{
+    method: 'GET',
+    body: JSON.stringify( {
+      difficulty: difficulty.value,
+      rows: rows.value
+    })})
   if (!t || t.length !== rows.value + 1) {
     const n = rows.value + 1
 
