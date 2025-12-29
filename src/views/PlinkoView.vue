@@ -41,7 +41,7 @@ const baseTables: Record<string, number[]> = {
 }
 
 const table = computed(() => {
-  const t = api<number[]>('/api/v1/plinko/game/multipliers',{
+  const t = api<number[]>('/api/v1/games/plinko/game/multipliers',{
     method: 'GET',
     body: JSON.stringify( {
       difficulty: difficulty.value,
