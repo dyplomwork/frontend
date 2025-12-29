@@ -4,11 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="c7c88f2a-ad0b-424b-ac99-30439a06c014" name="Changes" comment="fix(View): fix ProfileView">
+    <list default="true" id="c7c88f2a-ad0b-424b-ac99-30439a06c014" name="Changes" comment="feat(admin): fix route + Profile Fix">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/App.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/router/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/router/index.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/views/AdminView.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/AdminView.vue" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/views/PlinkoView.vue" beforeDir="false" afterPath="$PROJECT_DIR$/src/views/PlinkoView.vue" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -30,17 +29,17 @@
     &quot;accountId&quot;: &quot;ef375b0f-a973-42fa-9b9d-fbda4a0f95b3&quot;
   }
 }</component>
-  <component name="KubernetesApiPersistence"><![CDATA[{}]]></component>
-  <component name="KubernetesApiProvider"><![CDATA[{
-  "configuredContexts": [
+  <component name="KubernetesApiPersistence">{}</component>
+  <component name="KubernetesApiProvider">{
+  &quot;configuredContexts&quot;: [
     {
-      "name": "default@scxdrop",
-      "kubeConfigUrl": "file://C:/Users/going/.kube/config",
-      "currentNamespace": "frontend"
+      &quot;name&quot;: &quot;default@scxdrop&quot;,
+      &quot;kubeConfigUrl&quot;: &quot;file://C:/Users/going/.kube/config&quot;,
+      &quot;currentNamespace&quot;: &quot;frontend&quot;
     }
   ],
-  "isMigrated": true
-}]]></component>
+  &quot;isMigrated&quot;: true
+}</component>
   <component name="ProjectColorInfo">{
   &quot;customColor&quot;: &quot;&quot;,
   &quot;associatedIndex&quot;: 3
@@ -53,30 +52,30 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "master",
-    "ignore_missing_gitignore": "true",
-    "junie.onboarding.icon.badge.shown": "true",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "prettierjs.PrettierConfiguration.Package": "G:\\SC.CASINO\\site\\node_modules\\prettier",
-    "settings.editor.selected.configurable": "preferences.pluginManager",
-    "ts.external.directory.path": "G:\\SC.CASINO\\site\\node_modules\\typescript\\lib",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;ignore_missing_gitignore&quot;: &quot;true&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;prettierjs.PrettierConfiguration.Package&quot;: &quot;G:\\SC.CASINO\\site\\node_modules\\prettier&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;G:\\SC.CASINO\\site\\node_modules\\typescript\\lib&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   },
-  "keyToStringList": {
-    "DatabaseDriversLRU": [
-      "postgresql"
+  &quot;keyToStringList&quot;: {
+    &quot;DatabaseDriversLRU&quot;: [
+      &quot;postgresql&quot;
     ]
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="G:\SC.CASINO\site\src\router" />
@@ -106,7 +105,9 @@
       <workItem from="1766617885663" duration="174000" />
       <workItem from="1766618879046" duration="3852000" />
       <workItem from="1766753226147" duration="602000" />
-      <workItem from="1766754573743" duration="19102000" />
+      <workItem from="1766754573743" duration="22919000" />
+      <workItem from="1766826751710" duration="2417000" />
+      <workItem from="1767044543024" duration="5804000" />
     </task>
     <task id="LOCAL-00001" summary="Bug Redact">
       <option name="closed" value="true" />
@@ -268,7 +269,31 @@
       <option name="project" value="LOCAL" />
       <updated>1766787376225</updated>
     </task>
-    <option name="localTasksCounter" value="21" />
+    <task id="LOCAL-00021" summary="feat(admin): rebuild panel and add sidebar music toggle">
+      <option name="closed" value="true" />
+      <created>1766789441400</created>
+      <option name="number" value="00021" />
+      <option name="presentableId" value="LOCAL-00021" />
+      <option name="project" value="LOCAL" />
+      <updated>1766789441400</updated>
+    </task>
+    <task id="LOCAL-00022" summary="feat(admin): fix route">
+      <option name="closed" value="true" />
+      <created>1766789614739</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1766789614739</updated>
+    </task>
+    <task id="LOCAL-00023" summary="feat(admin): fix route + Profile Fix">
+      <option name="closed" value="true" />
+      <created>1766790150051</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1766790150051</updated>
+    </task>
+    <option name="localTasksCounter" value="24" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -312,6 +337,9 @@
     <MESSAGE value="fix(api): fix = application/json" />
     <MESSAGE value="fix(auth): sync user balance via GET /users/me/balance" />
     <MESSAGE value="fix(View): fix ProfileView" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix(View): fix ProfileView" />
+    <MESSAGE value="feat(admin): rebuild panel and add sidebar music toggle" />
+    <MESSAGE value="feat(admin): fix route" />
+    <MESSAGE value="feat(admin): fix route + Profile Fix" />
+    <option name="LAST_COMMIT_MESSAGE" value="feat(admin): fix route + Profile Fix" />
   </component>
 </project>

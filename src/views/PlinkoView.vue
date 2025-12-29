@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
 import { useAuthStore } from '../stores/auth'
@@ -10,71 +10,88 @@ const auth = useAuthStore()
 
 const amount = ref(0)
 const ballCount = ref(1)
-const difficulty = ref<'low'|'medium'|'high'>('medium')
+const difficulty = ref<'LOW'|'MEDIUM'|'HIGH'>('MEDIUM')
 const rows = ref(16)
 const spinning = ref(false)
 const message = ref('')
 
-const HOUSE_EDGE = 0.01
-
 const rowsList = [8, 12, 16]
 
-/**
- * Multipliers table per rows. Must be exactly rows+1 items.
- * Values are intentionally "Stake-like" (symmetrical).
- */
+/** fallback multipliers */
 const baseTables: Record<string, number[]> = {
-  // rows = 8 -> 9 bins
   'low:8':    [3, 1.5, 1.1, 1.0, 0.7, 1.0, 1.1, 1.5, 3],
   'medium:8': [8, 2.0, 1.3, 0.7, 0.3, 0.7, 1.3, 2.0, 8],
   'high:8':   [29, 4.0, 1.5, 0.5, 0.2, 0.5, 1.5, 4.0, 29],
 
-  // rows = 12 -> 13 bins
   'low:12':    [5, 2.0, 1.6, 1.3, 1.1, 1.0, 0.8, 1.0, 1.1, 1.3, 1.6, 2.0, 5],
   'medium:12': [29, 8.0, 3.0, 1.6, 1.1, 0.8, 0.5, 0.8, 1.1, 1.6, 3.0, 8.0, 29],
   'high:12':   [120, 26, 8.0, 2.0, 1.0, 0.6, 0.2, 0.6, 1.0, 2.0, 8.0, 26, 120],
 
-  // rows = 16 -> 17 bins (matches screenshot-ish)
   'low:16':    [10, 3, 2, 1.6, 1.3, 1.1, 1.0, 0.8, 0.7, 0.8, 1.0, 1.1, 1.3, 1.6, 2, 3, 10],
   'medium:16': [110, 41, 10, 5, 3, 1.5, 1, 0.5, 0.3, 0.5, 1, 1.5, 3, 5, 10, 41, 110],
   'high:16':   [1000, 110, 41, 10, 5, 2, 1, 0.5, 0.2, 0.5, 1, 2, 5, 10, 41, 110, 1000],
 }
 
-const table = computed(() => {
-  const t = api<number[]>('/api/v1/games/plinko/game/multipliers',{
-    method: 'GET',
-    body: JSON.stringify( {
-      difficulty: difficulty.value,
-      rows: rows.value
-    })})
-  if (!t || t.length !== rows.value + 1) {
-    const n = rows.value + 1
+const diffLower = computed(() => difficulty.value.toLowerCase() as 'low'|'medium'|'high')
 
-  const res =  api<{
-    ok: boolean
-    balls: { rights: boolean[]; landing: number; multiplier: number; payout: number }[]
-    totalBet: number
-    totalReturn: number
-    net: number
-    balance: number
-  }>('/api/plinko/drop', {
-    method: 'POST',
-    body: JSON.stringify({
-      amount: bet.value,
-      ballCount: n,
-      rows: rows.value,
-      difficulty: difficulty.value,
+function fallbackTable() {
+  const key = `${diffLower.value}:${rows.value}`
+  const t = baseTables[key]
+  if (t && t.length === rows.value + 1) return t
+  const n = rows.value + 1
+  return Array.from({ length: n }, (_, i) => (i === 0 || i === n - 1 ? 10 : 1))
+}
+
+/** multipliers: async load -> ref */
+const multipliers = ref<number[]>(fallbackTable())
+const loadingMult = ref(false)
+
+async function loadMultipliers() {
+  loadingMult.value = true
+  try {
+    const url =
+      `/api/v1/games/plinko/game/multipliers` +
+      `?rows=${encodeURIComponent(rows.value)}` +
+      `&difficulty=${encodeURIComponent(difficulty.value)}` +
+      `&_=${Date.now()}`
+
+    const t = await api<number[]>(url, {
+      method: 'GET',
+      cache: 'no-store' as any,
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+      } as any,
     })
-  })
-    return Array.from({ length: n }, (_, i) => (i === 0 || i === n - 1 ? 10 : 1))
+
+    multipliers.value =
+      (Array.isArray(t) && t.length === rows.value + 1)
+        ? [...t]
+        : [...fallbackTable()]
+  } catch (e) {
+    console.error('loadMultipliers failed:', e)
+    multipliers.value = [...fallbackTable()]
+  } finally {
+    loadingMult.value = false
   }
-  return t
-})
+}
+
+
+onMounted(() => { void loadMultipliers() })
+watch([rows, difficulty], () => { void loadMultipliers() }, { immediate: true })
+
+
+const table = computed(() =>
+  (Array.isArray(multipliers.value) && multipliers.value.length === rows.value + 1)
+    ? multipliers.value
+    : fallbackTable()
+)
 
 const bet = computed(() => Math.max(0, Number(amount.value) || 0))
-const totalBet = computed(() => bet.value * Math.max(1, Math.min(50, Number(ballCount.value) || 1)))
+const ballsN = computed(() => Math.max(1, Math.min(50, Number(ballCount.value) || 1)))
+const totalBet = computed(() => bet.value * ballsN.value)
 
-// Responsive board sizing (pegs + bins are tied to the same geometry)
+/** stage sizing */
 const stageEl = ref<HTMLElement | null>(null)
 const stageW = ref(620)
 const stageH = ref(560)
@@ -89,7 +106,6 @@ onMounted(() => {
     stageH.value = Math.max(420, el.clientHeight)
   })
   ro.observe(stageEl.value)
-  // initial
   stageW.value = Math.max(360, stageEl.value.clientWidth)
   stageH.value = Math.max(420, stageEl.value.clientHeight)
 })
@@ -105,19 +121,15 @@ function clamp(min: number, v: number, max: number){
 const PAD_X = computed(() => clamp(26, stageW.value * 0.06, 54))
 const W = computed(() => stageW.value)
 
-// Gap between adjacent pegs in the bottom row (ties all x positions)
 const pegGapX = computed(() => {
   const denom = Math.max(1, rows.value - 1)
   const raw = (W.value - PAD_X.value * 2) / denom
   return clamp(20, raw, 36)
 })
 const pegGapY = computed(() => clamp(20, pegGapX.value * 0.95, 34))
-// keep bins from "sticking" together on narrow widths
 const BIN_SIZE = computed(() => clamp(34, pegGapX.value * 1.45, 58))
 
 const stageHeight = computed(() => {
-  // Height scales with rows so the board doesn't look squashed on bigger setups.
-  // Pegs start at y=60, bins are placed at 60 + rows*pegGapY + 44
   const h = 3 + rows.value * pegGapY.value + 44 + BIN_SIZE.value + 40
   return clamp(460, h, 860)
 })
@@ -130,6 +142,7 @@ type Ball = {
   landing: number | null
   msg: string
 }
+
 const balls = ref<Ball[]>([])
 const safeBalls = computed(() => (balls.value || []).filter(Boolean) as Ball[])
 const hitKeys = ref<Set<string>>(new Set())
@@ -137,10 +150,7 @@ const hitKeys = ref<Set<string>>(new Set())
 function pegPos(r: number, c: number) {
   const cols = r + 1
   const startX = W.value / 2 - (cols - 1) * pegGapX.value / 2
-  return {
-    x: startX + c * pegGapX.value,
-    y: 60 + r * pegGapY.value
-  }
+  return { x: startX + c * pegGapX.value, y: 60 + r * pegGapY.value }
 }
 
 const pegs = computed(() => {
@@ -166,13 +176,12 @@ const bins = computed(() => {
   }))
 })
 
-// Visual width of the multiplier row so squares sit exactly under the pyramid
 const binsWidth = computed(() => {
   const n = rows.value + 1
   return (n - 1) * pegGapX.value + BIN_SIZE.value
 })
 
-// bin glow when a ball lands
+/** glow */
 const glowBin = ref<number | null>(null)
 let glowTimer: number | null = null
 function setGlow(i: number){
@@ -189,13 +198,43 @@ function sleep(ms: number) { return new Promise<void>((r) => setTimeout(r, ms)) 
 async function flashPeg(r: number, c: number) {
   const key = `${r}-${c}`
   hitKeys.value.add(key)
-  // short flash so multiple balls can overlap
   await sleep(90)
   hitKeys.value.delete(key)
 }
 
-async function dropBall(ball: Ball) {
-  // Each ball runs independently (async)
+/** backend response */
+type ApiTrace = { win: number; mask: number }
+type ApiPlay = { total: number; traces: ApiTrace[] }
+
+type BallResult = {
+  rights: boolean[]      // rows-length
+  landing: number        // 0..rows
+  payout: number
+  multiplier: number
+}
+
+function popcount32(x: number) {
+  x >>>= 0
+  let c = 0
+  while (x) { x &= x - 1; c++ }
+  return c
+}
+
+/**
+ * mask -> rights
+ * бит r = решение на уровне r: 1 = вправо, 0 = влево
+ * landing = кол-во единиц (сколько раз пошёл вправо)
+ */
+function traceToBallResult(trace: ApiTrace): BallResult {
+  const mask = (Number(trace.mask) >>> 0)
+  const rights = Array.from({ length: rows.value }, (_, r) => ((mask >>> r) & 1) === 1)
+  const landing = popcount32(mask)
+  const payout = Number(trace.win) || 0
+  const multiplier = table.value[landing] ?? 0
+  return { rights, landing, payout, multiplier }
+}
+
+async function dropBall(ball: Ball, result: BallResult) {
   ball.visible = true
   ball.landing = null
   ball.msg = ''
@@ -203,22 +242,17 @@ async function dropBall(ball: Ball) {
   ball.x = W.value / 2
   ball.y = 42
 
-  let idx = 0 // bin index: 0..rows
+  let idx = 0
   for (let r = 0; r < rows.value; r++) {
-    // hit peg (r, idx) - triangular coords
     const hit = pegPos(r, idx)
     ball.x = hit.x
     ball.y = hit.y - 10
-    // flash peg without blocking the main loop too long
-    void flashPeg(r, idx)
-    // tick sound like Stake
-    sfx('plinko_tick')
 
+    void flashPeg(r, idx)
+    sfx('plinko_tick')
     await sleep(110)
 
-    // choose direction
-    const goRight = Math.random() < 0.5
-    if (goRight) idx += 1
+    if (result.rights[r]) idx += 1
 
     if (r < rows.value - 1) {
       const next = pegPos(r + 1, idx)
@@ -228,15 +262,17 @@ async function dropBall(ball: Ball) {
     }
   }
 
+  // idx = фактический слот
   const b = bins.value[idx]
   ball.x = b.x
   ball.y = b.y - 18
   await sleep(160)
 
-  ball.landing = result.landing
-  setGlow(result.landing)
-  const mult = result.multiplier
-  const win = Math.round(result.payout * 100) / 100
+  ball.landing = idx
+  setGlow(idx)
+
+  const mult = table.value[idx] ?? result.multiplier ?? 0
+  const win = Math.round((Number(result.payout) || 0) * 100) / 100
 
   if (win > 0) {
     sfx('win')
@@ -250,11 +286,21 @@ async function dropBall(ball: Ball) {
   ball.visible = false
 }
 
+async function safeFetchBalance() {
+  const fn = (auth as any)?.fetchBalance
+  if (typeof fn !== 'function') return
+  try { await fn.call(auth) } catch {}
+}
+
 async function start() {
   if (spinning.value) return
   if (!auth.user) { message.value = 'Нужен вход'; return }
+
+  // баланс перед стартом
+  await safeFetchBalance()
+
   if (bet.value <= 0) { message.value = 'Укажи Amount'; return }
-  if (auth.user.balance < totalBet.value) { message.value = 'Недостаточно баланса'; return }
+  if ((auth.user?.balance ?? 0) < totalBet.value) { message.value = 'Недостаточно баланса'; return }
 
   spinning.value = true
   message.value = ''
@@ -263,7 +309,33 @@ async function start() {
 
   sfx('plinko_drop')
 
-  const n = Math.max(1, Math.min(50, Number(ballCount.value) || 1))
+  const n = ballsN.value
+
+  let res: ApiPlay
+  try {
+    res = await api<ApiPlay>('/api/v1/games/plinko/game/play', {
+      method: 'POST',
+      body: JSON.stringify({
+        bet: bet.value,
+        balls: n,
+        rows: rows.value,
+        difficulty: difficulty.value,
+      }),
+    })
+  } catch {
+    message.value = 'Ошибка игры (play)'
+    spinning.value = false
+    return
+  }
+
+  const traces = Array.isArray(res?.traces) ? res.traces : []
+  const results: BallResult[] = Array.from({ length: n }, (_, i) => {
+    const t = traces[i]
+    return t
+      ? traceToBallResult(t)
+      : { rights: Array(rows.value).fill(false), landing: 0, payout: 0, multiplier: table.value[0] ?? 0 }
+  })
+
   const created: Ball[] = Array.from({ length: n }, (_, i) => ({
     id: Date.now() + i,
     x: W.value / 2,
@@ -274,37 +346,36 @@ async function start() {
   }))
   balls.value = created
 
-  // Start all balls asynchronously (slight stagger feels "casino")
   const tasks = created.map(async (b, i) => {
     await sleep(i * 80)
-    await dropBall(b, res.balls[i])
+    await dropBall(b, results[i])
   })
   await Promise.allSettled(tasks)
 
-  if (auth.user) {
-    auth.user = { ...auth.user, balance: res.balance }
-    localStorage.setItem('casino_sim_user_v1', JSON.stringify(auth.user))
-  }
-  const net = Math.round(res.net * 100) / 100
-  if (net > 0) message.value = `Профит +${net}`
-  else if (net < 0) message.value = `Минус ${net}`
+  // баланс после игры
+  await safeFetchBalance()
+
+  const totalWin = Number(res?.total) || 0
+  const net = Math.round((totalWin - totalBet.value) * 100) / 100
+  if (net > 0) message.value = `Профит +${net.toFixed(2)}`
+  else if (net < 0) message.value = `Минус ${net.toFixed(2)}`
+  else message.value = 'В ноль'
 
   spinning.value = false
 }
 
 function binGradient(mult: number) {
-  // Map multiplier to color: low=yellow, high=red
   const min = 0.2
   const max = 110
   const t = Math.max(0, Math.min(1, (mult - min) / (max - min)))
-
-  // Hue 45 (yellow) -> 0 (red)
   const hue = 45 * (1 - t)
   const c1 = `hsl(${hue} 85% 55% / .9)`
   const c2 = `hsl(${Math.max(0, hue - 8)} 85% 38% / .9)`
   return `linear-gradient(180deg, ${c1}, ${c2})`
 }
 </script>
+
+
 
 <template>
   <GameLayout>
@@ -321,9 +392,9 @@ function binGradient(mult: number) {
         <div class="field">
           <div class="label">Difficulty</div>
           <select class="input" v-model="difficulty" @change="sfx('click')">
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
           </select>
         </div>
 
