@@ -1,462 +1,400 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
-import GamePanel from '../components/GamePanel.vue'
-import { useAuthStore } from '../stores/auth'
 import { api } from '../utils/api'
-import { sfx } from '../utils/sfx'
 
-const auth = useAuthStore()
+type Role = 'user' | 'admin'
 
-const amount = ref(0)
-const ballCount = ref(1)
-const difficulty = ref<'low' | 'medium' | 'high'>('medium')
-const rows = ref(16)
-const spinning = ref(false)
-const message = ref('')
-
-const rowsList = [8, 12, 16]
-
-/**
- * Fallback multipliers (если API недоступен)
- */
-const baseTables: Record<string, number[]> = {
-  'low:8': [3, 1.5, 1.1, 1.0, 0.7, 1.0, 1.1, 1.5, 3],
-  'medium:8': [8, 2.0, 1.3, 0.7, 0.3, 0.7, 1.3, 2.0, 8],
-  'high:8': [29, 4.0, 1.5, 0.5, 0.2, 0.5, 1.5, 4.0, 29],
-
-  'low:12': [5, 2.0, 1.6, 1.3, 1.1, 1.0, 0.8, 1.0, 1.1, 1.3, 1.6, 2.0, 5],
-  'medium:12': [29, 8.0, 3.0, 1.6, 1.1, 0.8, 0.5, 0.8, 1.1, 1.6, 3.0, 8.0, 29],
-  'high:12': [120, 26, 8.0, 2.0, 1.0, 0.6, 0.2, 0.6, 1.0, 2.0, 8.0, 26, 120],
-
-  'low:16': [10, 3, 2, 1.6, 1.3, 1.1, 1.0, 0.8, 0.7, 0.8, 1.0, 1.1, 1.3, 1.6, 2, 3, 10],
-  'medium:16': [110, 41, 10, 5, 3, 1.5, 1, 0.5, 0.3, 0.5, 1, 1.5, 3, 5, 10, 41, 110],
-  'high:16': [1000, 110, 41, 10, 5, 2, 1, 0.5, 0.2, 0.5, 1, 2, 5, 10, 41, 110, 1000],
+type AdminUser = {
+  id: string
+  nickname: string
+  discord: string
+  role: Role
+  balance: number
 }
 
-function fallbackTable() {
-  const key = `${difficulty.value}:${rows.value}`
-  const t = baseTables[key]
-  if (t && t.length === rows.value + 1) return t
-  const n = rows.value + 1
-  return Array.from({ length: n }, (_, i) => (i === 0 || i === n - 1 ? 10 : 1))
+type TicketStatus = 'pending' | 'approved' | 'rejected'
+type TicketType = 'deposit' | 'withdraw'
+
+type Ticket = {
+  id: string
+  userId: string
+  type: TicketType
+  amount: number
+  status: TicketStatus
+  createdAt: string
+  // optional fields from backend (safe)
+  nickname?: string
+  discord?: string
 }
 
-/**
- * backend:
- * GET /game/multipliers with JSON body: { rows, difficulty }
- * (оставляем именно так, чтобы совпасть с твоим беком)
- */
-const multipliers = ref<number[]>(fallbackTable())
-const loadingMult = ref(false)
+const tab = ref<'users' | 'tickets'>('users')
 
-async function loadMultipliers() {
-  loadingMult.value = true
+const users = ref<AdminUser[]>([])
+const tickets = ref<Ticket[]>([])
+
+const loadingUsers = ref(false)
+const loadingTickets = ref(false)
+const msg = ref('')
+const err = ref('')
+
+const qUsers = ref('')
+const qTickets = ref('')
+
+const pendingCount = computed(() => tickets.value.filter(t => t.status === 'pending').length)
+
+const filteredUsers = computed(() => {
+  const q = qUsers.value.trim().toLowerCase()
+  if (!q) return users.value
+  return users.value.filter(u =>
+    u.nickname.toLowerCase().includes(q) ||
+    u.discord.toLowerCase().includes(q) ||
+    String(u.id).toLowerCase().includes(q) ||
+    u.role.toLowerCase().includes(q)
+  )
+})
+
+const filteredTickets = computed(() => {
+  const q = qTickets.value.trim().toLowerCase()
+  if (!q) return tickets.value
+  return tickets.value.filter(t =>
+    String(t.id).toLowerCase().includes(q) ||
+    String(t.userId).toLowerCase().includes(q) ||
+    (t.nickname || '').toLowerCase().includes(q) ||
+    (t.discord || '').toLowerCase().includes(q) ||
+    t.type.toLowerCase().includes(q) ||
+    t.status.toLowerCase().includes(q)
+  )
+})
+
+const editingId = ref<string | null>(null)
+const editNickname = ref('')
+const editRole = ref<Role>('user')
+const editBalance = ref<number>(0)
+
+function startEdit(u: AdminUser) {
+  editingId.value = u.id
+  editNickname.value = u.nickname
+  editRole.value = u.role
+  editBalance.value = Number(u.balance) || 0
+  msg.value = ''
+  err.value = ''
+}
+
+function cancelEdit() {
+  editingId.value = null
+}
+
+async function loadUsers() {
+  err.value = ''
+  msg.value = ''
+  loadingUsers.value = true
   try {
-    const t = await api<number[]>('/api/v1/games/plinko/game/multipliers', {
-      method: 'GET',
-      body: JSON.stringify({ rows: rows.value, difficulty: difficulty.value }),
-    })
-    multipliers.value = t && t.length === rows.value + 1 ? t : fallbackTable()
-  } catch {
-    multipliers.value = fallbackTable()
+    const res = await api<{ ok: boolean; users: AdminUser[] }>('/api/v1/admin/users', { method: 'GET' })
+    users.value = Array.isArray(res.users) ? res.users : []
+  } catch (e: any) {
+    err.value = e?.message || 'Не удалось загрузить пользователей'
   } finally {
-    loadingMult.value = false
+    loadingUsers.value = false
   }
 }
 
-onMounted(() => {
-  void loadMultipliers()
-})
-
-watch([rows, difficulty], () => {
-  void loadMultipliers()
-})
-
-const table = computed(() => (multipliers.value?.length === rows.value + 1 ? multipliers.value : fallbackTable()))
-
-const bet = computed(() => Math.max(0, Number(amount.value) || 0))
-const ballsN = computed(() => Math.max(1, Math.min(50, Number(ballCount.value) || 1)))
-const totalBet = computed(() => bet.value * ballsN.value)
-
-// Responsive board sizing
-const stageEl = ref<HTMLElement | null>(null)
-const stageW = ref(620)
-const stageH = ref(560)
-
-let ro: ResizeObserver | null = null
-onMounted(() => {
-  if (!stageEl.value) return
-  ro = new ResizeObserver(() => {
-    const el = stageEl.value
-    if (!el) return
-    stageW.value = Math.max(360, el.clientWidth)
-    stageH.value = Math.max(420, el.clientHeight)
-  })
-  ro.observe(stageEl.value)
-  stageW.value = Math.max(360, stageEl.value.clientWidth)
-  stageH.value = Math.max(420, stageEl.value.clientHeight)
-})
-onBeforeUnmount(() => {
-  if (ro && stageEl.value) ro.unobserve(stageEl.value)
-  ro = null
-})
-
-function clamp(min: number, v: number, max: number) {
-  return Math.max(min, Math.min(max, v))
-}
-
-const PAD_X = computed(() => clamp(26, stageW.value * 0.06, 54))
-const W = computed(() => stageW.value)
-
-const pegGapX = computed(() => {
-  const denom = Math.max(1, rows.value - 1)
-  const raw = (W.value - PAD_X.value * 2) / denom
-  return clamp(20, raw, 36)
-})
-const pegGapY = computed(() => clamp(20, pegGapX.value * 0.95, 34))
-const BIN_SIZE = computed(() => clamp(34, pegGapX.value * 1.45, 58))
-
-const stageHeight = computed(() => {
-  const h = 3 + rows.value * pegGapY.value + 44 + BIN_SIZE.value + 40
-  return clamp(460, h, 860)
-})
-
-type Ball = {
-  id: number
-  x: number
-  y: number
-  visible: boolean
-  landing: number | null
-  msg: string
-}
-
-const balls = ref<Ball[]>([])
-const safeBalls = computed(() => (balls.value || []).filter(Boolean) as Ball[])
-const hitKeys = ref<Set<string>>(new Set())
-
-function pegPos(r: number, c: number) {
-  const cols = r + 1
-  const startX = W.value / 2 - (cols - 1) * pegGapX.value / 2
-  return {
-    x: startX + c * pegGapX.value,
-    y: 60 + r * pegGapY.value,
-  }
-}
-
-const pegs = computed(() => {
-  const out: { r: number; c: number; x: number; y: number; key: string }[] = []
-  for (let r = 0; r < rows.value; r++) {
-    for (let c = 0; c <= r; c++) {
-      const p = pegPos(r, c)
-      out.push({ r, c, x: p.x, y: p.y, key: `${r}-${c}` })
-    }
-  }
-  return out
-})
-
-const bins = computed(() => {
-  const n = rows.value + 1
-  const y = 60 + rows.value * pegGapY.value + 44
-  const startX = W.value / 2 - (n - 1) * pegGapX.value / 2
-  return Array.from({ length: n }, (_, i) => ({
-    i,
-    mult: table.value[i] ?? 0,
-    x: startX + i * pegGapX.value,
-    y,
-  }))
-})
-
-const binsWidth = computed(() => {
-  const n = rows.value + 1
-  return (n - 1) * pegGapX.value + BIN_SIZE.value
-})
-
-// bin glow
-const glowBin = ref<number | null>(null)
-let glowTimer: number | null = null
-function setGlow(i: number) {
-  glowBin.value = i
-  if (glowTimer !== null) window.clearTimeout(glowTimer)
-  glowTimer = window.setTimeout(() => {
-    glowBin.value = null
-    glowTimer = null
-  }, 420)
-}
-
-function sleep(ms: number) {
-  return new Promise<void>((r) => setTimeout(r, ms))
-}
-
-async function flashPeg(r: number, c: number) {
-  const key = `${r}-${c}`
-  hitKeys.value.add(key)
-  await sleep(90)
-  hitKeys.value.delete(key)
-}
-
-/**
- * backend response:
- * GameResponse { total: BigDecimal, traces: [{ win: BigDecimal, mask: Int }] }
- */
-type ApiTrace = { win: string | number; mask: number }
-type ApiGameResponse = { total: string | number; traces: ApiTrace[] }
-
-type BallResult = {
-  rights: boolean[] // длина rows
-  landing: number // 0..rows
-  multiplier: number
-  payout: number
-}
-
-function popcount32(x: number) {
-  x >>>= 0
-  let c = 0
-  while (x) {
-    x &= x - 1
-    c++
-  }
-  return c
-}
-
-function traceToBallResult(trace: ApiTrace): BallResult {
-  const mask = Number(trace.mask) >>> 0
-  const rights = Array.from({ length: rows.value }, (_, r) => ((mask >>> r) & 1) === 1)
-  const landing = popcount32(mask)
-  const payout = Number(trace.win) || 0
-  const multiplier = table.value[landing] ?? 0
-  return { rights, landing, multiplier, payout }
-}
-
-async function dropBall(ball: Ball, result: BallResult) {
-  ball.visible = true
-  ball.landing = null
-  ball.msg = ''
-
-  ball.x = W.value / 2
-  ball.y = 42
-
-  let idx = 0
-  for (let r = 0; r < rows.value; r++) {
-    const hit = pegPos(r, idx)
-    ball.x = hit.x
-    ball.y = hit.y - 10
-
-    void flashPeg(r, idx)
-    sfx('plinko_tick')
-    await sleep(110)
-
-    const goRight = !!result.rights[r]
-    if (goRight) idx += 1
-
-    if (r < rows.value - 1) {
-      const next = pegPos(r + 1, idx)
-      ball.x = next.x
-      ball.y = next.y - 10
-      await sleep(130)
-    }
-  }
-
-  const b = bins.value[idx]
-  ball.x = b.x
-  ball.y = b.y - 18
-  await sleep(160)
-
-  ball.landing = result.landing
-  setGlow(result.landing)
-
-  const mult = result.multiplier
-  const win = Math.round(result.payout * 100) / 100
-
-  if (win > 0) {
-    sfx('win')
-    ball.msg = `x${mult} → +${win.toFixed(2)}`
-  } else {
-    sfx('lose')
-    ball.msg = `x${mult} → 0`
-  }
-
-  await sleep(260)
-  ball.visible = false
-}
-
-async function safeFetchBalance() {
-  // если в сторе нет метода — просто пропускаем
-  const fn = (auth as any)?.fetchBalance
-  if (typeof fn !== 'function') return
+async function loadTickets() {
+  err.value = ''
+  msg.value = ''
+  loadingTickets.value = true
   try {
-    await fn.call(auth)
-  } catch (e) {
-    console.warn('fetchBalance failed', e)
+    const res = await api<{ ok: boolean; tickets: Ticket[] }>('/api/v1/admin/tickets', { method: 'GET' })
+    tickets.value = Array.isArray(res.tickets) ? res.tickets : []
+  } catch (e: any) {
+    err.value = e?.message || 'Не удалось загрузить тикеты'
+  } finally {
+    loadingTickets.value = false
   }
 }
 
-async function start() {
-  if (spinning.value) return
-  if (!auth.user) {
-    message.value = 'Нужен вход'
+async function refreshAll() {
+  await Promise.all([loadUsers(), loadTickets()])
+}
+
+async function saveUser(id: string) {
+  msg.value = ''
+  err.value = ''
+
+  const nickname = editNickname.value.trim()
+  if (!nickname) {
+    err.value = 'Никнейм не может быть пустым'
+    return
+  }
+  const balance = Number(editBalance.value)
+  if (!Number.isFinite(balance)) {
+    err.value = 'Баланс должен быть числом'
     return
   }
 
-  // всегда подтягиваем актуальный баланс перед стартом (accounts — источник истины)
-  await safeFetchBalance()
-
-  if (bet.value <= 0) {
-    message.value = 'Укажи Amount'
-    return
-  }
-  if ((auth.user?.balance ?? 0) < totalBet.value) {
-    message.value = 'Недостаточно баланса'
-    return
-  }
-
-  spinning.value = true
-  message.value = ''
-  balls.value = []
-  hitKeys.value = new Set()
-
-  sfx('plinko_drop')
-
-  const n = ballsN.value
-
-  let res: ApiGameResponse
   try {
-    res = await api<ApiGameResponse>('/api/v1/games/plinko/game/play', {
-      method: 'POST',
-      body: JSON.stringify({
-        bet: bet.value,
-        balls: n,
-        rows: rows.value,
-        difficulty: difficulty.value,
-      }),
+    await api<{ ok: boolean; user: AdminUser }>(`/api/v1/admin/users/${id}`, {
+      method: 'PATCH',
+      body: { nickname, role: editRole.value, balance }
     })
-  } catch (e) {
-    message.value = 'Ошибка игры (play)'
-    spinning.value = false
-    return
+
+    // update locally
+    const idx = users.value.findIndex(u => u.id === id)
+    if (idx !== -1) {
+      users.value[idx] = { ...users.value[idx], nickname, role: editRole.value, balance }
+    }
+
+    editingId.value = null
+    msg.value = 'Пользователь обновлён'
+  } catch (e: any) {
+    err.value = e?.message || 'Не удалось сохранить'
   }
-
-  const traces = Array.isArray(res?.traces) ? res.traces : []
-  const results: BallResult[] = Array.from({ length: n }, (_, i) => {
-    const t = traces[i]
-    return t
-      ? traceToBallResult(t)
-      : { rights: Array(rows.value).fill(false), landing: 0, multiplier: table.value[0] ?? 0, payout: 0 }
-  })
-
-  const created: Ball[] = Array.from({ length: n }, (_, i) => ({
-    id: Date.now() + i,
-    x: W.value / 2,
-    y: 42,
-    visible: false,
-    landing: null,
-    msg: '',
-  }))
-  balls.value = created
-
-  const tasks = created.map(async (b, i) => {
-    await sleep(i * 80)
-    await dropBall(b, results[i])
-  })
-  await Promise.allSettled(tasks)
-
-  // net считаем для сообщения (а баланс — только через fetchBalance)
-  const totalWin = Number(res?.total) || 0
-  const net = Math.round((totalWin - totalBet.value) * 100) / 100
-
-  // актуализируем баланс после игры
-  await safeFetchBalance()
-
-  if (net > 0) message.value = `Профит +${net.toFixed(2)}`
-  else if (net < 0) message.value = `Минус ${net.toFixed(2)}`
-  else message.value = 'В ноль'
-
-  spinning.value = false
 }
 
-function binGradient(mult: number) {
-  const min = 0.2
-  const max = 110
-  const t = Math.max(0, Math.min(1, (mult - min) / (max - min)))
-  const hue = 45 * (1 - t)
-  const c1 = `hsl(${hue} 85% 55% / .9)`
-  const c2 = `hsl(${Math.max(0, hue - 8)} 85% 38% / .9)`
-  return `linear-gradient(180deg, ${c1}, ${c2})`
+async function deleteUser(id: string) {
+  msg.value = ''
+  err.value = ''
+  if (!confirm('Удалить пользователя? Это действие нельзя отменить.')) return
+  try {
+    await api<{ ok: boolean }>(`/api/v1/admin/users/${id}`, { method: 'DELETE' })
+    users.value = users.value.filter(u => u.id !== id)
+    msg.value = 'Пользователь удалён'
+    if (editingId.value === id) editingId.value = null
+  } catch (e: any) {
+    err.value = e?.message || 'Не удалось удалить'
+  }
 }
+
+async function approveTicket(id: string) {
+  msg.value = ''
+  err.value = ''
+  try {
+    await api<{ ok: boolean; ticket?: Ticket }>(`/api/v1/admin/tickets/${id}/approve`, { method: 'POST' })
+    const t = tickets.value.find(x => x.id === id)
+    if (t) t.status = 'approved'
+    msg.value = 'Тикет подтверждён'
+  } catch (e: any) {
+    err.value = e?.message || 'Не удалось подтвердить тикет'
+  }
+}
+
+async function rejectTicket(id: string) {
+  msg.value = ''
+  err.value = ''
+  try {
+    await api<{ ok: boolean; ticket?: Ticket }>(`/api/v1/admin/tickets/${id}/reject`, { method: 'POST' })
+    const t = tickets.value.find(x => x.id === id)
+    if (t) t.status = 'rejected'
+    msg.value = 'Тикет отклонён'
+  } catch (e: any) {
+    err.value = e?.message || 'Не удалось отклонить тикет'
+  }
+}
+
+onMounted(async () => {
+  await refreshAll()
+})
 </script>
 
 <template>
-  <GameLayout>
-    <template #panel>
-      <GamePanel
-        v-model="amount"
-        :disabled="spinning"
-        play-text="Start"
-        :message="message"
-        @half="amount = Math.max(0, (Number(amount)||0)/2)"
-        @double="amount = (Number(amount)||0)*2"
-        @play="start"
-      >
-        <div class="field">
-          <div class="label">Difficulty</div>
-          <select class="input" v-model="difficulty" @change="sfx('click')">
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <div class="label">Rows</div>
-          <select class="input" v-model.number="rows" @change="sfx('click')">
-            <option v-for="r in rowsList" :key="r" :value="r">{{ r }}</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <div class="label">Balls</div>
-          <div class="balls-row">
-            <input class="input" v-model.number="ballCount" type="number" min="1" max="50" step="1" />
-            <div class="pill">×</div>
+  <GameLayout :min-height="640">
+    <div class="admin-wrap">
+      <div class="admin-head card">
+        <div class="row-between" style="gap:12px;">
+          <div class="grid" style="gap:4px;">
+            <h2 style="margin:0;">Admin Panel</h2>
+            <div class="muted">Users & Tickets </div>
           </div>
-          <div class="mini">
-            Total bet: <b class="num">{{ totalBet.toFixed(2) }}</b>
-            <span v-if="loadingMult" class="muted" style="margin-left:8px;">multipliers…</span>
+
+          <div class="row" style="gap:10px; flex-wrap:wrap;">
+            <button class="btn" @click="refreshAll" :disabled="loadingUsers || loadingTickets">Refresh</button>
+            <span class="badge">pending tickets: {{ pendingCount }}</span>
           </div>
         </div>
-      </GamePanel>
-    </template>
 
-    <div class="plinko-stage" ref="stageEl" :style="{ height: stageHeight + 'px' }">
-      <div class="pegs">
-        <div
-          v-for="p in pegs"
-          :key="p.key"
-          class="peg"
-          :class="{ hit: hitKeys.has(p.key) }"
-          :style="{ left: p.x+'px', top: p.y+'px' }"
-        />
+        <div class="tabs" style="margin-top:12px;">
+          <button class="tab" :class="{ on: tab === 'users' }" @click="tab = 'users'">
+            Users <span class="pill">{{ users.length }}</span>
+          </button>
+          <button class="tab" :class="{ on: tab === 'tickets' }" @click="tab = 'tickets'">
+            Tickets <span class="pill">{{ tickets.length }}</span>
+          </button>
+        </div>
+
+        <div v-if="err" class="alert alert-err" style="margin-top:12px;">{{ err }}</div>
+        <div v-else-if="msg" class="alert alert-ok" style="margin-top:12px;">{{ msg }}</div>
       </div>
 
-      <div class="balls">
-        <div
-          v-for="b in safeBalls"
-          :key="b.id"
-          class="ball"
-          v-show="b.visible"
-          :style="{ left: b.x + 'px', top: b.y + 'px' }"
-        />
+      <!-- USERS -->
+      <div v-if="tab === 'users'" class="card admin-card">
+        <div class="row-between" style="gap:12px; flex-wrap:wrap;">
+          <div class="row" style="gap:10px; align-items:center;">
+            <b>All users</b>
+            <span v-if="loadingUsers" class="muted">loading…</span>
+          </div>
+
+          <div class="row" style="gap:10px; flex-wrap:wrap;">
+            <input class="input" v-model="qUsers" placeholder="Search: id / nickname / discord / role" />
+            <button class="btn" @click="loadUsers" :disabled="loadingUsers">Reload</button>
+          </div>
+        </div>
+
+        <div class="table-wrap" style="margin-top:12px;">
+          <table class="table">
+            <thead>
+            <tr>
+              <th style="width: 220px;">User</th>
+              <th>Discord</th>
+              <th style="width: 120px;">Role</th>
+              <th style="width: 160px; text-align:right;">Balance</th>
+              <th style="width: 260px; text-align:right;">Actions</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            <tr v-for="u in filteredUsers" :key="u.id">
+              <td>
+                <div class="u-meta">
+                  <div class="u-name">
+                    <template v-if="editingId === u.id">
+                      <input class="input input-sm" v-model="editNickname" />
+                    </template>
+                    <template v-else>
+                      <b>{{ u.nickname }}</b>
+                    </template>
+                  </div>
+                  <div class="muted u-id">#{{ String(u.id).slice(0, 8) }}</div>
+                </div>
+              </td>
+
+              <td class="muted">
+                <span>{{ u.discord }}</span>
+              </td>
+
+              <td>
+                <template v-if="editingId === u.id">
+                  <select class="input input-sm" v-model="editRole">
+                    <option value="user">user</option>
+                    <option value="admin">admin</option>
+                  </select>
+                </template>
+                <template v-else>
+                  <span class="badge">{{ u.role }}</span>
+                </template>
+              </td>
+
+              <td style="text-align:right;">
+                <template v-if="editingId === u.id">
+                  <input class="input input-sm" type="number" step="0.01" v-model.number="editBalance" style="text-align:right;" />
+                </template>
+                <template v-else>
+                  <span class="num">{{ Number(u.balance).toFixed(2) }}</span>
+                </template>
+              </td>
+
+              <td style="text-align:right;">
+                <div class="row" style="gap:8px; justify-content:flex-end; flex-wrap:wrap;">
+                  <template v-if="editingId === u.id">
+                    <button class="btn btn-primary" @click="saveUser(u.id)">Save</button>
+                    <button class="btn" @click="cancelEdit">Cancel</button>
+                  </template>
+                  <template v-else>
+                    <button class="btn" @click="startEdit(u)">Edit</button>
+                    <button class="btn btn-danger" @click="deleteUser(u.id)">Delete</button>
+                  </template>
+                </div>
+              </td>
+            </tr>
+
+            <tr v-if="!loadingUsers && filteredUsers.length === 0">
+              <td colspan="5" class="muted" style="padding:16px;">No users found.</td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div class="bins-grid" :style="{ width: binsWidth + 'px', '--bin': BIN_SIZE + 'px' }">
-        <div
-          v-for="bin in bins"
-          :key="bin.i"
-          class="bin"
-          :class="{ glow: glowBin === bin.i }"
-          :style="{ background: binGradient(bin.mult) }"
-        >
-          <span class="bin-mult">{{ bin.mult }}x</span>
+      <!-- TICKETS -->
+      <div v-else class="card admin-card">
+        <div class="row-between" style="gap:12px; flex-wrap:wrap;">
+          <div class="row" style="gap:10px; align-items:center;">
+            <b>All tickets</b>
+            <span class="badge">pending: {{ pendingCount }}</span>
+            <span v-if="loadingTickets" class="muted">loading…</span>
+          </div>
+
+          <div class="row" style="gap:10px; flex-wrap:wrap;">
+            <input class="input" v-model="qTickets" placeholder="Search: id / userId / status / type" />
+            <button class="btn" @click="loadTickets" :disabled="loadingTickets">Reload</button>
+          </div>
+        </div>
+
+        <div class="table-wrap" style="margin-top:12px;">
+          <table class="table">
+            <thead>
+            <tr>
+              <th style="width: 220px;">Ticket</th>
+              <th style="width: 200px;">User</th>
+              <th style="width: 120px;">Type</th>
+              <th style="width: 140px; text-align:right;">Amount</th>
+              <th style="width: 140px;">Status</th>
+              <th style="width: 260px; text-align:right;">Actions</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            <tr v-for="t in filteredTickets" :key="t.id">
+              <td>
+                <div class="u-meta">
+                  <div class="u-name"><b>#{{ String(t.id).slice(0, 8) }}</b></div>
+                  <div class="muted u-id">{{ t.createdAt ? new Date(t.createdAt).toLocaleString() : '-' }}</div>
+                </div>
+              </td>
+
+              <td class="muted">
+                <div class="grid" style="gap:2px;">
+                  <span>#{{ String(t.userId).slice(0, 8) }}</span>
+                  <span v-if="t.nickname">{{ t.nickname }}</span>
+                </div>
+              </td>
+
+              <td>
+                <span class="badge">{{ t.type }}</span>
+              </td>
+
+              <td style="text-align:right;">
+                <span class="num">{{ Number(t.amount).toFixed(2) }}</span>
+              </td>
+
+              <td>
+                <span class="badge" :class="'st-' + t.status">{{ t.status }}</span>
+              </td>
+
+              <td style="text-align:right;">
+                <div class="row" style="gap:8px; justify-content:flex-end; flex-wrap:wrap;">
+                  <button
+                    class="btn btn-primary"
+                    @click="approveTicket(t.id)"
+                    :disabled="t.status !== 'pending' || loadingTickets"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    class="btn btn-danger"
+                    @click="rejectTicket(t.id)"
+                    :disabled="t.status !== 'pending' || loadingTickets"
+                  >
+                    Reject
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <tr v-if="!loadingTickets && filteredTickets.length === 0">
+              <td colspan="6" class="muted" style="padding:16px;">No tickets found.</td>
+            </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -464,105 +402,136 @@ function binGradient(mult: number) {
 </template>
 
 <style scoped>
-.field{ margin-top: 8px; }
-.label{ color: var(--muted); font-size: 12px; margin-bottom: 8px; font-weight: 600; }
-.balls-row{ display:grid; grid-template-columns: 1fr auto; gap: 10px; align-items:center; }
-.pill{
-  width: var(--control-h);
-  height: var(--control-h);
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: rgba(0,0,0,.22);
-  display:grid;
-  place-items:center;
-  font-weight: 800;
-  opacity:.9;
+.admin-wrap{
+  width: min(1150px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 16px;
 }
-.mini{ margin-top: 8px; color: rgba(255,255,255,.65); font-size: 12px; }
 
-.plinko-stage{
-  width: 100%;
-  height: 560px;
+.admin-head{
+  border-radius: 18px;
+  padding: 14px;
+  background:
+    radial-gradient(560px 220px at 20% 0%, rgba(58,145,255,.18), rgba(0,0,0,0)),
+    radial-gradient(460px 180px at 80% 0%, rgba(0,231,1,.10), rgba(0,0,0,0));
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+.admin-card{
+  border-radius: 18px;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,.06);
+}
+
+.tabs{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.tab{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.18);
+  color: rgba(255,255,255,.9);
+  cursor:pointer;
+  font-weight: 900;
+}
+.tab.on{
+  background: rgba(58,145,255,.18);
+  border-color: rgba(58,145,255,.28);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.2), 0 10px 22px rgba(0,0,0,.28);
+}
+.pill{
+  font-size: 12px;
+  font-weight: 900;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.22);
+  color: rgba(255,255,255,.86);
+}
+
+.alert{
+  border-radius: 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.18);
+  white-space: normal;
+}
+.alert-err{
+  border-color: rgba(248,81,73,.35);
+  background: rgba(248,81,73,.10);
+}
+.alert-ok{
+  border-color: rgba(34,197,94,.35);
+  background: rgba(34,197,94,.10);
+}
+
+.table-wrap{
+  overflow:auto;
   border-radius: 16px;
   border: 1px solid rgba(255,255,255,.06);
-  background: radial-gradient(circle at 50% 30%, rgba(0,0,0,.0) 0 35%, rgba(0,0,0,.25) 36% 100%),
-  linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,0));
-  position: relative;
-  overflow: hidden;
+  background: rgba(0,0,0,.14);
 }
-.pegs{ position:absolute; inset:0; }
-.peg{
-  position:absolute;
-  width: 6px; height: 6px;
-  border-radius: 999px;
-  background: rgba(255,255,255,.92);
-  transform: translate(-50%, -50%);
-  box-shadow:
-    inset 0 0 0 1px rgba(0,0,0,.22),
-    0 0 12px rgba(255,255,255,.10),
-    0 0 18px rgba(90,180,255,.06);
-  transition: transform .08s ease, box-shadow .08s ease, filter .08s ease;
+.table{
+  width:100%;
+  border-collapse: collapse;
+  min-width: 860px;
 }
-.peg.hit{
-  transform: translate(-50%,-50%) scale(1.85);
-  box-shadow:
-    inset 0 0 0 1px rgba(0,0,0,.22),
-    0 0 18px rgba(90,180,255,.28),
-    0 0 38px rgba(90,180,255,.18);
-  filter: brightness(1.15);
+.table thead th{
+  text-align:left;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.70);
+  padding: 12px 12px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  background: rgba(0,0,0,.18);
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
-.balls{ position:absolute; inset:0; }
-.ball{
-  position:absolute;
-  width: 14px; height: 14px;
-  border-radius: 999px;
-  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.98), rgba(110,200,255,.95));
-  box-shadow: 0 0 18px rgba(90,180,255,.24), 0 18px 40px rgba(0,0,0,.35);
-  transform: translate(-50%, -50%);
-  transition: left .14s ease, top .14s ease;
-  z-index: 5;
+.table tbody td{
+  padding: 12px 12px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  vertical-align: middle;
 }
-.ball::after{
-  content:'';
-  position:absolute;
-  inset: 0;
-  border-radius: 999px;
-  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.55), rgba(255,255,255,0) 55%);
-  opacity: .85;
+.table tbody tr:hover td{
+  background: rgba(255,255,255,.03);
 }
-.bins-grid{
-  position:absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 34px;
-  height: calc(var(--bin, 56px) + 16px);
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 0;
-  padding: 8px 0;
+.u-meta{ display:flex; flex-direction:column; gap:2px; }
+.u-name{ display:flex; align-items:center; gap:8px; }
+.u-id{ font-size: 12px; }
+
+.input-sm{
+  padding: 8px 10px;
+  border-radius: 12px;
+  min-height: 34px;
 }
-.bin{
-  width: var(--bin, 56px);
-  height: var(--bin, 56px);
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,.10);
+
+.num{
+  font-weight: 900;
   color: rgba(255,255,255,.92);
-  font-size: 11px;
-  display:grid;
-  place-items:center;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
 }
 
-.bin.glow{
-  animation: binGlow 420ms ease-out;
+.btn-danger{
+  border-color: rgba(248,81,73,.35);
+  background: rgba(248,81,73,.10);
+}
+.btn-danger:hover{
+  background: rgba(248,81,73,.16);
 }
 
-@keyframes binGlow{
-  0%{ filter: brightness(1.0); box-shadow: inset 0 0 0 1px rgba(255,255,255,.10), 0 0 0 rgba(255,208,90,0); }
-  20%{ filter: brightness(1.25); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 0 22px rgba(255,208,90,.38), 0 0 46px rgba(255,208,90,.20); }
-  100%{ filter: brightness(1.0); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08), 0 0 0 rgba(255,208,90,0); }
-}
+.st-pending{ border-color: rgba(250,204,21,.45); background: rgba(250,204,21,.10); }
+.st-approved{ border-color: rgba(34,197,94,.45); background: rgba(34,197,94,.10); }
+.st-rejected{ border-color: rgba(248,81,73,.45); background: rgba(248,81,73,.10); }
 
-.bin-mult{ font-weight: 900; }
+@media (max-width: 900px){
+  .table{ min-width: 760px; }
+}
 </style>

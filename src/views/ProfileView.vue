@@ -118,7 +118,7 @@ async function refreshAll(){
       <div v-else class="grid" style="gap:10px; margin-top:12px;">
         <div v-for="t in mineSafe" :key="String(t.id)" class="card2 row-between" style="gap:12px;">
           <div class="grid" style="gap:4px;">
-            <b>#{{ String(t.id).slice(0,6) }} • {{ t.type === 'deposit' ? 'Пополнение' : 'Вывод' }}</b>
+            <b>#{{ String(t.id).slice(0,6) }} • {{ t.type === 'DEPOSIT' ? 'Пополнение' : 'Вывод' }}</b>
             <span class="muted">{{ t.createdAt ? new Date(t.createdAt).toLocaleString() : '-' }}</span>
             <span class="badge" :class="'st-' + t.status">{{ t.status }}</span>
           </div>
