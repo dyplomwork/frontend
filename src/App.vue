@@ -165,6 +165,11 @@ function logout(){ sfx('click'); auth.logout(); router.push('/') }
     <div class="stake-main">
       <header class="stake-topbar">
         <div class="top-left">
+          <button class="icon-btn topbar-menu" @click="toggleSidebar" aria-label="Menu">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path fill="currentColor" d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z"/>
+            </svg>
+          </button>
           <div class="logo" @click="router.push('/')">
             <span class="logo-mark">SOPOVDROP</span>
           </div>
