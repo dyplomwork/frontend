@@ -13,7 +13,7 @@ type AdminUser = {
   balance: number
 }
 
-type TicketStatus = 'pending' | 'approved' | 'rejected'
+type TicketStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 type TicketType = 'deposit' | 'withdraw'
 
 type Ticket = {
@@ -171,7 +171,7 @@ async function approveTicket(id: string) {
   try {
     await api<{ ok: boolean; ticket?: Ticket }>(`/api/v1/admin/tickets/${id}/approve`, { method: 'POST' })
     const t = tickets.value.find(x => x.id === id)
-    if (t) t.status = 'approved'
+    if (t) t.status = 'APPROVED'
     msg.value = 'Тикет подтверждён'
   } catch (e: any) {
     err.value = e?.message || 'Не удалось подтвердить тикет'
@@ -184,7 +184,7 @@ async function rejectTicket(id: string) {
   try {
     await api<{ ok: boolean; ticket?: Ticket }>(`/api/v1/admin/tickets/${id}/reject`, { method: 'POST' })
     const t = tickets.value.find(x => x.id === id)
-    if (t) t.status = 'rejected'
+    if (t) t.status = 'REJECTED'
     msg.value = 'Тикет отклонён'
   } catch (e: any) {
     err.value = e?.message || 'Не удалось отклонить тикет'
@@ -375,14 +375,14 @@ onMounted(async () => {
                   <button
                     class="btn btn-primary"
                     @click="approveTicket(t.id)"
-                    :disabled="t.status !== 'pending' || loadingTickets"
+                    :disabled="t.status !== 'PENDING' || loadingTickets"
                   >
                     Approve
                   </button>
                   <button
                     class="btn btn-danger"
                     @click="rejectTicket(t.id)"
-                    :disabled="t.status !== 'pending' || loadingTickets"
+                    :disabled="t.status !== 'PENDING' || loadingTickets"
                   >
                     Reject
                   </button>
