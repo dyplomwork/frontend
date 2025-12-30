@@ -4,6 +4,7 @@ import GameLayout from '../components/GameLayout.vue'
 import { useAuthStore } from '../stores/auth'
 import { api } from '../utils/api'
 import { sfx } from '../utils/sfx'
+import { formatNumber } from '../utils/format'
 
 type BetKey =
   | `n:${number}`
@@ -16,6 +17,8 @@ const auth = useAuthStore()
 
 const chips = [1, 2, 5, 10, 25, 50, 100]
 const chip = ref(10)
+
+const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 
 const bets = ref<Record<string, number>>({})
 const history = ref<{ key: BetKey; amount: number }[]>([])
@@ -364,7 +367,7 @@ function betOf(key: BetKey) {
         <div class="field">
           <div class="label">Total Amount</div>
           <div class="amount-total">
-            <div class="num">{{ totalBet.toFixed(2) }}</div>
+            <div class="num">{{ fmt(totalBet, 2) }}</div>
             <div class="coin">K</div>
           </div>
           <div class="btn-row">
@@ -810,13 +813,7 @@ function betOf(key: BetKey) {
 }
 
 .cell.has {
-  background: rgba(245, 197, 66, 0.08);
-  box-shadow:
-    inset 0 0 0 1px rgba(245, 197, 66, 0.55),
-    0 0 0 1px rgba(0,0,0,0.18),
-    0 0 22px rgba(245, 197, 66, 0.16),
-    0 10px 28px rgba(0,0,0,0.30);
-  filter: brightness(1.04);
+  box-shadow: inset 0 0 0 1px rgba(245, 197, 66, 0.28);
 }
 .cell.hover{
   box-shadow:

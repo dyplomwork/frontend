@@ -4,6 +4,7 @@ import { useRoute, useRouter, RouterView, RouterLink } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { isSfxOn, setSfxOn, sfx } from './utils/sfx'
 import { getBgmVolume, initBgm, isBgmOn, setBgmVolume } from './utils/bgm'
+import { formatNumber } from './utils/format'
 import AppFooter from './components/AppFooter.vue'
 import SeoHead from './components/SeoHead.vue'
 
@@ -16,6 +17,8 @@ const sidebarOpen = ref(false)
 
 const bgmOn = ref(true)
 const bgmVol = ref(0.15)
+
+const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 
 onMounted(() => {
   sidebarOpen.value = localStorage.getItem(LS_SIDEBAR) === '1'
@@ -179,7 +182,7 @@ function logout(){ sfx('click'); auth.logout(); router.push('/') }
           <template v-if="auth.user">
             <div class="balance-pill">
               <span class="muted">Balance</span>
-              <span class="bal">{{ auth.user.balance.toFixed(2) }}</span>
+              <span class="bal">{{ fmt(auth.user.balance, 2) }}</span>
               <span class="coin">K</span>
             </div>
             <button class="btn" @click="logout">Logout</button>

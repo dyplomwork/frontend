@@ -17,16 +17,17 @@ type TicketStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 type TicketType = 'DEPOSIT' | 'WITHDRAW'
 
 type Ticket = {
-  id: string
-  userId: string
+  id: number
+  ownerId: number
   type: TicketType
   amount: number
   status: TicketStatus
-  createdAt: string
-  // optional fields from backend (safe)
+  closedAt?: string | null
   nickname?: string
   discord?: string
 }
+
+
 
 const tab = ref<'users' | 'tickets'>('users')
 
@@ -59,7 +60,7 @@ const filteredTickets = computed(() => {
   if (!q) return tickets.value
   return tickets.value.filter(t =>
     String(t.id).toLowerCase().includes(q) ||
-    String(t.userId).toLowerCase().includes(q) ||
+    String(t.ownerId).toLowerCase().includes(q) ||
     (t.nickname || '').toLowerCase().includes(q) ||
     (t.discord || '').toLowerCase().includes(q) ||
     t.type.toLowerCase().includes(q) ||
@@ -104,8 +105,18 @@ async function loadTickets() {
   msg.value = ''
   loadingTickets.value = true
   try {
-    const res = await api<{ ok: boolean; tickets: Ticket[] }>('/api/v1/admin/tickets', { method: 'GET' })
-    tickets.value = Array.isArray(res.tickets) ? res.tickets : []
+    const res = await api<{ ok: boolean; ticket: Ticket[] }>('/api/v1/admin/tickets', { method: 'GET' })
+
+    const list = Array.isArray(res.ticket) ? res.ticket : []
+
+    // на всякий: нормализация чисел
+    tickets.value = list.map((t: any) => ({
+      ...t,
+      id: Number(t.id),
+      ownerId: Number(t.ownerId),
+      amount: Number(t.amount),
+      createdAt: t.createdAt ?? undefined,
+    }))
   } catch (e: any) {
     err.value = e?.message || 'Не удалось загрузить тикеты'
   } finally {
@@ -165,12 +176,12 @@ async function deleteUser(id: string) {
   }
 }
 
-async function approveTicket(id: string) {
+async function approveTicket(id: number) {
   msg.value = ''
   err.value = ''
   try {
     await api<{ ok: boolean; ticket?: Ticket }>(`/api/v1/admin/tickets/${id}/approve`, { method: 'POST' })
-    const t = tickets.value.find(x => x.id === id)
+    const t = tickets.value.find(x => x.id === Number(id))
     if (t) t.status = 'APPROVED'
     msg.value = 'Тикет подтверждён'
   } catch (e: any) {
@@ -178,18 +189,19 @@ async function approveTicket(id: string) {
   }
 }
 
-async function rejectTicket(id: string) {
+async function rejectTicket(id: number) {
   msg.value = ''
   err.value = ''
   try {
     await api<{ ok: boolean; ticket?: Ticket }>(`/api/v1/admin/tickets/${id}/reject`, { method: 'POST' })
-    const t = tickets.value.find(x => x.id === id)
+    const t = tickets.value.find(x => x.id === Number(id))
     if (t) t.status = 'REJECTED'
     msg.value = 'Тикет отклонён'
   } catch (e: any) {
     err.value = e?.message || 'Не удалось отклонить тикет'
   }
 }
+
 
 onMounted(async () => {
   await refreshAll()
@@ -324,7 +336,7 @@ onMounted(async () => {
           </div>
 
           <div class="row" style="gap:10px; flex-wrap:wrap;">
-            <input class="input" v-model="qTickets" placeholder="Search: id / userId / status / type" />
+            <input class="input" v-model="qTickets" placeholder="Search: id / ownerId / status / type" />
             <button class="btn" @click="loadTickets" :disabled="loadingTickets">Reload</button>
           </div>
         </div>
@@ -347,13 +359,15 @@ onMounted(async () => {
               <td>
                 <div class="u-meta">
                   <div class="u-name"><b>#{{ String(t.id).slice(0, 8) }}</b></div>
-                  <div class="muted u-id">{{ t.createdAt ? new Date(t.createdAt).toLocaleString() : '-' }}</div>
+                  <div class="muted u-id">
+                    {{ t.closedAt ? new Date(t.closedAt).toLocaleString() : '—' }}
+                  </div>
                 </div>
               </td>
 
               <td class="muted">
                 <div class="grid" style="gap:2px;">
-                  <span>#{{ String(t.userId).slice(0, 8) }}</span>
+                  <span>#{{ String(t.ownerId).slice(0, 8) }}</span>
                   <span v-if="t.nickname">{{ t.nickname }}</span>
                 </div>
               </td>

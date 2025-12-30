@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed, useSlots } from 'vue'
 type Props = {
   minHeight?: number | string
 }
@@ -11,14 +10,11 @@ const props = withDefaults(defineProps<Props>(), {
 function toCssPx(v: number | string){
   return typeof v === 'number' ? `${v}px` : v
 }
-
-const slots = useSlots()
-const hasPanel = computed(() => !!slots.panel)
 </script>
 
 <template>
-  <div class="game-shell panel" :class="{ 'no-panel': !hasPanel }" :style="{ minHeight: toCssPx(props.minHeight) }">
-    <aside v-if="hasPanel" class="game-left">
+  <div class="game-shell panel" :style="{ minHeight: toCssPx(props.minHeight) }">
+    <aside class="game-left">
       <slot name="panel" />
     </aside>
     <section class="game-main">
@@ -32,9 +28,6 @@ const hasPanel = computed(() => !!slots.panel)
   overflow: hidden;
   display:grid;
   grid-template-columns: var(--left-panel-w) 1fr;
-}
-.game-shell.no-panel{
-  grid-template-columns: 1fr;
 }
 .game-left{
   border-right: 1px solid var(--border);

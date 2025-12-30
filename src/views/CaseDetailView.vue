@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { useGameStore } from '../stores/game'
 import { useAuthStore } from '../stores/auth'
 import { sfx } from '../utils/sfx'
+import { formatNumber } from '../utils/format'
 
 type ReelItem = { label: string; amount: number; icon: string }
 type HistoryItem = { ts: number; label: string; amount: number }
@@ -16,6 +17,8 @@ const c = computed(() => game.cases.find(x => x.id === String(route.params.id)))
 
 const opening = ref(false)
 const message = ref('')
+
+const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 
 const items = ref<ReelItem[]>([])
 const result = ref<string | null>(null)
@@ -330,7 +333,7 @@ watch(quickOpen, (v) => {
         <div class="top">
           <div class="badge">CASE</div>
           <h2 class="title">{{ c.name }}</h2>
-          <div class="price">{{ c.price }} <span class="coin">K</span></div>
+          <div class="price">{{ fmt(c.price, 0) }} <span class="coin">K</span></div>
         </div>
 
         <div class="model">

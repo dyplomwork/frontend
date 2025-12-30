@@ -19,17 +19,17 @@ async function logout(){
 
 <template>
   <header class="container">
-    <div class="row-between card header-bar">
-      <div class="row header-left">
+    <div class="row-between card">
+      <div class="row">
         <RouterLink to="/" class="row" style="gap:10px;">
           <span class="badge">🎰</span>
           <b>SOPOVDROP</b>
         </RouterLink>
         <span class="badge">role: {{ roleLabel }}</span>
-        <span v-if="auth.user" class="badge">balance: {{ Number(auth.user.balance).toFixed(2) }}K</span>
+        <span v-if="auth.user" class="badge">balance: {{ auth.user.balance }} credits</span>
       </div>
 
-      <nav class="row header-nav">
+      <nav class="row">
         <RouterLink class="badge" to="/roulette">Games</RouterLink>
         <RouterLink class="badge" to="/cases">Cases</RouterLink>
         <RouterLink v-if="auth.user" class="badge" to="/profile">Profile</RouterLink>
@@ -40,36 +40,12 @@ async function logout(){
         <button class="btn sfx" @click="toggleSfx" title="Sound">
           <span class="ic" aria-hidden="true">{{ sfxOn ? '🔊' : '🔇' }}</span>
         </button>
-      </nav>
+</nav>
     </div>
   </header>
 </template>
 
 <style scoped>
-.header-bar{
-  padding: 12px 14px;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.header-left{
-  gap: 12px;
-  flex-wrap: wrap;
-  min-width: 220px;
-}
-
-.header-nav{
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-@media (max-width: 720px){
-  .header-bar{ justify-content: space-between; }
-  .header-nav{ width: 100%; justify-content: flex-start; }
-  .header-left{ width: 100%; }
-}
+.sfx{ width: 44px; height: 40px; padding: 0; display:inline-grid; place-items:center; }
+.ic{ font-size: 18px; }
 </style>
-
-

@@ -4,6 +4,7 @@ import GameLayout from '../components/GameLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
 import { useAuthStore } from '../stores/auth'
 import { sfx } from '../utils/sfx'
+import { formatNumber } from '../utils/format'
 
 type Cell = { id:number; hasMine:boolean; revealed:boolean }
 
@@ -20,6 +21,8 @@ const lost = ref(false)
 const safePicks = ref(0)
 const multiplier = ref(1)
 const message = ref('')
+
+const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 
 const gems = computed(() => SIZE - mines.value)
 
@@ -165,15 +168,15 @@ buildGrid()
 
         <template #summary>
           <div class="summary">
-            <div class="label">Total Net Gain ({{ multiplier.toFixed(2) }}x)</div>
+            <div class="label">Total Net Gain ({{ fmt(multiplier, 2) }}x)</div>
             <div class="net">
-              <span class="num">{{ totalNetGain.toFixed(2) }}</span>
+              <span class="num">{{ fmt(totalNetGain, 2) }}</span>
               <span class="coin">K</span>
             </div>
           </div>
 
           <button class="btn btn-primary" @click="cashOut" :disabled="!(inGame && safePicks>0)">
-            Cashout ({{ payoutAmount.toFixed(2) }}K)
+            Cashout ({{ fmt(payoutAmount, 2) }}K)
           </button>
         </template>
       </GamePanel>

@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { useGameStore } from '../stores/game'
 import { sfx } from '../utils/sfx'
+import { formatNumber } from '../utils/format'
 const game = useGameStore()
+
+const fmt = (v: number | string, d = 0) => formatNumber(v, d)
 
 function rarity(amount: number){
   if(amount >= 1200) return 'legendary'
@@ -39,7 +42,7 @@ function lootIcon(amount: number){
           <div class="tile-top">
             <div class="emoji">{{ c.modelEmoji }}</div>
             <div class="name">{{ c.name }}</div>
-            <div class="price">{{ c.price }} <span class="coin">K</span></div>
+            <div class="price">{{ fmt(c.price, 0) }} <span class="coin">K</span></div>
           </div>
 
           <div class="loot-preview">

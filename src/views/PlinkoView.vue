@@ -5,11 +5,9 @@ import GamePanel from '../components/GamePanel.vue'
 import { useAuthStore } from '../stores/auth'
 import { api } from '../utils/api'
 import { sfx } from '../utils/sfx'
+import { formatNumber } from '../utils/format'
 
 const auth = useAuthStore()
-
-const isBrowser = () => typeof window !== 'undefined' && typeof localStorage !== 'undefined'
-const LS_PLINKO_MULT_PREFIX = 'plinko_mult_v1'
 
 const amount = ref(0)
 const ballCount = ref(1)
@@ -17,6 +15,8 @@ const difficulty = ref<'LOW'|'MEDIUM'|'HIGH'>('MEDIUM')
 const rows = ref(16)
 const spinning = ref(false)
 const message = ref('')
+
+const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 
 const rowsList = [8, 12, 16]
 
@@ -37,39 +37,8 @@ const baseTables: Record<string, number[]> = {
 
 const diffLower = computed(() => difficulty.value.toLowerCase() as 'low'|'medium'|'high')
 
-function multCacheKey() {
-  return `${LS_PLINKO_MULT_PREFIX}:${diffLower.value}:${rows.value}`
-}
-
-function readCachedTable(): number[] | null {
-  if (!isBrowser()) return null
-  try {
-    const raw = localStorage.getItem(multCacheKey())
-    if (!raw) return null
-    const parsed = JSON.parse(raw)
-    if (Array.isArray(parsed) && parsed.length === rows.value + 1 && parsed.every(n => typeof n === 'number')) {
-      return parsed as number[]
-    }
-  } catch {
-    // ignore
-  }
-  return null
-}
-
-function writeCachedTable(t: number[]) {
-  if (!isBrowser()) return
-  try {
-    localStorage.setItem(multCacheKey(), JSON.stringify(t))
-  } catch {
-    // ignore
-  }
-}
-
 function fallbackTable() {
   const key = `${diffLower.value}:${rows.value}`
-  // prefer last displayed multipliers so the UI doesn't "jump" on reload
-  const cached = readCachedTable()
-  if (cached) return cached
   const t = baseTables[key]
   if (t && t.length === rows.value + 1) return t
   const n = rows.value + 1
@@ -98,12 +67,10 @@ async function loadMultipliers() {
       } as any,
     })
 
-    if (Array.isArray(t) && t.length === rows.value + 1) {
-      multipliers.value = [...t]
-      writeCachedTable(multipliers.value)
-    } else {
-      multipliers.value = [...fallbackTable()]
-    }
+    multipliers.value =
+      (Array.isArray(t) && t.length === rows.value + 1)
+        ? [...t]
+        : [...fallbackTable()]
   } catch (e) {
     console.error('loadMultipliers failed:', e)
     multipliers.value = [...fallbackTable()]
@@ -114,11 +81,7 @@ async function loadMultipliers() {
 
 
 onMounted(() => { void loadMultipliers() })
-watch([rows, difficulty], () => {
-  // immediately show cached/known values for this config (no flicker)
-  multipliers.value = [...fallbackTable()]
-  void loadMultipliers()
-}, { immediate: true })
+watch([rows, difficulty], () => { void loadMultipliers() }, { immediate: true })
 
 
 const table = computed(() =>
@@ -316,7 +279,7 @@ async function dropBall(ball: Ball, result: BallResult) {
 
   if (win > 0) {
     sfx('win')
-    ball.msg = `x${mult} → +${win.toFixed(2)}`
+    ball.msg = `x${mult} → +${fmt(win, 2)}`
   } else {
     sfx('lose')
     ball.msg = `x${mult} → 0`
@@ -397,8 +360,8 @@ async function start() {
 
   const totalWin = Number(res?.total) || 0
   const net = Math.round((totalWin - totalBet.value) * 100) / 100
-  if (net > 0) message.value = `Профит +${net.toFixed(2)}`
-  else if (net < 0) message.value = `Минус ${net.toFixed(2)}`
+  if (net > 0) message.value = `Профит +${fmt(net, 2)}`
+  else if (net < 0) message.value = `Минус ${fmt(net, 2)}`
   else message.value = 'В ноль'
 
   spinning.value = false
@@ -451,7 +414,7 @@ function binGradient(mult: number) {
             <input class="input" v-model.number="ballCount" type="number" min="1" max="50" step="1" />
             <div class="pill">×</div>
           </div>
-          <div class="mini">Total bet: <b class="num">{{ totalBet.toFixed(2) }}</b></div>
+          <div class="mini">Total bet: <b class="num">{{ fmt(totalBet, 2) }}</b></div>
         </div>
       </GamePanel>
     </template>

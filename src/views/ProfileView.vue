@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useTicketsStore } from '../stores/tickets'
+import { formatNumber } from '../utils/format'
 
 const auth = useAuthStore()
 const tickets = useTicketsStore()
@@ -13,6 +14,8 @@ const message = ref('')
 const loading = computed(() => tickets.loading)
 const mineSafe = computed(() => tickets.mine ?? [])
 const pending = computed(() => mineSafe.value.filter(t => t.status === 'pending'))
+
+const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 
 
 
@@ -78,7 +81,7 @@ async function refreshAll(){
     <div class="card">
       <div class="row-between">
         <h2 style="margin:0;">Профиль</h2>
-        <span v-if="auth.user" class="badge">Balance: {{ auth.user.balance.toFixed(2) }}K</span>
+        <span v-if="auth.user" class="badge">Balance: {{ fmt(auth.user.balance, 2) }}</span>
       </div>
 
       <p class="muted" style="margin-top:8px;">
@@ -123,7 +126,7 @@ async function refreshAll(){
             <span class="badge" :class="'st-' + t.status">{{ t.status }}</span>
           </div>
           <div class="row" style="gap:8px;">
-            <span class="badge">amount: {{ t.amount }}</span>
+            <span class="badge">amount: {{ fmt(t.amount, 2) }}</span>
           </div>
         </div>
       </div>

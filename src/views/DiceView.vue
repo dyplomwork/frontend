@@ -4,6 +4,7 @@ import GameLayout from '../components/GameLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
 import { useAuthStore } from '../stores/auth'
 import { sfx } from '../utils/sfx'
+import { formatNumber } from '../utils/format'
 
 const auth = useAuthStore()
 
@@ -18,10 +19,21 @@ const message = ref('')
 // Stake-like: 1% house edge
 const HOUSE_EDGE = 0.01
 
+const fmt = (v: number | string, d = 2) => formatNumber(v, d)
+
+// prevent slider spam-sfx
+let lastSliderSfxAt = 0
+function sliderSfx() {
+  const now = (typeof performance !== 'undefined' ? performance.now() : Date.now())
+  if (now - lastSliderSfxAt < 80) return
+  lastSliderSfxAt = now
+  sfx('click')
+}
+
 const bet = computed(() => Math.max(0, Number(amount.value) || 0))
 const winChance = computed(() => {
   const c = 100 - Number(rollOver.value || 0)
-  // allow full range (some UIs cap at 95, but here user wants to go above/below)
+  // allow full range like Stake: 1%..99%
   return Math.max(1, Math.min(99, c))
 })
 const multiplier = computed(() => {
@@ -38,18 +50,13 @@ const flashZone = ref<'win' | 'lose' | ''>('')
 
 const resultLabel = computed(() => needle.value.toFixed(2))
 
+
+
+// prevent slider spam-sfx
+
+
 let raf: number | null = null
 let lastTick = 0
-
-let lastSliderSfx = 0
-function sliderSfx(){
-  // moving the range input fires a *lot* of events; keep sound subtle
-  const now = (typeof performance !== 'undefined' ? performance.now() : Date.now())
-  if (now - lastSliderSfx > 90) {
-    sfx('click')
-    lastSliderSfx = now
-  }
-}
 
 function stopAnim() {
   if (raf !== null) {
@@ -128,7 +135,7 @@ async function play() {
       void auth.applyBalance(winnings.value)
       sfx('win')
       flash('win')
-      message.value = `Победа: +${profitOnWin.value.toFixed(2)} (x${multiplier.value})`
+      message.value = `Победа: +${fmt(profitOnWin.value, 2)} (x${formatNumber(multiplier.value, 4)})`
     } else {
       sfx('lose')
       flash('lose')
@@ -160,19 +167,19 @@ onBeforeUnmount(() => stopAnim())
           <div class="summary">
             <div class="row-between">
               <span class="muted">Payout</span>
-              <span class="num">x{{ multiplier.toFixed(4) }}</span>
+              <span class="num">x{{ fmt(multiplier, 4) }}</span>
             </div>
             <div class="row-between">
               <span class="muted">Profit on win</span>
-              <span class="num">{{ profitOnWin.toFixed(4) }}</span>
+              <span class="num">{{ fmt(profitOnWin, 4) }}</span>
             </div>
             <div class="row-between">
               <span class="muted">Win Chance</span>
-              <span class="num">{{ winChance.toFixed(4) }}%</span>
+              <span class="num">{{ fmt(winChance, 4) }}%</span>
             </div>
             <div class="row-between">
               <span class="muted">Roll Over</span>
-              <span class="num">{{ rollOver.toFixed(2) }}</span>
+              <span class="num">{{ fmt(rollOver, 2) }}</span>
             </div>
           </div>
         </template>
@@ -206,7 +213,6 @@ onBeforeUnmount(() => stopAnim())
           step="0.01"
           v-model.number="rollOver"
           @input="sliderSfx"
-          @change="sliderSfx"
           :disabled="running"
           aria-label="Roll Over"
         />
@@ -236,7 +242,7 @@ onBeforeUnmount(() => stopAnim())
       </div>
 
       <div v-if="lastRoll !== null" class="last">
-        Last roll: <b>{{ lastRoll.toFixed(2) }}</b>
+        Last roll: <b>{{ fmt(lastRoll, 2) }}</b>
       </div>
 
       <!-- небольшая “фишка”: мини-легенда -->
