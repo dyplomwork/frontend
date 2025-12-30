@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
 import { api } from '../utils/api'
+import { useAuthStore } from '../stores/auth'
 
 type Role = 'user' | 'admin'
 
@@ -37,6 +38,8 @@ const tickets = ref<Ticket[]>([])
 const loadingUsers = ref(false)
 const loadingTickets = ref(false)
 const msg = ref('')
+const auth = useAuthStore()
+
 const err = ref('')
 
 const qUsers = ref('')
@@ -180,11 +183,13 @@ async function approveTicket(id: number) {
   msg.value = ''
   err.value = ''
   try {
-    await api<void>(`/api/v1/admin/tickets/${id}`, { method: 'PATCH',body:{
-      status: 'REJECTED'
-      } })
+    await api<void>(`/api/v1/admin/tickets/${id}`, {
+      method: 'PATCH',
+      body: { status: 'APPROVED' }
+    })
     const t = tickets.value.find(x => x.id === Number(id))
     if (t) t.status = 'APPROVED'
+    await auth.fetchBalance().catch(() => {})
     msg.value = 'Тикет подтверждён'
   } catch (e: any) {
     err.value = e?.message || 'Не удалось подтвердить тикет'
@@ -195,11 +200,14 @@ async function rejectTicket(id: number) {
   msg.value = ''
   err.value = ''
   try {
-    await api<void>(`/api/v1/admin/tickets/${id}`, { method: 'PATCH', body:{
-        status: 'APPROVED'
-      } })
+    const note = prompt('Причина отклонения (необязательно):') ?? undefined
+    await api<void>(`/api/v1/admin/tickets/${id}`, {
+      method: 'PATCH',
+      body: { status: 'REJECTED', note }
+    })
     const t = tickets.value.find(x => x.id === Number(id))
     if (t) t.status = 'REJECTED'
+    await auth.fetchBalance().catch(() => {})
     msg.value = 'Тикет отклонён'
   } catch (e: any) {
     err.value = e?.message || 'Не удалось отклонить тикет'
