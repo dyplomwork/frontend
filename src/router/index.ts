@@ -137,6 +137,15 @@ export function addAuthGuards(r: Router) {
     if (to.meta.requiresAdmin && !auth.isAdmin) return { name: 'home' }
     return true
   })
+
+
+  // Refresh balance on every page load (route change).
+  r.afterEach(() => {
+    // During SSG/prerender there is no window/localStorage.
+    if (typeof window === 'undefined') return
+    const auth = useAuthStore()
+    if (auth.isAuthed) auth.fetchBalance().catch(() => {})
+  })
 }
 
 
