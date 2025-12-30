@@ -180,7 +180,9 @@ async function approveTicket(id: number) {
   msg.value = ''
   err.value = ''
   try {
-    await api<{ ok: boolean; ticket?: Ticket }>(`/api/v1/admin/tickets/${id}/approve`, { method: 'POST' })
+    await api<void>(`/api/v1/admin/tickets/${id}`, { method: 'PATCH',body:{
+      status: 'REJECTED'
+      } })
     const t = tickets.value.find(x => x.id === Number(id))
     if (t) t.status = 'APPROVED'
     msg.value = 'Тикет подтверждён'
@@ -193,7 +195,9 @@ async function rejectTicket(id: number) {
   msg.value = ''
   err.value = ''
   try {
-    await api<{ ok: boolean; ticket?: Ticket }>(`/api/v1/admin/tickets/${id}/reject`, { method: 'POST' })
+    await api<void>(`/api/v1/admin/tickets/${id}`, { method: 'PATCH', body:{
+        status: 'APPROVED'
+      } })
     const t = tickets.value.find(x => x.id === Number(id))
     if (t) t.status = 'REJECTED'
     msg.value = 'Тикет отклонён'
