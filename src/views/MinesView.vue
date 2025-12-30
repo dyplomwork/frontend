@@ -168,12 +168,12 @@ buildGrid()
             <div class="label">Total Net Gain ({{ multiplier.toFixed(2) }}x)</div>
             <div class="net">
               <span class="num">{{ totalNetGain.toFixed(2) }}</span>
-              <span class="coin">G</span>
+              <span class="coin">K</span>
             </div>
           </div>
 
           <button class="btn btn-primary" @click="cashOut" :disabled="!(inGame && safePicks>0)">
-            Cashout ({{ payoutAmount.toFixed(2) }}G)
+            Cashout ({{ payoutAmount.toFixed(2) }}K)
           </button>
         </template>
       </GamePanel>

@@ -365,7 +365,7 @@ function betOf(key: BetKey) {
           <div class="label">Total Amount</div>
           <div class="amount-total">
             <div class="num">{{ totalBet.toFixed(2) }}</div>
-            <div class="coin">G</div>
+            <div class="coin">K</div>
           </div>
           <div class="btn-row">
             <button class="btn btn-ghost" :disabled="spinning" @click="undo">Undo</button>
@@ -810,7 +810,13 @@ function betOf(key: BetKey) {
 }
 
 .cell.has {
-  box-shadow: inset 0 0 0 1px rgba(245, 197, 66, 0.28);
+  background: rgba(245, 197, 66, 0.08);
+  box-shadow:
+    inset 0 0 0 1px rgba(245, 197, 66, 0.55),
+    0 0 0 1px rgba(0,0,0,0.18),
+    0 0 22px rgba(245, 197, 66, 0.16),
+    0 10px 28px rgba(0,0,0,0.30);
+  filter: brightness(1.04);
 }
 .cell.hover{
   box-shadow:

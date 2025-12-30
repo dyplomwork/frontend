@@ -39,7 +39,7 @@ function lootIcon(amount: number){
           <div class="tile-top">
             <div class="emoji">{{ c.modelEmoji }}</div>
             <div class="name">{{ c.name }}</div>
-            <div class="price">{{ c.price }} <span class="coin">G</span></div>
+            <div class="price">{{ c.price }} <span class="coin">K</span></div>
           </div>
 
           <div class="loot-preview">

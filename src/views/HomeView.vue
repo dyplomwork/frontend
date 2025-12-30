@@ -11,7 +11,7 @@ const balance = computed(() => auth.user?.balance ?? 0)
   <div class="home">
     <div class="hero card">
       <div class="hero-left">
-        <div class="pill">SOPOVDROP • demo credits</div>
+        <div class="pill">SOPOVDROP • demo credits (K)</div>
         <h1>Play casino-style games</h1>
         <p class="muted">
           Roulette, Plinko, Mines and Cases — in a clean Stake-like UI. Balance is stored locally for dev.
@@ -24,7 +24,7 @@ const balance = computed(() => auth.user?.balance ?? 0)
       <div class="hero-right">
         <div class="stat">
           <div class="label">Balance</div>
-          <div class="value">{{ balance.toFixed(2) }} <span class="coin">G</span></div>
+          <div class="value">{{ balance.toFixed(2) }} <span class="coin">K</span></div>
         </div>
         <div class="stat">
           <div class="label">Account</div>

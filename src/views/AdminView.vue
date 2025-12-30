@@ -14,7 +14,7 @@ type AdminUser = {
 }
 
 type TicketStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
-type TicketType = 'deposit' | 'withdraw'
+type TicketType = 'DEPOSIT' | 'WITHDRAW'
 
 type Ticket = {
   id: string
@@ -41,7 +41,7 @@ const err = ref('')
 const qUsers = ref('')
 const qTickets = ref('')
 
-const pendingCount = computed(() => tickets.value.filter(t => t.status === 'pending').length)
+const pendingCount = computed(() => tickets.value.filter(t => t.status === 'PENDING').length)
 
 const filteredUsers = computed(() => {
   const q = qUsers.value.trim().toLowerCase()
@@ -367,7 +367,7 @@ onMounted(async () => {
               </td>
 
               <td>
-                <span class="badge" :class="'st-' + t.status">{{ t.status }}</span>
+                <span class="badge" :class="'st-' + String(t.status).toLowerCase()">{{ t.status }}</span>
               </td>
 
               <td style="text-align:right;">

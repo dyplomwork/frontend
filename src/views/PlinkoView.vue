@@ -8,6 +8,9 @@ import { sfx } from '../utils/sfx'
 
 const auth = useAuthStore()
 
+const isBrowser = () => typeof window !== 'undefined' && typeof localStorage !== 'undefined'
+const LS_PLINKO_MULT_PREFIX = 'plinko_mult_v1'
+
 const amount = ref(0)
 const ballCount = ref(1)
 const difficulty = ref<'LOW'|'MEDIUM'|'HIGH'>('MEDIUM')
@@ -34,8 +37,39 @@ const baseTables: Record<string, number[]> = {
 
 const diffLower = computed(() => difficulty.value.toLowerCase() as 'low'|'medium'|'high')
 
+function multCacheKey() {
+  return `${LS_PLINKO_MULT_PREFIX}:${diffLower.value}:${rows.value}`
+}
+
+function readCachedTable(): number[] | null {
+  if (!isBrowser()) return null
+  try {
+    const raw = localStorage.getItem(multCacheKey())
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed) && parsed.length === rows.value + 1 && parsed.every(n => typeof n === 'number')) {
+      return parsed as number[]
+    }
+  } catch {
+    // ignore
+  }
+  return null
+}
+
+function writeCachedTable(t: number[]) {
+  if (!isBrowser()) return
+  try {
+    localStorage.setItem(multCacheKey(), JSON.stringify(t))
+  } catch {
+    // ignore
+  }
+}
+
 function fallbackTable() {
   const key = `${diffLower.value}:${rows.value}`
+  // prefer last displayed multipliers so the UI doesn't "jump" on reload
+  const cached = readCachedTable()
+  if (cached) return cached
   const t = baseTables[key]
   if (t && t.length === rows.value + 1) return t
   const n = rows.value + 1
@@ -64,10 +98,12 @@ async function loadMultipliers() {
       } as any,
     })
 
-    multipliers.value =
-      (Array.isArray(t) && t.length === rows.value + 1)
-        ? [...t]
-        : [...fallbackTable()]
+    if (Array.isArray(t) && t.length === rows.value + 1) {
+      multipliers.value = [...t]
+      writeCachedTable(multipliers.value)
+    } else {
+      multipliers.value = [...fallbackTable()]
+    }
   } catch (e) {
     console.error('loadMultipliers failed:', e)
     multipliers.value = [...fallbackTable()]
@@ -78,7 +114,11 @@ async function loadMultipliers() {
 
 
 onMounted(() => { void loadMultipliers() })
-watch([rows, difficulty], () => { void loadMultipliers() }, { immediate: true })
+watch([rows, difficulty], () => {
+  // immediately show cached/known values for this config (no flicker)
+  multipliers.value = [...fallbackTable()]
+  void loadMultipliers()
+}, { immediate: true })
 
 
 const table = computed(() =>

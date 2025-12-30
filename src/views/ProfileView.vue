@@ -78,7 +78,7 @@ async function refreshAll(){
     <div class="card">
       <div class="row-between">
         <h2 style="margin:0;">Профиль</h2>
-        <span v-if="auth.user" class="badge">Balance: {{ auth.user.balance.toFixed(2) }}</span>
+        <span v-if="auth.user" class="badge">Balance: {{ auth.user.balance.toFixed(2) }}K</span>
       </div>
 
       <p class="muted" style="margin-top:8px;">

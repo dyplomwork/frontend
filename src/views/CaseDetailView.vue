@@ -330,7 +330,7 @@ watch(quickOpen, (v) => {
         <div class="top">
           <div class="badge">CASE</div>
           <h2 class="title">{{ c.name }}</h2>
-          <div class="price">{{ c.price }} <span class="coin">G</span></div>
+          <div class="price">{{ c.price }} <span class="coin">K</span></div>
         </div>
 
         <div class="model">

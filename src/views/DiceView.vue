@@ -21,7 +21,8 @@ const HOUSE_EDGE = 0.01
 const bet = computed(() => Math.max(0, Number(amount.value) || 0))
 const winChance = computed(() => {
   const c = 100 - Number(rollOver.value || 0)
-  return Math.max(1, Math.min(95, c))
+  // allow full range (some UIs cap at 95, but here user wants to go above/below)
+  return Math.max(1, Math.min(99, c))
 })
 const multiplier = computed(() => {
   const m = (100 / winChance.value) * (1 - HOUSE_EDGE)
@@ -39,6 +40,16 @@ const resultLabel = computed(() => needle.value.toFixed(2))
 
 let raf: number | null = null
 let lastTick = 0
+
+let lastSliderSfx = 0
+function sliderSfx(){
+  // moving the range input fires a *lot* of events; keep sound subtle
+  const now = (typeof performance !== 'undefined' ? performance.now() : Date.now())
+  if (now - lastSliderSfx > 90) {
+    sfx('click')
+    lastSliderSfx = now
+  }
+}
 
 function stopAnim() {
   if (raf !== null) {
@@ -194,7 +205,8 @@ onBeforeUnmount(() => stopAnim())
           max="99"
           step="0.01"
           v-model.number="rollOver"
-          @input="sfx('click')"
+          @input="sliderSfx"
+          @change="sliderSfx"
           :disabled="running"
           aria-label="Roll Over"
         />

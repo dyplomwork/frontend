@@ -180,7 +180,7 @@ function logout(){ sfx('click'); auth.logout(); router.push('/') }
             <div class="balance-pill">
               <span class="muted">Balance</span>
               <span class="bal">{{ auth.user.balance.toFixed(2) }}</span>
-              <span class="coin">G</span>
+              <span class="coin">K</span>
             </div>
             <button class="btn" @click="logout">Logout</button>
           </template>

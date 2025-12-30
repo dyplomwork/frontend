@@ -14,7 +14,7 @@ type Props = {
 const props = withDefaults(defineProps<Props>(), {
   playText: 'Play',
   disabled: false,
-  currency: 'G',
+  currency: 'K',
   message: '',
   showMultButtons: true,
 })
