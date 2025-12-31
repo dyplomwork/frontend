@@ -34,7 +34,7 @@ let bigWinRaf: number | null = null
 type SoundKey = 'impact' | 'count' | 'climax'
 
 const soundOn = computed(() => true)
-const bigWinVol = computed(() => 0.9)
+const bigWinVol = computed(() => 0.35)
 
 const soundCache = new Map<string, HTMLAudioElement>()
 let countLoop: HTMLAudioElement | null = null
