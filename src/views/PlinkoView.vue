@@ -92,11 +92,21 @@ function stopCountLoop() {
 function shortMoney(v: number) {
   const n = Number(v) || 0
   const abs = Math.abs(n)
-  if (abs >= 1_000_000_000) return `${fmt(n / 1_000_000_000, 2)} B`
-  if (abs >= 1_000_000) return `${fmt(n / 1_000_000, 2)} M`
-  if (abs >= 1_000) return `${fmt(n / 1_000, 2)} K`
-  return fmt(n, 2)
+
+  // ВАЖНО: у тебя числа уже в K-единицах
+  // 1000K = 1M, 1_000_000K = 1B, 1_000_000_000K = 1T
+
+  if (abs >= 1_000_000_000) return `${fmt(n / 1_000_000_000, 2)} T`
+  if (abs >= 1_000_000)     return `${fmt(n / 1_000_000, 2)} B`
+  if (abs >= 1_000)         return `${fmt(n / 1_000, 2)} M`
+
+  // Вариант А: показывать K явно
+  return `${fmt(n, 2)} K`
+
+  // Вариант B: если суффикс K у тебя везде “по умолчанию”, можно так:
+  // return fmt(n, 2)
 }
+
 
 function easeOutExpo(t: number) {
   return t === 1 ? 1 : 1 - Math.pow(2, -10 * t)
@@ -614,7 +624,7 @@ if (typeof window !== 'undefined') {
 
             <!-- бегущие цифры -->
             <div class="bigwin-amount">
-              * {{ bigWin.displayText }} {{ bigWin.title }} *
+              ⭐ {{ bigWin.displayText }} {{ bigWin.title }} ⭐
             </div>
 
             <div class="bigwin-sub">
