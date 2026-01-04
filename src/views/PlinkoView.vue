@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/auth'
 import { api } from '../utils/api'
 import { sfx } from '../utils/sfx'
 import { formatNumber } from '../utils/format'
+import { useBigWinOverlay } from '../composables/useBigWinOverlay'
 
 const auth = useAuthStore()
 
@@ -15,80 +16,6 @@ const difficulty = ref<'LOW'|'MEDIUM'|'HIGH'>('MEDIUM')
 const rows = ref(16)
 const spinning = ref(false)
 const message = ref('')
-// BIG WIN overlay (threshold by total round: totalWin >= totalBet * 20)
-const bigWin = ref({
-  show: false,
-  title: 'BIG WIN',
-  mult: 0,
-  amount: 0,
-  // animated counter values
-  displayValue: 0,
-  displayText: '0',
-  // styling intensity
-  tier: 1, // 1=big, 2=mega, 3=super
-})
-
-let bigWinTimer: number | null = null
-let bigWinRaf: number | null = null
-
-type SoundKey = 'impact' | 'count' | 'climax'
-
-const soundOn = computed(() => true)
-const bigWinVol = computed(() => 0.35)
-
-const soundCache = new Map<string, HTMLAudioElement>()
-let countLoop: HTMLAudioElement | null = null
-
-function getSoundUrl(key: SoundKey, tier: number) {
-  // tier: 1=BIG,2=MEGA,3=SUPER
-  const imp = 'mp3'
-  const ext = 'wav'
-  if (key === 'impact') {
-    if (tier === 3) return `/sfx/superwin_impact.${imp}`
-    if (tier === 2) return `/sfx/megawin_impact.${ext}`
-    return `/sfx/bigwin_impact.${imp}`
-  }
-  if (key === 'climax') {
-    if (tier === 3) return `/sfx/superwin_climax.${imp}`
-    if (tier === 2) return `/sfx/megawin_climax.${imp}`
-    return `/sfx/bigwin_climax.${ext}`
-  }
-  return `/sfx/bigwin_count.${ext}`
-}
-
-function playOne(url: string, vol: number) {
-  if (!soundOn.value) return
-  let a = soundCache.get(url)
-  if (!a) {
-    a = new Audio(url)
-    a.preload = 'auto'
-    soundCache.set(url, a)
-  }
-  try {
-    const b = a.cloneNode(true) as HTMLAudioElement
-    b.volume = Math.max(0, Math.min(1, vol))
-    void b.play()
-  } catch {}
-}
-
-function startCountLoop(url: string, vol: number) {
-  if (!soundOn.value) return
-  stopCountLoop()
-  const a = new Audio(url)
-  a.preload = 'auto'
-  a.loop = true
-  a.volume = Math.max(0, Math.min(1, vol))
-  countLoop = a
-  try { void a.play() } catch {}
-}
-
-function stopCountLoop() {
-  if (!countLoop) return
-  try { countLoop.pause(); countLoop.currentTime = 0 } catch {}
-  countLoop = null
-}
-
-
 function shortMoney(v: number) {
   const n = Number(v) || 0
   const abs = Math.abs(n)
@@ -107,82 +34,15 @@ function shortMoney(v: number) {
   // return fmt(n, 2)
 }
 
-
-function easeOutExpo(t: number) {
-  return t === 1 ? 1 : 1 - Math.pow(2, -10 * t)
-}
-
-// “бегущие цифры” 0 -> target за durationMs
-function animateBigWinCounter(target: number, durationMs = 900) {
-  if (bigWinRaf !== null) cancelAnimationFrame(bigWinRaf)
-  stopCountLoop()
-
-  // start "count up" loop while numbers run
-  startCountLoop(getSoundUrl('count', bigWin.value.tier), bigWinVol.value * 0.25)
-
-  const start = performance.now()
-  const from = 0
-  const to = Math.max(0, Number(target) || 0)
-
-  const tick = (now: number) => {
-    const p = Math.min(1, (now - start) / durationMs)
-    const k = easeOutExpo(p)
-    const v = from + (to - from) * k
-
-    bigWin.value.displayValue = v
-    bigWin.value.displayText = shortMoney(v)
-
-    if (p < 1) {
-      bigWinRaf = requestAnimationFrame(tick)
-    } else {
-      bigWinRaf = null
-      stopCountLoop()
-      playOne(getSoundUrl('climax', bigWin.value.tier), bigWinVol.value * 0.95)
-    }
-  }
-
-  bigWinRaf = requestAnimationFrame(tick)
-}
-
-
-function getWinTier(mult: number) {
-  // можешь подкрутить пороги
-  if (mult >= 100) return { tier: 3, title: 'SUPER WIN' }
-  if (mult >= 50) return { tier: 2, title: 'MEGA WIN' }
-  return { tier: 1, title: 'BIG WIN' }
-}
-
-async function showBigWin(mult: number, amount: number) {
-  if (bigWinTimer !== null) window.clearTimeout(bigWinTimer)
-  if (bigWinRaf !== null) cancelAnimationFrame(bigWinRaf)
-
-  const t = getWinTier(mult)
-
-  bigWin.value.show = true
-  bigWin.value.tier = t.tier
-  bigWin.value.title = t.title
-  bigWin.value.mult = mult
-  bigWin.value.amount = amount
-
-  // impact on open
-  playOne(getSoundUrl('impact', bigWin.value.tier), bigWinVol.value * 0.95)
-
-  // сброс и запуск “бегущих цифр”
-  bigWin.value.displayValue = 0
-  bigWin.value.displayText = shortMoney(0)
-  animateBigWinCounter(amount, t.tier === 3 ? 1200 : t.tier === 2 ? 1050 : 900)
-
-  // звук (если нет отдельного - просто win)
-  try { sfx('big_win') } catch { try { sfx('win') } catch {} }
-
-  // авто-скрытие (чуть дольше для mega/super)
-  const ttl = t.tier === 3 ? 3400 : t.tier === 2 ? 3000 : 2600
-  bigWinTimer = window.setTimeout(() => {
-    stopCountLoop()
-    bigWin.value.show = false
-    bigWinTimer = null
-  }, ttl)
-}
+// BIG WIN / MEGA WIN / SUPER WIN overlay (kept for Plinko, reusable for other games)
+const { bigWin, showBigWin } = useBigWinOverlay({
+  formatNumber,
+  sfx,
+  shortMoney,
+  // If later you add a global sound toggle, pass it here.
+  soundOn: () => true,
+  volume: () => 0.35,
+})
 
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
@@ -312,6 +172,10 @@ type Ball = {
   id: number
   x: number
   y: number
+  vx: number
+  vy: number
+  row: number
+  idx: number
   visible: boolean
   landing: number | null
   msg: string
@@ -408,62 +272,162 @@ function traceToBallResult(trace: ApiTrace): BallResult {
   return { rights, landing, payout, multiplier }
 }
 
-async function dropBall(ball: Ball, result: BallResult) {
+// --- Physics-ish ball animation (single RAF loop per ball)
+// Goal: smoother + more realistic than step-by-step sleeps, and scales better with many balls.
+function animateBall(ball: Ball, result: BallResult, delayMs = 0) {
+  // IMPORTANT REQUIREMENT:
+  // - Ball MUST always land in the correct bin according to backend trace.mask.
+  // - No "stuck" physics / no mode freeze.
+  // We keep a realistic feel (gravity + kicks on pegs), but the path is trace-driven (deterministic).
+
+  const g = 2600 // px/s^2 (gravity)
+  const drag = 0.992
+
   ball.visible = true
   ball.landing = null
   ball.msg = ''
-
   ball.x = W.value / 2
   ball.y = 42
+  ball.vx = 0
+  ball.vy = 0
+  ball.row = 0
+  ball.idx = 0
 
-  let idx = 0
-  for (let r = 0; r < rows.value; r++) {
-    const hit = pegPos(r, idx)
-    ball.x = hit.x
-    ball.y = hit.y - 10
+  const startAt = performance.now() + Math.max(0, delayMs)
+  const y0 = 42
 
-    void flashPeg(r, idx)
-    sfx('plinko_tick')
-    await sleep(110)
+  // where we MUST land
+  const landing = clamp(0, result.landing ?? 0, rows.value)
+  const targetBin = bins.value[landing]
+  const targetY = targetBin?.y ?? (60 + rows.value * pegGapY.value + 44)
 
-    if (result.rights[r]) idx += 1
+  // schedule "peg hits" (one per row)
+  // total fall time scales gently with rows to keep it readable
+  const totalMs = rows.value <= 8 ? 1650 : rows.value <= 12 ? 2050 : 2450
+  const rowMs = totalMs / Math.max(1, rows.value)
+  const pegHitTimes = Array.from({ length: rows.value }, (_, r) => startAt + (r + 1) * rowMs)
 
-    if (r < rows.value - 1) {
-      const next = pegPos(r + 1, idx)
-      ball.x = next.x
-      ball.y = next.y - 10
-      await sleep(130)
+  let firedRow = -1
+  let idxAtRow = 0
+
+  return new Promise<void>((resolve) => {
+    let prevT = 0
+    const tick = (t: number) => {
+      if (!spinning.value) {
+        ball.visible = false
+        resolve()
+        return
+      }
+      if (t < startAt) {
+        requestAnimationFrame(tick)
+        return
+      }
+
+      // time step
+      const dt = prevT ? Math.min(0.034, (t - prevT) / 1000) : 1 / 60
+      prevT = t
+
+      // gravity + simple damping (smooth & stable)
+      ball.vy = (ball.vy + g * dt) * Math.pow(drag, dt * 60)
+      ball.y = ball.y + ball.vy * dt
+
+      // progress 0..1 based on vertical movement (for guided centering towards landing bin)
+      const prog = clamp(0, (ball.y - y0) / Math.max(1, (targetY - 14) - y0), 1)
+
+      // base X drifts towards the correct landing bin as the ball falls
+      const baseX = lerp(W.value / 2, targetBin?.x ?? (W.value / 2), prog)
+
+      // apply "kicks" on each row hit time, decaying over time (gives realistic sways)
+      // Also fires peg flash + tick SFX deterministically.
+      while (firedRow + 1 < rows.value && t >= pegHitTimes[firedRow + 1]) {
+        firedRow++
+        const goRight = !!result.rights[firedRow]
+        const dir = goRight ? 1 : -1
+
+        // flash the peg we "hit" at this row
+        void flashPeg(firedRow, idxAtRow)
+        sfx('plinko_tick')
+
+        if (goRight) idxAtRow++
+        ball.row = firedRow + 1
+        ball.idx = idxAtRow
+
+        // deterministic-ish horizontal impulse
+        // small randomness is ok but MUST NOT affect landing (baseX handles that)
+        const kick = (pegGapX.value * 7.5) * (0.11 + Math.random() * 0.04)
+        ball.vx = (ball.vx * 0.25) + dir * kick
+      }
+
+      // decay vx over time + add subtle wobble
+      ball.vx *= 0.975
+      const wobble = Math.sin(elapsedS * 12 + ball.id) * 0.7
+
+      // final x is guided + impulse + wobble
+      ball.x = baseX + ball.vx + wobble
+      ball.x = clamp(PAD_X.value, ball.x, W.value - PAD_X.value)
+
+      // landing into the correct bin
+      // IMPORTANT: do not "sink" below the hole; instead do a small damped bounce and then hide.
+      const restY = (targetY - 10) // visually sits inside the bin/hole
+      if (ball.y >= restY) {
+        ball.x = targetBin?.x ?? ball.x
+        ball.y = restY
+
+        ball.landing = landing
+        ball.idx = landing
+        setGlow(landing)
+
+        const mult = table.value[landing] ?? result.multiplier ?? 0
+        const win = Math.round((Number(result.payout) || 0) * 100) / 100
+
+        if (win > 0) {
+          sfx('win')
+          ball.msg = `x${mult} → +${fmt(win, 2)}`
+          if (bet.value > 0 && win >= bet.value * 20) {
+            void showBigWin(mult, win)
+          }
+        } else {
+          sfx('lose')
+          ball.msg = `x${mult} → 0`
+        }
+
+        // small bin "bounce" (very smooth): a couple of decaying hops + tiny horizontal rebound
+        const bounceStart = performance.now()
+        const ampY = 10 + Math.random() * 4
+        const ampX = (Math.random() < 0.5 ? -1 : 1) * (4 + Math.random() * 4)
+        const bounce = (tt: number) => {
+          const p = Math.min(1, (tt - bounceStart) / 420)
+          // decaying cosine bounce: starts at 0, goes down a bit, then settles
+          const k = 1 - p
+          const w = Math.cos(p * Math.PI * 2.2)
+          // keep within hole area: only bounce UP (negative y) visually
+          const dy = -Math.abs(w) * ampY * k
+          const dx = ampX * w * k
+          ball.y = restY + dy
+          ball.x = (targetBin?.x ?? ball.x) + dx
+          if (p < 1) requestAnimationFrame(bounce)
+          else {
+            ball.y = restY
+            ball.x = targetBin?.x ?? ball.x
+            // brief hold so the player sees the result
+            window.setTimeout(() => {
+              ball.visible = false
+              resolve()
+            }, 180)
+          }
+        }
+        requestAnimationFrame(bounce)
+        return
+      }
+
+      requestAnimationFrame(tick)
     }
-  }
+    requestAnimationFrame(tick)
+  })
+}
 
-  // idx = фактический слот
-  const b = bins.value[idx]
-  ball.x = b.x
-  ball.y = b.y - 18
-  await sleep(160)
-
-  ball.landing = idx
-  setGlow(idx)
-
-  const mult = table.value[idx] ?? result.multiplier ?? 0
-  const win = Math.round((Number(result.payout) || 0) * 100) / 100
-
-  if (win > 0) {
-    sfx('win')
-    ball.msg = `x${mult} → +${fmt(win, 2)}`
-
-
-    if (bet.value > 0 && win >= bet.value * 20) {
-      void showBigWin(mult, win)
-    }
-  } else {
-
-    sfx('lose')
-    ball.msg = `x${mult} → 0`
-  }
-
-  await sleep(260)
-  ball.visible = false
+function lerp(a: number, b: number, t: number) {
+  return a + (b - a) * t
 }
 
 async function safeFetchBalance() {
@@ -520,16 +484,17 @@ async function start() {
     id: Date.now() + i,
     x: W.value / 2,
     y: 42,
+    vx: 0,
+    vy: 0,
+    row: 0,
+    idx: 0,
     visible: false,
     landing: null,
     msg: ''
   }))
   balls.value = created
 
-  const tasks = created.map(async (b, i) => {
-    await sleep(i * 80)
-    await dropBall(b, results[i])
-  })
+  const tasks = created.map((b, i) => animateBall(b, results[i], i * 80))
   await Promise.allSettled(tasks)
 
   // баланс после игры
@@ -732,8 +697,8 @@ if (typeof window !== 'undefined') {
   background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.98), rgba(110,200,255,.95));
   box-shadow: 0 0 18px rgba(90,180,255,.24), 0 18px 40px rgba(0,0,0,.35);
   transform: translate(-50%, -50%);
-  transition: left .14s ease, top .14s ease;
-  z-index: 5;
+  transition: none;
+  z-index: 4;
 }
 .ball::after{
   content:'';
@@ -754,6 +719,7 @@ if (typeof window !== 'undefined') {
   align-items: flex-end;
   gap: 0;
   padding: 8px 0;
+  z-index: 8;
 }
 .bin{
   width: var(--bin, 56px);

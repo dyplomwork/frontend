@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
 import { useAuthStore } from '../stores/auth'
 import { sfx } from '../utils/sfx'
@@ -26,6 +26,7 @@ const history = ref<{ key: BetKey; amount: number }[]>([])
 const spinning = ref(false)
 
 const lastNumber = ref<number | null>(null)
+const lastWinAmount = ref<number | null>(null)
 const message = ref('')
 
 const winKeys = ref<Set<BetKey>>(new Set())
@@ -265,13 +266,18 @@ async function spin() {
   spinning.value = true
   message.value = ''
   lastNumber.value = null
+  lastWinAmount.value = null
   winKeys.value = new Set()
   pauseIdle(1_000)
+
+  // ensure the "spinning" class is applied before we change wheelDeg (otherwise CSS transition may not fire)
+  await nextTick()
 
   try {
     sfx('spin')
 
     let win: number
+    let shouldRefreshBalance = false
 
     if (TEMP_ALLOW_FREE_SPIN) {
       // локально (не зависит ни от чего)
@@ -290,15 +296,14 @@ async function spin() {
       const res = await roulettePlay({ bets: payload })
       win = Number(res.number)
 
-      // refresh balance from auth service
-      await auth.fetchMe()
+      // backend returns: { number, amount } where amount = winnings
+      const winAmount = Number(res.amount ?? 0)
+      lastWinAmount.value = winAmount
 
-      // show payout/profit (backend returns `amount` = payout)
-      const payout = Number(res.amount ?? 0)
-      const profit = Math.max(0, payout - Number(totalBet.value))
-      if (payout > 0) {
-        message.value = `Выпало ${win}. Выплата: +${fmt(profit, 2)}`
-      }
+      // refresh balance (both win/lose) — но ТОЛЬКО после анимации прокрута
+      shouldRefreshBalance = true
+
+      if (winAmount > 0) message.value = `Выпало ${win}. Выигрыш: +${fmt(winAmount, 2)}`
     }
 
 
@@ -317,6 +322,10 @@ async function spin() {
     await new Promise(r => setTimeout(r, 3600))
     sfx('stop')
     wheelDeg.value = desiredWheelDegForNumber(win)
+
+    if (shouldRefreshBalance) {
+      await auth.fetchBalance().catch(() => {})
+    }
 
     lastNumber.value = win
     lastNumbers.value = [win, ...lastNumbers.value].slice(0, 30)
@@ -423,6 +432,9 @@ function betOf(key: BetKey) {
 
           <div class="last" v-if="lastNumber !== null">
             <span class="badge" :class="colorOf(lastNumber)">{{ lastNumber }}</span>
+            <span v-if="lastWinAmount !== null" class="payout" :class="{ on: lastWinAmount > 0 }">
+              {{ lastWinAmount > 0 ? `+${fmt(lastWinAmount, 2)}` : '0' }}
+            </span>
           </div>
         </div>
 
@@ -637,6 +649,28 @@ function betOf(key: BetKey) {
   left: 12px;
   bottom: 12px;
   z-index: 7;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.payout{
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 1000;
+  font-size: 12px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.18);
+  color: rgba(255,255,255,.75);
+}
+.payout.on{
+  background: rgba(0,255,140,.18);
+  border-color: rgba(0,255,140,.32);
+  color: rgba(235,255,245,.95);
 }
 
 .history-under {

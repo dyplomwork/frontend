@@ -280,6 +280,8 @@ async function openOne(){
     sfx('win')
     result.value = wLabel
     resultAmount.value = wAmount
+    // refresh balance after round (win or lose)
+    await (auth as any).fetchBalance?.().catch(() => {})
     opening.value = false
     return
   }
@@ -305,6 +307,8 @@ async function openOne(){
 
   result.value = wLabel
   resultAmount.value = wAmount
+  // refresh balance after round (win or lose)
+  await (auth as any).fetchBalance?.().catch(() => {})
   opening.value = false
 }
 

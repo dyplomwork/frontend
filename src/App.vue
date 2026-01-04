@@ -174,7 +174,7 @@ function logout(){ sfx('click'); auth.logout(); router.push('/') }
             </svg>
           </button>
           <div class="logo" @click="router.push('/')">
-            <span class="logo-mark">SOPOVDROP</span>
+            <span class="logo-mark">SCXDROP</span>
           </div>
         </div>
 

@@ -5,7 +5,7 @@ import GamePanel from '../components/GamePanel.vue'
 import { useAuthStore } from '../stores/auth'
 import { sfx } from '../utils/sfx'
 import { formatNumber } from '../utils/format'
-import { dicePayout, dicePlay } from '../api/games'
+import { dicePlay } from '../api/games'
 
 const auth = useAuthStore()
 
@@ -19,9 +19,9 @@ const running = ref(false)
 const lastRoll = ref<number | null>(null)
 const message = ref('')
 
-// server-driven odds/payout
-const payoutMul = ref<number>(0)
-const winChancePct = ref<number>(0)
+// payout is calculated on the frontend (saves an extra request)
+// Common dice formula with ~1% house edge: multiplier = 99 / winChance
+const HOUSE_EDGE_BASE = 99
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100
@@ -32,7 +32,10 @@ const bet = computed(() => Math.max(0, Number(amount.value) || 0))
 const rollOver = computed(() => Math.max(1, Math.min(99, round2(Number(rollOverUi.value || 0)))))
 const winChance = computed(() => round2(100 - rollOver.value))
 
-const multiplier = computed(() => payoutMul.value || 0)
+const multiplier = computed(() => {
+  const wc = Math.max(0.01, Number(winChance.value) || 0)
+  return Math.round((HOUSE_EDGE_BASE / wc) * 10000) / 10000
+})
 const winnings = computed(() => Math.round(bet.value * multiplier.value * 10000) / 10000)
 const profitOnWin = computed(() => Math.round(bet.value * (multiplier.value - 1) * 10000) / 10000)
 
@@ -63,26 +66,9 @@ function flash(kind: 'win' | 'lose') {
 
 // ==== Slider behavior (NO lag) ====
 function onSliderInput() {
+  // keep slider value neat (2 decimals) while multiplier updates continuously
   rollOverUi.value = round2(Number(rollOverUi.value))
 }
-
-// Fetch payout only when user "commits" the value
-let payoutCommitId = 0
-async function onSliderCommit() {
-  const id = ++payoutCommitId
-  try {
-    const ro = round2(Number(rollOverUi.value))
-    const res = await dicePayout(ro)
-    if (id !== payoutCommitId) return
-    payoutMul.value = Number(res.payout)
-    winChancePct.value = Number(res.winChancePercentage)
-    sfx('click')
-  } catch {
-    // ignore
-  }
-}
-
-void onSliderCommit()
 
 async function play() {
   if (running.value) return
@@ -118,7 +104,8 @@ async function play() {
   }
 
   const target = Number(res.roll) // 0..100 (2 decimals)
-  const resultIsWin = !!res.isWin
+  // backend can return either { win } or { isWin }
+  const resultIsWin = !!(res.win ?? res.isWin)
   const resultPayout = Number(res.payout)
 
   const duration = 1400
@@ -141,7 +128,7 @@ async function play() {
     }
 
     try {
-      await auth.fetchMe()
+      await auth.fetchBalance()
     } catch {}
 
     running.value = false
@@ -243,9 +230,7 @@ onBeforeUnmount(() => stopAnim())
           step="0.01"
           v-model.number="rollOverUi"
           @input="onSliderInput"
-          @change="onSliderCommit"
-          @pointerup="onSliderCommit"
-          @keyup.enter="onSliderCommit"
+          @change="sfx('click')"
           :disabled="running"
           aria-label="Roll Over"
         />

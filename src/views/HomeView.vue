@@ -13,7 +13,7 @@ const fmt = (v: number | string, d = 2) => formatNumber(v, d)
   <div class="home">
     <div class="hero card">
       <div class="hero-left">
-        <div class="pill">SOPOVDROP • demo credits</div>
+        <div class="pill">SCXDROP • demo credits</div>
         <h1>Play casino-style games</h1>
         <p class="muted">
           Roulette, Plinko, Mines and Cases — in a clean Stake-like UI. Balance is stored locally for dev.
@@ -79,14 +79,39 @@ const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 
     <div class="card last">
       <div class="row-between">
-        <h2>Last wins</h2>
-        <span class="badge">demo</span>
+        <h2>Quick guide</h2>
+        <span class="badge">tips</span>
       </div>
-      <div class="wins">
-        <div class="win"><span class="u">User123</span> <span class="m">Cases</span> <span class="g">+1200</span></div>
-        <div class="win"><span class="u">Player7</span> <span class="m">Roulette</span> <span class="g">+300</span></div>
-        <div class="win"><span class="u">LuckyFox</span> <span class="m">Plinko</span> <span class="g">+80</span></div>
-        <div class="win"><span class="u">Bully</span> <span class="m">Mines</span> <span class="g">+45</span></div>
+
+      <div class="guide">
+        <div class="gcard">
+          <div class="gi">🎡</div>
+          <div>
+            <div class="gt">Roulette</div>
+            <div class="gm">Ставь несколькими фишками • следи за total bet • выигрыш сразу в балансе</div>
+          </div>
+        </div>
+        <div class="gcard">
+          <div class="gi">🎲</div>
+          <div>
+            <div class="gt">Dice</div>
+            <div class="gm">Payout считается на фронте • шанс = 100 − Roll Over • быстрее и без лишних запросов</div>
+          </div>
+        </div>
+        <div class="gcard">
+          <div class="gi">🔻</div>
+          <div>
+            <div class="gt">Plinko</div>
+            <div class="gm">Реалистичное падение шаров • подсветка бинов • мульти-боллы</div>
+          </div>
+        </div>
+        <div class="gcard">
+          <div class="gi">💣</div>
+          <div>
+            <div class="gt">Mines</div>
+            <div class="gm">Рандом-пики • кэш-аут в любой момент • мультипликатор растёт на каждом safe pick</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -125,9 +150,10 @@ h2{margin:0;font-size:18px}
 .stat .label{font-size:12px;color:rgba(255,255,255,.6);font-weight:800}
 .stat .value{font-size:16px;font-weight:1000}
 .coin{opacity:.8;font-weight:1000;margin-left:6px}
-.last .wins{display:flex;flex-direction:column;gap:8px;margin-top:12px}
-.win{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;background:rgba(0,0,0,.14);border:1px solid rgba(255,255,255,.08)}
-.win .u{font-weight:900}
-.win .m{color:rgba(255,255,255,.65)}
-.win .g{font-weight:1000;color:rgba(0,255,140,.9)}
+.guide{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+@media (max-width: 900px){.guide{grid-template-columns:1fr}}
+.gcard{display:flex;gap:12px;align-items:flex-start;padding:12px;border-radius:14px;background:rgba(0,0,0,.14);border:1px solid rgba(255,255,255,.08)}
+.gi{width:36px;height:36px;display:grid;place-items:center;border-radius:12px;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.08)}
+.gt{font-weight:1000}
+.gm{color:rgba(255,255,255,.65);font-size:12px;line-height:1.45;margin-top:4px}
 </style>

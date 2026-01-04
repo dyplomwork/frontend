@@ -23,7 +23,7 @@ async function logout(){
       <div class="row">
         <RouterLink to="/" class="row" style="gap:10px;">
           <span class="badge">🎰</span>
-          <b>SOPOVDROP</b>
+          <b>SCXDROP</b>
         </RouterLink>
         <span class="badge">role: {{ roleLabel }}</span>
         <span v-if="auth.user" class="badge">balance: {{ auth.user.balance }} credits</span>

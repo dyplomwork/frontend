@@ -82,8 +82,8 @@ async function start() {
     safePicks.value = 0
     multiplier.value = 1
 
-    // balance decreased on backend
-    await auth.fetchMe()
+    // balance decreased on backend (both win/lose should refresh)
+    await auth.fetchBalance().catch(() => {})
 
     // try to sync session (opened cells etc.)
     try {
@@ -125,7 +125,7 @@ async function reveal(cell: Cell) {
       if (res.field) applyField(res.field)
       message.value = 'Бомба! Проигрыш'
       sfx('lose')
-      await auth.fetchMe()
+      await auth.fetchBalance().catch(() => {})
     }
   } catch (e: any) {
     // backend might throw on invalid state / mine hit
@@ -136,7 +136,7 @@ async function reveal(cell: Cell) {
       applyField(fin.field)
       inGame.value = false
       lost.value = true
-      await auth.fetchMe()
+      await auth.fetchBalance().catch(() => {})
     } catch {}
   }
 }
@@ -157,7 +157,7 @@ async function cashOut() {
 
     inGame.value = false
     lost.value = false
-    await auth.fetchMe()
+    await auth.fetchBalance().catch(() => {})
   } catch (e: any) {
     message.value = e?.message ? String(e.message) : 'Ошибка вывода'
   }
