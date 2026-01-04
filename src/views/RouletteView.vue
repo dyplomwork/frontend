@@ -19,6 +19,7 @@ const chips = [1, 2, 5, 10, 25, 50, 100]
 const chip = ref(10)
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
+const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100
 
 const bets = ref<Record<string, number>>({})
 const history = ref<{ key: BetKey; amount: number }[]>([])
@@ -282,14 +283,22 @@ async function spin() {
       if (auth.user.balance < totalBet.value) { message.value = 'Недостаточно баланса'; return }
 
       const payload = Object.entries(bets.value)
-        .filter(([,amount]) => Number(amount) > 0)
-        .map(([key, amount]) => ({ key: normalizeRouletteKey(key), amount: Number(amount) }))
+        .filter(([, amount]) => Number(amount) > 0)
+        // backend validates scale=2
+        .map(([key, amount]) => ({ key: normalizeRouletteKey(key), amount: round2(Number(amount)) }))
 
       const res = await roulettePlay({ bets: payload })
       win = Number(res.number)
 
       // refresh balance from auth service
       await auth.fetchMe()
+
+      // show payout/profit (backend returns `amount` = payout)
+      const payout = Number(res.amount ?? 0)
+      const profit = Math.max(0, payout - Number(totalBet.value))
+      if (payout > 0) {
+        message.value = `Выпало ${win}. Выплата: +${fmt(profit, 2)}`
+      }
     }
 
 
@@ -316,7 +325,8 @@ async function spin() {
     highlightNumber(win)     // ✅ подсветка сектора на 1s
     setWinKeysFor(win)
 
-    message.value = `Выпало ${win}`
+    // If not set above (no payout info), show basic result
+    if (!message.value) message.value = `Выпало ${win}`
   } catch (e: any) {
     message.value = e?.message ? String(e.message) : 'Ошибка'
   } finally {

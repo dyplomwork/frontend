@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
 import { useAuthStore } from '../stores/auth'
@@ -10,8 +10,10 @@ import { dicePayout, dicePlay } from '../api/games'
 const auth = useAuthStore()
 
 const amount = ref(0)
-// rollOver in [1..99]. Win if roll >= rollOver (green on the right).
-const rollOver = ref(30)
+
+// ✅ Слайдер теперь = Roll Over (то, что ждёт бэк)
+// Win, если roll >= rollOver
+const rollOverUi = ref(30) // 1..99
 
 const running = ref(false)
 const lastRoll = ref<number | null>(null)
@@ -21,39 +23,15 @@ const message = ref('')
 const payoutMul = ref<number>(0)
 const winChancePct = ref<number>(0)
 
-
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
-
-// prevent slider spam-sfx
-let lastSliderSfxAt = 0
-function sliderSfx() {
-  const now = (typeof performance !== 'undefined' ? performance.now() : Date.now())
-  if (now - lastSliderSfxAt < 80) return
-  lastSliderSfxAt = now
-  sfx('click')
-}
-
-// fetch payout info from backend (debounced by latest-only)
-let payoutReqId = 0
-watch(rollOver, async (v) => {
-  const id = ++payoutReqId
-  try {
-    const res = await dicePayout(Number(v))
-    if (id !== payoutReqId) return
-    payoutMul.value = Number(res.payout)
-    winChancePct.value = Number(res.winChancePercentage)
-  } catch {
-    // ignore (keep previous)
-  }
-}, { immediate: true })
-
+const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100
 
 const bet = computed(() => Math.max(0, Number(amount.value) || 0))
-const winChance = computed(() => {
-  const c = 100 - Number(rollOver.value || 0)
-  // allow full range like Stake: 1%..99%
-  return Math.max(1, Math.min(99, c))
-})
+
+// ✅ WinChance = 100 - rollOver
+const rollOver = computed(() => Math.max(1, Math.min(99, round2(Number(rollOverUi.value || 0)))))
+const winChance = computed(() => round2(100 - rollOver.value))
+
 const multiplier = computed(() => payoutMul.value || 0)
 const winnings = computed(() => Math.round(bet.value * multiplier.value * 10000) / 10000)
 const profitOnWin = computed(() => Math.round(bet.value * (multiplier.value - 1) * 10000) / 10000)
@@ -64,11 +42,6 @@ const bump = ref(false)
 const flashZone = ref<'win' | 'lose' | ''>('')
 
 const resultLabel = computed(() => needle.value.toFixed(2))
-
-
-
-// prevent slider spam-sfx
-
 
 let raf: number | null = null
 let lastTick = 0
@@ -88,9 +61,33 @@ function flash(kind: 'win' | 'lose') {
   }, 520)
 }
 
+// ==== Slider behavior (NO lag) ====
+function onSliderInput() {
+  rollOverUi.value = round2(Number(rollOverUi.value))
+}
+
+// Fetch payout only when user "commits" the value
+let payoutCommitId = 0
+async function onSliderCommit() {
+  const id = ++payoutCommitId
+  try {
+    const ro = round2(Number(rollOverUi.value))
+    const res = await dicePayout(ro)
+    if (id !== payoutCommitId) return
+    payoutMul.value = Number(res.payout)
+    winChancePct.value = Number(res.winChancePercentage)
+    sfx('click')
+  } catch {
+    // ignore
+  }
+}
+
+void onSliderCommit()
+
 async function play() {
   if (running.value) return
   message.value = ''
+
   if (!auth.user) {
     message.value = 'Нужен вход'
     return
@@ -106,26 +103,33 @@ async function play() {
 
   running.value = true
   lastRoll.value = null
-
   sfx('click')
 
-  // server decides roll + win + payout
-  const res = await dicePlay({ bet: Number(bet.value), rollOver: Number(rollOver.value) })
+  // ✅ отправляем РЕАЛЬНЫЙ rollOver (без инверсии!)
+  const ro = round2(Number(rollOverUi.value))
+
+  let res: any
+  try {
+    res = await dicePlay({ bet: Number(bet.value), rollOver: ro })
+  } catch (e: any) {
+    running.value = false
+    message.value = e?.message || 'Ошибка запроса'
+    return
+  }
+
   const target = Number(res.roll) // 0..100 (2 decimals)
   const resultIsWin = !!res.isWin
   const resultPayout = Number(res.payout)
+
   const duration = 1400
   const t0 = performance.now()
   const start = needle.value
 
-  // tick cadence
   const TOTAL_TICKS = 10
   lastTick = 0
 
-  // ✅ async-часть вынесена сюда
   const finalize = async () => {
-    const isWin = resultIsWin
-    if (isWin) {
+    if (resultIsWin) {
       sfx('win')
       flash('win')
       const profit = Math.max(0, resultPayout - Number(bet.value))
@@ -136,17 +140,16 @@ async function play() {
       message.value = 'Проигрыш'
     }
 
-    // refresh balance from auth service
     try {
       await auth.fetchMe()
-    } finally {
-      running.value = false
-    }
+    } catch {}
+
+    running.value = false
   }
 
   const step = (t: number) => {
     const p = Math.min(1, (t - t0) / duration)
-    const e = 1 - Math.pow(1 - p, 3) // easeOutCubic
+    const e = 1 - Math.pow(1 - p, 3)
     needle.value = start + (target - start) * e
 
     const curTick = Math.floor(e * TOTAL_TICKS)
@@ -170,7 +173,6 @@ async function play() {
       window.setTimeout(() => (bump.value = false), 240)
     })
 
-    // 👇 запускаем async-финализацию без await
     void finalize()
   }
 
@@ -204,7 +206,7 @@ onBeforeUnmount(() => stopAnim())
             </div>
             <div class="row-between">
               <span class="muted">Win Chance</span>
-              <span class="num">{{ fmt(winChance, 4) }}%</span>
+              <span class="num">{{ fmt(winChance, 2) }}%</span>
             </div>
             <div class="row-between">
               <span class="muted">Roll Over</span>
@@ -216,7 +218,6 @@ onBeforeUnmount(() => stopAnim())
     </template>
 
     <div class="dial">
-      <!-- TOP SCALE (Stake-like) -->
       <div class="scale-top" aria-hidden="true">
         <div class="tick" style="left: 0%"><span>0</span></div>
         <div class="tick" style="left: 25%"><span>25</span></div>
@@ -226,35 +227,48 @@ onBeforeUnmount(() => stopAnim())
       </div>
 
       <div class="bar stake" :class="flashZone">
-        <!-- inner track -->
         <div class="track">
+          <!-- ✅ Lose зона слева: 0..rollOver -->
           <div class="split red" :style="{ width: rollOver + '%' }" />
+          <!-- ✅ Win зона справа: rollOver..100 -->
           <div class="split green" :style="{ width: (100 - rollOver) + '%' }" />
           <div class="track-shine" aria-hidden="true" />
         </div>
 
-        <!-- (Invisible) native slider for interaction -->
         <input
           class="bar-slider"
           type="range"
           min="1"
           max="99"
           step="0.01"
-          v-model.number="rollOver"
-          @input="sliderSfx"
+          v-model.number="rollOverUi"
+          @input="onSliderInput"
+          @change="onSliderCommit"
+          @pointerup="onSliderCommit"
+          @keyup.enter="onSliderCommit"
           :disabled="running"
           aria-label="Roll Over"
         />
 
-        <!-- Visual thumb (Stake-like) -->
-        <div class="roll-thumb" :style="{ left: rollOver + '%' }" aria-hidden="true">
-          <div class="thumb-icon" />
-        </div>
-
-        <!-- RollOver marker -->
+        <!-- Mark line (thin + glow) -->
         <div class="roll-line" :style="{ left: rollOver + '%' }" aria-hidden="true" />
 
-        <!-- Result puck -->
+        <!-- Thumb / ролик -->
+        <div class="roll-thumb" :style="{ left: rollOver + '%' }" aria-hidden="true">
+          <div class="thumb-grip">
+            <span class="grip-bar"></span>
+            <span class="grip-bar"></span>
+            <span class="grip-bar"></span>
+          </div>
+
+          <!-- value bubble -->
+          <div class="thumb-bubble">
+            <div class="bubble-top">ROLL OVER</div>
+            <div class="bubble-val">{{ fmt(rollOver, 2) }}</div>
+          </div>
+        </div>
+
+
         <div
           class="result-puck"
           :class="[flashZone, { bump }]"
@@ -274,7 +288,6 @@ onBeforeUnmount(() => stopAnim())
         Last roll: <b>{{ fmt(lastRoll, 2) }}</b>
       </div>
 
-      <!-- небольшая “фишка”: мини-легенда -->
       <div class="legend" aria-hidden="true">
         <span class="pill red">Lose</span>
         <span class="pill green">Win</span>
@@ -307,7 +320,7 @@ onBeforeUnmount(() => stopAnim())
   width: min(920px, 100%);
   margin: 0 auto;
   position: relative;
-  padding-top: 28px; /* space for top ticks */
+  padding-top: 28px;
 }
 
 /* ===== Stake-like top ticks ===== */
@@ -340,22 +353,22 @@ onBeforeUnmount(() => stopAnim())
 .tick span {
   font-size: 13px;
   font-weight: 900;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.92);
   text-shadow: 0 10px 18px rgba(0, 0, 0, 0.55);
 }
 
 /* ===== Main bar ===== */
 .bar.stake {
   position: relative;
-  height: 44px;
+  height: 48px; /* чуть выше */
   border-radius: 999px;
   padding: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(14, 24, 34, 0.72);
   box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.25),
-    inset 0 16px 26px rgba(0, 0, 0, 0.35),
-    0 18px 40px rgba(0, 0, 0, 0.35);
+    inset 0 0 0 1px rgba(0, 0, 0, 0.28),
+    inset 0 18px 28px rgba(0, 0, 0, 0.35),
+    0 18px 40px rgba(0, 0, 0, 0.36);
   overflow: hidden;
 }
 
@@ -367,26 +380,24 @@ onBeforeUnmount(() => stopAnim())
   overflow: hidden;
   background: rgba(255, 255, 255, 0.04);
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
-    inset 0 10px 18px rgba(0, 0, 0, 0.25);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+    inset 0 10px 18px rgba(0, 0, 0, 0.26);
   display: flex;
 }
 
 /* split zones */
-.split {
-  height: 100%;
-}
+.split { height: 100%; }
 .split.red {
   background-image:
-    linear-gradient(90deg, rgba(255, 64, 87, 0.92), rgba(255, 64, 87, 0.45)),
-    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0 1px, rgba(0, 0, 0, 0) 1px 6px);
+    linear-gradient(90deg, rgba(255, 64, 87, 0.95), rgba(255, 64, 87, 0.45)),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0 1px, rgba(0, 0, 0, 0) 1px 7px);
   background-blend-mode: normal, multiply;
 }
 .split.green {
   flex: 1;
   background-image:
-    linear-gradient(90deg, rgba(0, 231, 1, 0.40), rgba(0, 231, 1, 0.92)),
-    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0 1px, rgba(0, 0, 0, 0) 1px 8px);
+    linear-gradient(90deg, rgba(0, 231, 1, 0.42), rgba(0, 231, 1, 0.95)),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0 1px, rgba(0, 0, 0, 0) 1px 9px);
   background-blend-mode: normal, multiply;
 }
 
@@ -394,9 +405,14 @@ onBeforeUnmount(() => stopAnim())
 .track-shine {
   position: absolute;
   inset: -40% -60%;
-  background: linear-gradient(115deg, rgba(255,255,255,0) 38%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0) 62%);
+  background: linear-gradient(
+    115deg,
+    rgba(255,255,255,0) 38%,
+    rgba(255,255,255,0.12) 50%,
+    rgba(255,255,255,0) 62%
+  );
   transform: translateX(-40%);
-  animation: shine 3.6s linear infinite;
+  animation: shine 3.8s linear infinite;
   pointer-events: none;
   mix-blend-mode: screen;
   opacity: 0.55;
@@ -406,81 +422,136 @@ onBeforeUnmount(() => stopAnim())
   100% { transform: translateX(40%); }
 }
 
-/* ===== Invisible slider (only for input) ===== */
+/* ===== Invisible slider (input) ===== */
 .bar-slider {
   position: absolute;
   inset: 0;
   width: 100%;
-  height: 44px;
+  height: 48px;
   margin: 0;
   opacity: 0;
-  z-index: 6;
+  z-index: 8; /* above track */
   -webkit-appearance: none;
   appearance: none;
 }
-.bar-slider::-webkit-slider-runnable-track { height: 44px; background: transparent; }
-.bar-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 54px; height: 36px; }
-.bar-slider::-moz-range-track { height: 44px; background: transparent; border: none; }
-.bar-slider::-moz-range-thumb { width: 54px; height: 36px; border: none; background: transparent; }
+.bar-slider::-webkit-slider-runnable-track { height: 48px; background: transparent; }
+.bar-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 64px; height: 44px; }
+.bar-slider::-moz-range-track { height: 48px; background: transparent; border: none; }
+.bar-slider::-moz-range-thumb { width: 64px; height: 44px; border: none; background: transparent; }
 
-/* ===== Visual RollOver thumb (Stake-ish blue handle) ===== */
+/* ===== Roll line (thin + glow) ===== */
+.roll-line {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  transform: translateX(-1px);
+  background: rgba(255, 255, 255, 0.34);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.35),
+    0 0 18px rgba(255, 255, 255, 0.12);
+  z-index: 6;
+  pointer-events: none;
+  border-radius: 2px;
+}
+
+/* ===== Thumb / ролик: четкий, понятный ===== */
 .roll-thumb {
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 54px;
-  height: 34px;
-  border-radius: 10px;
-  background: linear-gradient(180deg, rgba(105, 190, 255, 0.95), rgba(58, 145, 255, 0.95));
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  width: 24px;
+  height: 40px;
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(120, 205, 255, 0.96), rgba(56, 145, 255, 0.96));
+  border: 1px solid rgba(255, 255, 255, 0.20);
   box-shadow:
-    0 14px 26px rgba(0, 0, 0, 0.45),
-    0 0 0 1px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    0 18px 32px rgba(0, 0, 0, 0.48),
+    0 0 0 1px rgba(0, 0, 0, 0.40),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    inset 0 -10px 18px rgba(0, 0, 0, 0.14);
   z-index: 7;
   pointer-events: none;
+  backdrop-filter: blur(6px);
 }
+
+/* glossy overlay */
 .roll-thumb::after {
   content: "";
   position: absolute;
   inset: 2px;
-  border-radius: 9px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0));
+  border-radius: 13px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.20), rgba(255,255,255,0));
   pointer-events: none;
 }
-.thumb-icon {
+
+/* grip lines */
+.thumb-grip {
   position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
+  gap: 1px;
+  z-index: 2;
 }
-.thumb-icon::before,
-.thumb-icon::after {
-  content: "";
-  width: 4px;
-  height: 14px;
+.grip-bar {
+  display: block;
+  width: 7px;
+  height: 3px;
   border-radius: 999px;
-  background: rgba(10, 26, 40, 0.85);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
-  display: inline-block;
+  background: rgba(10, 26, 40, 0.78);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.12),
+    0 8px 18px rgba(0,0,0,0.25);
+  opacity: 0.95;
 }
-.thumb-icon::before { transform: translateX(-4px); }
-.thumb-icon::after { transform: translateX(4px); }
 
-/* RollOver vertical line */
-.roll-line {
+/* value bubble above thumb */
+.thumb-bubble {
   position: absolute;
-  top: 4px;
-  bottom: 4px;
-  width: 2px;
-  transform: translateX(-1px);
-  background: rgba(255, 255, 255, 0.32);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.28);
-  z-index: 5;
-  pointer-events: none;
+  left: 50%;
+  top: -48px;
+  transform: translateX(-50%);
+  min-width: 108px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(0, 0, 0, 0.38);
+  box-shadow:
+    0 18px 34px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+  text-align: center;
+  z-index: 10;
+}
+.thumb-bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 9px solid transparent;
+  border-right: 9px solid transparent;
+  border-top: 9px solid rgba(0, 0, 0, 0.38);
+  filter: drop-shadow(0 10px 14px rgba(0,0,0,0.45));
+}
+.bubble-top {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.72);
+}
+.bubble-val {
+  margin-top: 2px;
+  font-size: 14px;
+  font-weight: 1000;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 10px 18px rgba(0,0,0,0.55);
 }
 
-/* ===== Result puck (white circle) ===== */
+/* ===== Result puck ===== */
 .result-puck {
   position: absolute;
   top: 50%;
@@ -491,7 +562,7 @@ onBeforeUnmount(() => stopAnim())
   background: rgba(255, 255, 255, 0.92);
   border: 2px solid rgba(0, 0, 0, 0.55);
   box-shadow: 0 10px 16px rgba(0, 0, 0, 0.45), 0 0 26px rgba(255, 255, 255, 0.18);
-  z-index: 4;
+  z-index: 5;
   pointer-events: none;
 }
 .result-puck.win { box-shadow: 0 10px 16px rgba(0,0,0,.45), 0 0 26px rgba(0,231,1,.28); }
@@ -522,28 +593,11 @@ onBeforeUnmount(() => stopAnim())
   100% { transform: translate(-50%, -50%); }
 }
 
-/* Win/Lose glow around bar */
-.bar.win {
-  box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.25),
-    inset 0 16px 26px rgba(0, 0, 0, 0.35),
-    0 0 34px rgba(0, 231, 1, 0.14),
-    0 18px 40px rgba(0, 0, 0, 0.35);
-}
-.bar.lose {
-  box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.25),
-    inset 0 16px 26px rgba(0, 0, 0, 0.35),
-    0 0 34px rgba(255, 64, 87, 0.14),
-    0 18px 40px rgba(0, 0, 0, 0.35);
-}
-
 /* ===== Text areas ===== */
 .controls { margin-top: 16px; }
 .hint { margin-top: 10px; }
 .last { margin-top: 14px; color: rgba(255, 255, 255, 0.85); }
 
-/* small extra polish */
 .legend {
   margin-top: 10px;
   display: flex;
@@ -562,8 +616,8 @@ onBeforeUnmount(() => stopAnim())
 .pill.red { color: rgba(255, 160, 171, 0.95); }
 .pill.green { color: rgba(160, 255, 160, 0.95); }
 
-/* Reduce motion-friendly: if you already have a global flag/class, можешь завязать на неё */
 @media (prefers-reduced-motion: reduce) {
   .track-shine { animation: none; opacity: 0.25; }
 }
+
 </style>

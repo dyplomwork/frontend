@@ -112,7 +112,9 @@ export async function casesPlay(type: string) {
   })
 }
 
-export type CaseItemDTO = { name: string; chance: number; payout: number }
+// cases-service public DTOs
+// NOTE: list endpoint does not include the registry key (id), only name/price/items.
+export type CaseItemDTO = { name: string; chance: number; prize: number }
 export type CaseDTO = { id?: string; name: string; price: number; items: CaseItemDTO[] }
 
 /**
@@ -122,7 +124,8 @@ export type CaseDTO = { id?: string; name: string; price: number; items: CaseIte
  * They exist in the cases service, but your gateway may or may not expose them.
  */
 export async function casesList(): Promise<CaseDTO[]> {
-  return api<CaseDTO[]>('/api/v1/games/cases/')
+  // gateway routes: /api/v1/games/cases  (no trailing slash required)
+  return api<CaseDTO[]>('/api/v1/games/cases')
 }
 
 export async function casesGet(id: string): Promise<CaseDTO> {
