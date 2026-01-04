@@ -7,6 +7,7 @@ import { getBgmVolume, initBgm, isBgmOn, setBgmVolume } from './utils/bgm'
 import { formatNumber } from './utils/format'
 import AppFooter from './components/AppFooter.vue'
 import SeoHead from './components/SeoHead.vue'
+import BigWinOverlay from './components/BigWinOverlay.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -199,6 +200,8 @@ function logout(){ sfx('click'); auth.logout(); router.push('/') }
       </main>
 
       <AppFooter class="stake-footer" />
+
+      <BigWinOverlay />
     </div>
   </div>
 </template>

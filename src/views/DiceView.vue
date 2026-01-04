@@ -3,11 +3,13 @@ import { computed, onBeforeUnmount, ref } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
 import { useAuthStore } from '../stores/auth'
+import { useBigWinStore } from '../stores/bigwin'
 import { sfx } from '../utils/sfx'
 import { formatNumber } from '../utils/format'
 import { dicePlay } from '../api/games'
 
 const auth = useAuthStore()
+const bigwinStore = useBigWinStore()
 
 const amount = ref(0)
 
@@ -19,9 +21,9 @@ const running = ref(false)
 const lastRoll = ref<number | null>(null)
 const message = ref('')
 
-// payout is calculated on the frontend (saves an extra request)
-// Common dice formula with ~1% house edge: multiplier = 99 / winChance
-const HOUSE_EDGE_BASE = 99
+// local odds/payout (avoid extra API calls)
+const payoutMul = ref<number>(0)
+const winChancePct = ref<number>(0)
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100
@@ -32,10 +34,7 @@ const bet = computed(() => Math.max(0, Number(amount.value) || 0))
 const rollOver = computed(() => Math.max(1, Math.min(99, round2(Number(rollOverUi.value || 0)))))
 const winChance = computed(() => round2(100 - rollOver.value))
 
-const multiplier = computed(() => {
-  const wc = Math.max(0.01, Number(winChance.value) || 0)
-  return Math.round((HOUSE_EDGE_BASE / wc) * 10000) / 10000
-})
+const multiplier = computed(() => payoutMul.value || 0)
 const winnings = computed(() => Math.round(bet.value * multiplier.value * 10000) / 10000)
 const profitOnWin = computed(() => Math.round(bet.value * (multiplier.value - 1) * 10000) / 10000)
 
@@ -65,10 +64,21 @@ function flash(kind: 'win' | 'lose') {
 }
 
 // ==== Slider behavior (NO lag) ====
-function onSliderInput() {
-  // keep slider value neat (2 decimals) while multiplier updates continuously
-  rollOverUi.value = round2(Number(rollOverUi.value))
+function recalcLocalPayout() {
+  // Win if roll >= rollOver
+  // winChance = 100 - rollOver
+  const wc = Math.max(0.01, winChance.value)
+  // Classic dice formula with 1% edge: multiplier = 99 / winChance
+  payoutMul.value = round2(99 / wc)
+  winChancePct.value = round2(wc)
 }
+
+function onSliderInput() {
+  rollOverUi.value = round2(Number(rollOverUi.value))
+  recalcLocalPayout()
+}
+
+recalcLocalPayout()
 
 async function play() {
   if (running.value) return
@@ -104,8 +114,7 @@ async function play() {
   }
 
   const target = Number(res.roll) // 0..100 (2 decimals)
-  // backend can return either { win } or { isWin }
-  const resultIsWin = !!(res.win ?? res.isWin)
+  const resultIsWin = !!res.isWin
   const resultPayout = Number(res.payout)
 
   const duration = 1400
@@ -121,6 +130,8 @@ async function play() {
       flash('win')
       const profit = Math.max(0, resultPayout - Number(bet.value))
       message.value = `Победа: +${fmt(profit, 2)} (x${formatNumber(multiplier.value, 4)})`
+	      // BIG/MEGA/SUPER overlay (global)
+	      bigwinStore.maybeShow(resultPayout, bet.value)
     } else {
       sfx('lose')
       flash('lose')
@@ -128,7 +139,7 @@ async function play() {
     }
 
     try {
-      await auth.fetchBalance()
+      await auth.fetchMe()
     } catch {}
 
     running.value = false
@@ -230,7 +241,9 @@ onBeforeUnmount(() => stopAnim())
           step="0.01"
           v-model.number="rollOverUi"
           @input="onSliderInput"
-          @change="sfx('click')"
+          @change="onSliderCommit"
+          @pointerup="onSliderCommit"
+          @keyup.enter="onSliderCommit"
           :disabled="running"
           aria-label="Roll Over"
         />

@@ -3,10 +3,10 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
 import { useAuthStore } from '../stores/auth'
+import { useBigWinStore } from '../stores/bigwin'
 import { api } from '../utils/api'
 import { sfx } from '../utils/sfx'
 import { formatNumber } from '../utils/format'
-import { useBigWinOverlay } from '../composables/useBigWinOverlay'
 
 const auth = useAuthStore()
 
@@ -16,33 +16,7 @@ const difficulty = ref<'LOW'|'MEDIUM'|'HIGH'>('MEDIUM')
 const rows = ref(16)
 const spinning = ref(false)
 const message = ref('')
-function shortMoney(v: number) {
-  const n = Number(v) || 0
-  const abs = Math.abs(n)
-
-  // ВАЖНО: у тебя числа уже в K-единицах
-  // 1000K = 1M, 1_000_000K = 1B, 1_000_000_000K = 1T
-
-  if (abs >= 1_000_000_000) return `${fmt(n / 1_000_000_000, 2)} T`
-  if (abs >= 1_000_000)     return `${fmt(n / 1_000_000, 2)} B`
-  if (abs >= 1_000)         return `${fmt(n / 1_000, 2)} M`
-
-  // Вариант А: показывать K явно
-  return `${fmt(n, 2)} K`
-
-  // Вариант B: если суффикс K у тебя везде “по умолчанию”, можно так:
-  // return fmt(n, 2)
-}
-
-// BIG WIN / MEGA WIN / SUPER WIN overlay (kept for Plinko, reusable for other games)
-const { bigWin, showBigWin } = useBigWinOverlay({
-  formatNumber,
-  sfx,
-  shortMoney,
-  // If later you add a global sound toggle, pass it here.
-  soundOn: () => true,
-  volume: () => 0.35,
-})
+const bigwinStore = useBigWinStore()
 
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
@@ -145,9 +119,6 @@ onBeforeUnmount(() => {
   if(ro && stageEl.value) ro.unobserve(stageEl.value)
   ro = null
 })
-// stop bigwin loop if any
-stopCountLoop()
-
 function clamp(min: number, v: number, max: number){
   return Math.max(min, Math.min(max, v))
 }
@@ -172,13 +143,10 @@ type Ball = {
   id: number
   x: number
   y: number
-  vx: number
-  vy: number
-  row: number
-  idx: number
   visible: boolean
   landing: number | null
   msg: string
+  scale: number
 }
 
 const balls = ref<Ball[]>([])
@@ -231,6 +199,49 @@ function setGlow(i: number){
   }, 420)
 }
 
+
+function easeOutCubic(t: number){ return 1 - Math.pow(1 - t, 3) }
+function easeInOutCubic(t: number){ return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3)/2 }
+
+// deterministic tiny jitter (so same path isn't a clone, but landing stays correct)
+function jitter01(seed: number){
+  const x = Math.sin(seed) * 10000
+  return x - Math.floor(x) // 0..1
+}
+function jitterSigned(seed: number, amp = 1){
+  return (jitter01(seed) * 2 - 1) * amp
+}
+
+async function tweenTo(ball: Ball, toX: number, toY: number, ms: number, arc = 0){
+  const fromX = ball.x
+  const fromY = ball.y
+  const start = performance.now()
+  return await new Promise<void>((resolve) => {
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - start) / Math.max(1, ms))
+      const k = easeInOutCubic(p)
+      const x = fromX + (toX - fromX) * k
+      // arc > 0 => lift up in middle (negative y)
+      const lift = arc > 0 ? Math.sin(Math.PI * k) * arc : 0
+      const y = fromY + (toY - fromY) * k - lift
+      ball.x = x
+      ball.y = y
+      if (p < 1) requestAnimationFrame(tick)
+      else resolve()
+    }
+    requestAnimationFrame(tick)
+  })
+}
+
+async function bump(ball: Ball, strength = 6){
+  // tiny "thud": quick up then settle + a bit of scale
+  const baseScale = ball.scale || 1
+  ball.scale = baseScale * 1.12
+  await tweenTo(ball, ball.x, ball.y - strength, 50, 0)
+  await tweenTo(ball, ball.x, ball.y + strength * 0.35, 70, 0)
+  ball.scale = baseScale
+}
+
 function sleep(ms: number) { return new Promise<void>((r) => setTimeout(r, ms)) }
 
 async function flashPeg(r: number, c: number) {
@@ -272,163 +283,74 @@ function traceToBallResult(trace: ApiTrace): BallResult {
   return { rights, landing, payout, multiplier }
 }
 
-// --- Physics-ish ball animation (single RAF loop per ball)
-// Goal: smoother + more realistic than step-by-step sleeps, and scales better with many balls.
-function animateBall(ball: Ball, result: BallResult, delayMs = 0) {
-  // IMPORTANT REQUIREMENT:
-  // - Ball MUST always land in the correct bin according to backend trace.mask.
-  // - No "stuck" physics / no mode freeze.
-  // We keep a realistic feel (gravity + kicks on pegs), but the path is trace-driven (deterministic).
 
-  const g = 2600 // px/s^2 (gravity)
-  const drag = 0.992
-
+async function dropBall(ball: Ball, result: BallResult) {
   ball.visible = true
   ball.landing = null
   ball.msg = ''
+  ball.scale = 1
+
   ball.x = W.value / 2
   ball.y = 42
-  ball.vx = 0
-  ball.vy = 0
-  ball.row = 0
-  ball.idx = 0
 
-  const startAt = performance.now() + Math.max(0, delayMs)
-  const y0 = 42
+  let idx = 0
+  for (let r = 0; r < rows.value; r++) {
+    const hit = pegPos(r, idx)
 
-  // where we MUST land
-  const landing = clamp(0, result.landing ?? 0, rows.value)
-  const targetBin = bins.value[landing]
-  const targetY = targetBin?.y ?? (60 + rows.value * pegGapY.value + 44)
+    // small deterministic variation per row/ball
+    const sx = jitterSigned(ball.id * 0.001 + r * 1.31, 1.6)
+    const sy = jitterSigned(ball.id * 0.002 + r * 2.17, 0.8)
 
-  // schedule "peg hits" (one per row)
-  // total fall time scales gently with rows to keep it readable
-  const totalMs = rows.value <= 8 ? 1650 : rows.value <= 12 ? 2050 : 2450
-  const rowMs = totalMs / Math.max(1, rows.value)
-  const pegHitTimes = Array.from({ length: rows.value }, (_, r) => startAt + (r + 1) * rowMs)
+    // glide into peg (smooth)
+    await tweenTo(ball, hit.x + sx, hit.y - 10 + sy, 95, 8)
 
-  let firedRow = -1
-  let idxAtRow = 0
+    // visual + audio "thud"
+    void flashPeg(r, idx)
+    try { sfx('plinko_hit') } catch { try { sfx('plinko_tick') } catch {} }
+    await bump(ball, 5)
 
-  return new Promise<void>((resolve) => {
-    let prevT = 0
-    const tick = (t: number) => {
-      if (!spinning.value) {
-        ball.visible = false
-        resolve()
-        return
-      }
-      if (t < startAt) {
-        requestAnimationFrame(tick)
-        return
-      }
+    // choose direction from trace mask
+    if (result.rights[r]) idx += 1
 
-      // time step
-      const dt = prevT ? Math.min(0.034, (t - prevT) / 1000) : 1 / 60
-      prevT = t
-
-      // gravity + simple damping (smooth & stable)
-      ball.vy = (ball.vy + g * dt) * Math.pow(drag, dt * 60)
-      ball.y = ball.y + ball.vy * dt
-
-      // progress 0..1 based on vertical movement (for guided centering towards landing bin)
-      const prog = clamp(0, (ball.y - y0) / Math.max(1, (targetY - 14) - y0), 1)
-
-      // base X drifts towards the correct landing bin as the ball falls
-      const baseX = lerp(W.value / 2, targetBin?.x ?? (W.value / 2), prog)
-
-      // apply "kicks" on each row hit time, decaying over time (gives realistic sways)
-      // Also fires peg flash + tick SFX deterministically.
-      while (firedRow + 1 < rows.value && t >= pegHitTimes[firedRow + 1]) {
-        firedRow++
-        const goRight = !!result.rights[firedRow]
-        const dir = goRight ? 1 : -1
-
-        // flash the peg we "hit" at this row
-        void flashPeg(firedRow, idxAtRow)
-        sfx('plinko_tick')
-
-        if (goRight) idxAtRow++
-        ball.row = firedRow + 1
-        ball.idx = idxAtRow
-
-        // deterministic-ish horizontal impulse
-        // small randomness is ok but MUST NOT affect landing (baseX handles that)
-        const kick = (pegGapX.value * 7.5) * (0.11 + Math.random() * 0.04)
-        ball.vx = (ball.vx * 0.25) + dir * kick
-      }
-
-      // decay vx over time + add subtle wobble
-      ball.vx *= 0.975
-      const wobble = Math.sin(elapsedS * 12 + ball.id) * 0.7
-
-      // final x is guided + impulse + wobble
-      ball.x = baseX + ball.vx + wobble
-      ball.x = clamp(PAD_X.value, ball.x, W.value - PAD_X.value)
-
-      // landing into the correct bin
-      // IMPORTANT: do not "sink" below the hole; instead do a small damped bounce and then hide.
-      const restY = (targetY - 10) // visually sits inside the bin/hole
-      if (ball.y >= restY) {
-        ball.x = targetBin?.x ?? ball.x
-        ball.y = restY
-
-        ball.landing = landing
-        ball.idx = landing
-        setGlow(landing)
-
-        const mult = table.value[landing] ?? result.multiplier ?? 0
-        const win = Math.round((Number(result.payout) || 0) * 100) / 100
-
-        if (win > 0) {
-          sfx('win')
-          ball.msg = `x${mult} → +${fmt(win, 2)}`
-          if (bet.value > 0 && win >= bet.value * 20) {
-            void showBigWin(mult, win)
-          }
-        } else {
-          sfx('lose')
-          ball.msg = `x${mult} → 0`
-        }
-
-        // small bin "bounce" (very smooth): a couple of decaying hops + tiny horizontal rebound
-        const bounceStart = performance.now()
-        const ampY = 10 + Math.random() * 4
-        const ampX = (Math.random() < 0.5 ? -1 : 1) * (4 + Math.random() * 4)
-        const bounce = (tt: number) => {
-          const p = Math.min(1, (tt - bounceStart) / 420)
-          // decaying cosine bounce: starts at 0, goes down a bit, then settles
-          const k = 1 - p
-          const w = Math.cos(p * Math.PI * 2.2)
-          // keep within hole area: only bounce UP (negative y) visually
-          const dy = -Math.abs(w) * ampY * k
-          const dx = ampX * w * k
-          ball.y = restY + dy
-          ball.x = (targetBin?.x ?? ball.x) + dx
-          if (p < 1) requestAnimationFrame(bounce)
-          else {
-            ball.y = restY
-            ball.x = targetBin?.x ?? ball.x
-            // brief hold so the player sees the result
-            window.setTimeout(() => {
-              ball.visible = false
-              resolve()
-            }, 180)
-          }
-        }
-        requestAnimationFrame(bounce)
-        return
-      }
-
-      requestAnimationFrame(tick)
+    // glide to next row (slightly different arc)
+    if (r < rows.value - 1) {
+      const next = pegPos(r + 1, idx)
+      const nx = jitterSigned(ball.id * 0.003 + r * 3.11, 1.3)
+      const ny = jitterSigned(ball.id * 0.004 + r * 4.07, 0.7)
+      await tweenTo(ball, next.x + nx, next.y - 10 + ny, 115, 10)
     }
-    requestAnimationFrame(tick)
-  })
+  }
+
+  // idx = final slot
+  const b = bins.value[idx]
+  // approach bin
+  await tweenTo(ball, b.x, b.y - 18, 150, 12)
+
+  // settle: small bounce (never below bin)
+  await bump(ball, 6)
+
+  ball.landing = idx
+  setGlow(idx)
+
+  const mult = table.value[idx] ?? result.multiplier ?? 0
+  const win = Math.round((Number(result.payout) || 0) * 100) / 100
+
+  if (win > 0) {
+    try { sfx('win') } catch {}
+    ball.msg = `x${mult} → +${fmt(win, 2)}`
+
+    // per-ball big win (same as before)
+    // big/mega/super overlay (global)
+    bigwinStore.maybeShow(win, bet.value)
+  } else {
+    try { sfx('lose') } catch {}
+    ball.msg = `x${mult} → 0`
+  }
+
+  await sleep(260)
+  ball.visible = false
 }
 
-function lerp(a: number, b: number, t: number) {
-  return a + (b - a) * t
-}
 
 async function safeFetchBalance() {
   const fn = (auth as any)?.fetchBalance
@@ -484,31 +406,25 @@ async function start() {
     id: Date.now() + i,
     x: W.value / 2,
     y: 42,
-    vx: 0,
-    vy: 0,
-    row: 0,
-    idx: 0,
     visible: false,
     landing: null,
-    msg: ''
+    msg: '',
+    scale: 1
   }))
   balls.value = created
 
-  const tasks = created.map((b, i) => animateBall(b, results[i], i * 80))
+  const tasks = created.map(async (b, i) => {
+    await sleep(i * 80)
+    await dropBall(b, results[i])
+  })
   await Promise.allSettled(tasks)
 
   // баланс после игры
   await safeFetchBalance()
 
   const totalWin = Number(res?.total) || 0
-  // BIG WIN: threshold by total round (totalWin >= totalBet * 20)
-  if (totalBet.value > 0) {
-    const totalMult = totalWin / totalBet.value
-    if (totalWin >= totalBet.value * 20) {
-      // show overlay with total multiplier + total win amount
-      void showBigWin(totalMult, totalWin)
-    }
-  }
+  // BIG/MEGA/SUPER by total round
+  bigwinStore.maybeShow(totalWin, totalBet.value)
   const net = Math.round((totalWin - totalBet.value) * 100) / 100
   if (net > 0) message.value = `Профит +${fmt(net, 2)}`
   else if (net < 0) message.value = `Минус ${fmt(net, 2)}`
@@ -528,7 +444,7 @@ function binGradient(mult: number) {
 }
 // dev helper
 if (typeof window !== 'undefined') {
-  ;(window as any).__testBigWin = (mult: number, amount: number) => showBigWin(mult, amount)
+  ;(window as any).__testBigWin = (mult: number, amount: number) => bigwinStore.showBigWin(mult, amount)
 }
 
 </script>
@@ -575,33 +491,7 @@ if (typeof window !== 'undefined') {
     </template>
 
     <div class="plinko-stage" ref="stageEl" :style="{ height: stageHeight + 'px' }">
-      <transition name="bigwin-fade">
-        <div v-if="bigWin.show" class="bigwin" :class="`tier-${bigWin.tier}`">
-          <div class="bigwin-backdrop"></div>
 
-          <div class="bigwin-rays"></div>
-          <div class="bigwin-burst"></div>
-          <div class="bigwin-shock"></div>
-          <div class="bigwin-shock shock2"></div>
-
-          <div class="bigwin-card">
-            <div class="bigwin-title">{{ bigWin.title }}</div>
-
-            <!-- бегущие цифры -->
-            <div class="bigwin-amount">
-              ⭐ {{ bigWin.displayText }} {{ bigWin.title }} ⭐
-            </div>
-
-            <div class="bigwin-sub">
-              x{{ fmt(bigWin.mult, 2) }} • +{{ fmt(bigWin.amount, 2) }}
-            </div>
-
-            <div class="bigwin-sparks">
-              <i v-for="i in 26" :key="i" />
-            </div>
-          </div>
-        </div>
-      </transition>
       <div class="pegs">
             <div
               v-for="p in pegs"
@@ -619,7 +509,7 @@ if (typeof window !== 'undefined') {
               :key="b.id"
               class="ball"
               v-show="b.visible"
-              :style="{ left: b.x + 'px', top: b.y + 'px' }"
+              :style="{ left: b.x + 'px', top: b.y + 'px', transform: `translate(-50%, -50%) scale(${b.scale || 1})` }"
             />
           </div>
 
@@ -698,7 +588,7 @@ if (typeof window !== 'undefined') {
   box-shadow: 0 0 18px rgba(90,180,255,.24), 0 18px 40px rgba(0,0,0,.35);
   transform: translate(-50%, -50%);
   transition: none;
-  z-index: 4;
+  z-index: 5;
 }
 .ball::after{
   content:'';
@@ -719,7 +609,6 @@ if (typeof window !== 'undefined') {
   align-items: flex-end;
   gap: 0;
   padding: 8px 0;
-  z-index: 8;
 }
 .bin{
   width: var(--bin, 56px);
@@ -743,262 +632,8 @@ if (typeof window !== 'undefined') {
   100%{ filter: brightness(1.0); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08), 0 0 0 rgba(255,208,90,0); }
 }
 
+
 .bin-mult{ font-weight: 900; }
-/* BIG WIN overlay (more epic) */
-.bigwin{
-  position:absolute;
-  inset:0;
-  z-index: 50;
-  display:grid;
-  place-items:center;
-  pointer-events:none;
-}
-
-.bigwin-backdrop{
-  position:absolute;
-  inset:0;
-  background:
-    radial-gradient(circle at 50% 45%, rgba(0,0,0,.18) 0 25%, rgba(0,0,0,.82) 70% 100%),
-    linear-gradient(180deg, rgba(0,0,0,.25), rgba(0,0,0,.55));
-  animation: bigwinBackdrop 3000ms ease-out both;
-}
-
-.bigwin-rays{
-  position:absolute;
-  inset:-30%;
-  background:
-    conic-gradient(from 0deg,
-    rgba(255,210,90,.00),
-    rgba(255,210,90,.14),
-    rgba(110,200,255,.00),
-    rgba(255,210,90,.18),
-    rgba(110,200,255,.00),
-    rgba(255,210,90,.12),
-    rgba(255,210,90,.00)
-    );
-  filter: blur(0px);
-  opacity: 0;
-  animation: bigwinRays 1500ms ease-out both;
-}
-
-.bigwin-burst{
-  position:absolute;
-  width: 180vmax;
-  height: 180vmax;
-  border-radius: 999px;
-  background: radial-gradient(circle, rgba(255,210,90,.22), rgba(110,200,255,.08) 40%, rgba(0,0,0,0) 72%);
-  filter: blur(8px);
-  opacity: 0;
-  animation: bigwinBurst 1200ms ease-out both;
-}
-
-.bigwin-shock{
-  position:absolute;
-  width: min(620px, 92vw);
-  height: min(620px, 92vw);
-  border-radius: 999px;
-  border: 2px solid rgba(255,210,90,.82);
-  box-shadow: 0 0 60px rgba(255,210,90,.25), inset 0 0 40px rgba(110,200,255,.14);
-  transform: scale(.58);
-  opacity: 0;
-  animation: bigwinShock 950ms ease-out both;
-}
-.bigwin-shock.shock2{
-  width: min(760px, 98vw);
-  height: min(760px, 98vw);
-  border-color: rgba(110,200,255,.60);
-  animation-delay: 120ms;
-  opacity: 0;
-}
-
-.bigwin-card{
-  position:relative;
-  width: min(680px, 92vw);
-  padding: 22px 22px 18px;
-  border-radius: 22px;
-  border: 1px solid rgba(255,255,255,.12);
-  background:
-    radial-gradient(circle at 50% 0%, rgba(255,210,90,.10), rgba(0,0,0,0) 55%),
-    linear-gradient(180deg, rgba(25,25,30,.78), rgba(0,0,0,.66));
-  box-shadow:
-    0 30px 100px rgba(0,0,0,.60),
-    0 0 80px rgba(255,210,90,.18);
-  text-align:center;
-  overflow:hidden;
-  animation: bigwinCard 3000ms ease-out both;
-}
-
-.bigwin-card::before{
-  content:'';
-  position:absolute;
-  inset:-60%;
-  background: radial-gradient(circle, rgba(255,255,255,.12), rgba(255,255,255,0) 55%);
-  transform: translateX(-30%) rotate(18deg);
-  opacity: 0;
-  animation: bigwinShine 1200ms ease-out both;
-}
-
-.bigwin-title{
-  font-size: 46px;
-  font-weight: 1000;
-  letter-spacing: .10em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,.96);
-  text-shadow:
-    0 0 22px rgba(255,210,90,.30),
-    0 0 64px rgba(110,200,255,.16);
-  animation: bigwinTitle 980ms cubic-bezier(.2,.9,.2,1) both;
-}
-
-.bigwin-amount{
-  margin-top: 10px;
-  font-size: 30px;
-  font-weight: 1000;
-  letter-spacing: .03em;
-  color: rgba(255,210,90,.98);
-  text-shadow:
-    0 0 34px rgba(255,210,90,.28),
-    0 0 62px rgba(110,200,255,.12);
-  animation: bigwinAmount 1300ms cubic-bezier(.2,.9,.2,1) both;
-}
-
-.bigwin-sub{
-  margin-top: 10px;
-  font-size: 14px;
-  color: rgba(255,255,255,.72);
-  font-weight: 750;
-  opacity: .95;
-}
-
-.bigwin-sparks{
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  opacity: .92;
-  mix-blend-mode: screen;
-}
-
-.bigwin-sparks i{
-  position:absolute;
-  left: 50%;
-  top: 55%;
-  width: 9px;
-  height: 9px;
-  border-radius: 999px;
-  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.95), rgba(255,210,90,.88));
-  box-shadow: 0 0 22px rgba(255,210,90,.28), 0 0 36px rgba(110,200,255,.12);
-  transform: translate(-50%,-50%) scale(.9);
-  animation: sparkFly 1200ms ease-out both;
-}
-.bigwin-sparks i:nth-child(3n){ background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.95), rgba(110,200,255,.85)); }
-.bigwin-sparks i:nth-child(4n){ width: 6px; height: 6px; opacity: .85; }
-
-/* pseudo-random spread (26 sparks) */
-.bigwin-sparks i:nth-child(1){ --a:-70deg; --d:260px; }
-.bigwin-sparks i:nth-child(2){ --a:-40deg; --d:230px; }
-.bigwin-sparks i:nth-child(3){ --a:-15deg; --d:290px; }
-.bigwin-sparks i:nth-child(4){ --a:10deg;  --d:250px; }
-.bigwin-sparks i:nth-child(5){ --a:35deg;  --d:300px; }
-.bigwin-sparks i:nth-child(6){ --a:65deg;  --d:270px; }
-.bigwin-sparks i:nth-child(7){ --a:-95deg; --d:230px; }
-.bigwin-sparks i:nth-child(8){ --a:-120deg;--d:260px; }
-.bigwin-sparks i:nth-child(9){ --a:95deg;  --d:240px; }
-.bigwin-sparks i:nth-child(10){--a:120deg; --d:270px; }
-.bigwin-sparks i:nth-child(11){--a:-10deg; --d:340px; }
-.bigwin-sparks i:nth-child(12){--a:20deg;  --d:340px; }
-.bigwin-sparks i:nth-child(13){--a:-160deg;--d:250px; }
-.bigwin-sparks i:nth-child(14){--a:160deg; --d:250px; }
-.bigwin-sparks i:nth-child(15){--a:-55deg; --d:320px; }
-.bigwin-sparks i:nth-child(16){--a:55deg;  --d:320px; }
-.bigwin-sparks i:nth-child(17){--a:-135deg;--d:300px; }
-.bigwin-sparks i:nth-child(18){--a:135deg; --d:300px; }
-.bigwin-sparks i:nth-child(19){--a:-30deg; --d:360px; }
-.bigwin-sparks i:nth-child(20){--a:30deg;  --d:360px; }
-.bigwin-sparks i:nth-child(21){--a:-110deg;--d:320px; }
-.bigwin-sparks i:nth-child(22){--a:110deg; --d:320px; }
-.bigwin-sparks i:nth-child(23){--a:-175deg;--d:280px; }
-.bigwin-sparks i:nth-child(24){--a:175deg; --d:280px; }
-.bigwin-sparks i:nth-child(25){--a:-82deg; --d:360px; }
-.bigwin-sparks i:nth-child(26){--a:82deg;  --d:360px; }
-
-/* Tier intensity */
-.bigwin.tier-2 .bigwin-title{ text-shadow: 0 0 28px rgba(255,210,90,.36), 0 0 80px rgba(110,200,255,.18); }
-.bigwin.tier-2 .bigwin-card{ box-shadow: 0 30px 120px rgba(0,0,0,.62), 0 0 110px rgba(255,210,90,.22); }
-.bigwin.tier-3 .bigwin-title{ animation: bigwinTitleGlitch 1200ms ease-out both; }
-.bigwin.tier-3 .bigwin-card{ animation: bigwinCard 3400ms ease-out both, bigwinShake 900ms ease-out both; }
-.bigwin.tier-3 .bigwin-rays{ animation-duration: 1700ms; opacity: 1; }
-
-@keyframes bigwinBackdrop{
-  0%{ opacity: 0; }
-  10%{ opacity: 1; }
-  100%{ opacity: 0; }
-}
-@keyframes bigwinRays{
-  0%{ transform: scale(.7) rotate(-18deg); opacity: 0; }
-  15%{ opacity: .9; }
-  100%{ transform: scale(1.15) rotate(12deg); opacity: 0; }
-}
-@keyframes bigwinBurst{
-  0%{ transform: scale(.55); opacity: 0; filter: blur(12px); }
-  18%{ opacity: 1; }
-  100%{ transform: scale(1.18); opacity: 0; filter: blur(2px); }
-}
-@keyframes bigwinShock{
-  0%{ transform: scale(.55); opacity: 0; }
-  30%{ opacity: 1; }
-  100%{ transform: scale(1.20); opacity: 0; }
-}
-@keyframes bigwinCard{
-  0%{ transform: translateY(12px) scale(.90); opacity: 0; filter: blur(5px); }
-  16%{ transform: translateY(0) scale(1.03); opacity: 1; filter: blur(0); }
-  70%{ transform: translateY(0) scale(1.00); opacity: 1; }
-  100%{ transform: translateY(-8px) scale(.98); opacity: 0; }
-}
-@keyframes bigwinShine{
-  0%{ opacity: 0; transform: translateX(-35%) rotate(18deg); }
-  20%{ opacity: 1; }
-  100%{ opacity: 0; transform: translateX(35%) rotate(18deg); }
-}
-@keyframes bigwinTitle{
-  0%{ transform: scale(.86); opacity: 0; letter-spacing: .22em; }
-  100%{ transform: scale(1); opacity: 1; letter-spacing: .10em; }
-}
-@keyframes bigwinTitleGlitch{
-  0%{ transform: scale(.86); opacity: 0; }
-  25%{ opacity: 1; transform: scale(1.03); filter: drop-shadow(2px 0 rgba(110,200,255,.5)) drop-shadow(-2px 0 rgba(255,210,90,.35)); }
-  40%{ transform: translateX(2px) scale(1.02); }
-  55%{ transform: translateX(-2px) scale(1.01); }
-  100%{ transform: translateX(0) scale(1); filter:none; opacity: 1; }
-}
-@keyframes bigwinAmount{
-  0%{ transform: translateY(10px) scale(.90); opacity: 0; }
-  26%{ transform: translateY(0) scale(1.02); opacity: 1; }
-  100%{ transform: translateY(0) scale(1); opacity: 1; }
-}
-@keyframes sparkFly{
-  0%{ opacity: 0; transform: translate(-50%,-50%) scale(.7); }
-  20%{ opacity: 1; }
-  100%{
-    opacity: 0;
-    transform:
-      translate(-50%,-50%)
-      rotate(var(--a, 0deg))
-      translateX(var(--d, 260px))
-      scale(.18);
-  }
-}
-@keyframes bigwinShake{
-  0%{ }
-  10%{ transform: translateY(0) scale(1.03) translateX(0); }
-  15%{ transform: translateY(0) scale(1.03) translateX(3px); }
-  20%{ transform: translateY(0) scale(1.03) translateX(-3px); }
-  25%{ transform: translateY(0) scale(1.03) translateX(2px); }
-  30%{ transform: translateY(0) scale(1.03) translateX(-2px); }
-  100%{ }
-}
-
-.bigwin-fade-enter-active, .bigwin-fade-leave-active{ transition: opacity .18s ease; }
-.bigwin-fade-enter-from, .bigwin-fade-leave-to{ opacity: 0; }
 
 
 </style>

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
 import { useAuthStore } from '../stores/auth'
+import { useBigWinStore } from '../stores/bigwin'
 import { sfx } from '../utils/sfx'
 import { formatNumber } from '../utils/format'
 import { normalizeRouletteKey, roulettePlay } from '../api/games'
@@ -14,6 +15,7 @@ type BetKey =
   | 'Ряд1' | 'Ряд2' | 'Ряд3'
 
 const auth = useAuthStore()
+const bigwinStore = useBigWinStore()
 
 const chips = [1, 2, 5, 10, 25, 50, 100]
 const chip = ref(10)
@@ -26,7 +28,6 @@ const history = ref<{ key: BetKey; amount: number }[]>([])
 const spinning = ref(false)
 
 const lastNumber = ref<number | null>(null)
-const lastWinAmount = ref<number | null>(null)
 const message = ref('')
 
 const winKeys = ref<Set<BetKey>>(new Set())
@@ -266,17 +267,14 @@ async function spin() {
   spinning.value = true
   message.value = ''
   lastNumber.value = null
-  lastWinAmount.value = null
   winKeys.value = new Set()
   pauseIdle(1_000)
-
-  // ensure the "spinning" class is applied before we change wheelDeg (otherwise CSS transition may not fire)
-  await nextTick()
 
   try {
     sfx('spin')
 
     let win: number
+    let payout = 0
     let shouldRefreshBalance = false
 
     if (TEMP_ALLOW_FREE_SPIN) {
@@ -295,15 +293,8 @@ async function spin() {
 
       const res = await roulettePlay({ bets: payload })
       win = Number(res.number)
-
-      // backend returns: { number, amount } where amount = winnings
-      const winAmount = Number(res.amount ?? 0)
-      lastWinAmount.value = winAmount
-
-      // refresh balance (both win/lose) — но ТОЛЬКО после анимации прокрута
+      payout = Number(res.amount ?? 0)
       shouldRefreshBalance = true
-
-      if (winAmount > 0) message.value = `Выпало ${win}. Выигрыш: +${fmt(winAmount, 2)}`
     }
 
 
@@ -323,10 +314,6 @@ async function spin() {
     sfx('stop')
     wheelDeg.value = desiredWheelDegForNumber(win)
 
-    if (shouldRefreshBalance) {
-      await auth.fetchBalance().catch(() => {})
-    }
-
     lastNumber.value = win
     lastNumbers.value = [win, ...lastNumbers.value].slice(0, 30)
 
@@ -334,8 +321,20 @@ async function spin() {
     highlightNumber(win)     // ✅ подсветка сектора на 1s
     setWinKeysFor(win)
 
-    // If not set above (no payout info), show basic result
-    if (!message.value) message.value = `Выпало ${win}`
+    // Show result AFTER animation.
+    if (payout > 0) {
+      const profit = Math.max(0, payout - Number(totalBet.value))
+      message.value = `Выпало ${win}. Выигрыш: +${fmt(profit, 2)}`
+      // BIG/MEGA/SUPER overlay (global): based on total payout vs total bet
+      bigwinStore.maybeShow(payout, totalBet.value)
+    } else {
+      message.value = `Выпало ${win}`
+    }
+
+    // Refresh balance only after spin animation ends
+    if (shouldRefreshBalance) {
+      try { await auth.fetchMe() } catch {}
+    }
   } catch (e: any) {
     message.value = e?.message ? String(e.message) : 'Ошибка'
   } finally {
@@ -432,9 +431,6 @@ function betOf(key: BetKey) {
 
           <div class="last" v-if="lastNumber !== null">
             <span class="badge" :class="colorOf(lastNumber)">{{ lastNumber }}</span>
-            <span v-if="lastWinAmount !== null" class="payout" :class="{ on: lastWinAmount > 0 }">
-              {{ lastWinAmount > 0 ? `+${fmt(lastWinAmount, 2)}` : '0' }}
-            </span>
           </div>
         </div>
 
@@ -649,28 +645,6 @@ function betOf(key: BetKey) {
   left: 12px;
   bottom: 12px;
   z-index: 7;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.payout{
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 1000;
-  font-size: 12px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.18);
-  color: rgba(255,255,255,.75);
-}
-.payout.on{
-  background: rgba(0,255,140,.18);
-  border-color: rgba(0,255,140,.32);
-  color: rgba(235,255,245,.95);
 }
 
 .history-under {

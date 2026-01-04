@@ -20,9 +20,15 @@ export const createApp = ViteSSG(
     const pinia = createPinia()
     app.use(pinia)
 
-    // Head manager (SSR + client)
-    const head = createHead()
-    app.use(head)
+    // Head manager (SSR + client) - avoid double install warning in dev/HMR
+    const provides = (app as any)?._context?.provides || {}
+    const hasUsehead =
+      Object.prototype.hasOwnProperty.call(provides, 'usehead') ||
+      Object.prototype.hasOwnProperty.call(provides, 'useHead')
+    if (!hasUsehead) {
+      const head = createHead()
+      app.use(head)
+    }
 
     // In client only, init auth (uses localStorage).
     if (isClient) {

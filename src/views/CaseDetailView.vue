@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useGameStore } from '../stores/game'
 import { useAuthStore } from '../stores/auth'
+import { useBigWinStore } from '../stores/bigwin'
 import { sfx } from '../utils/sfx'
 import { formatNumber } from '../utils/format'
 
@@ -12,6 +13,7 @@ type HistoryItem = { ts: number; label: string; amount: number }
 const route = useRoute()
 const game = useGameStore()
 const auth = useAuthStore()
+const bigwinStore = useBigWinStore()
 
 const c = computed(() => game.cases.find(x => x.id === String(route.params.id)))
 
@@ -262,6 +264,9 @@ async function openOne(){
   const wLabel = res.loot?.label || '—'
   const wAmount = res.loot?.amount ?? 0
 
+	// BIG/MEGA/SUPER overlay (global)
+	bigwinStore.maybeShow(Number(wAmount) || 0, c.value.price)
+
   pushHistory({ ts: Date.now(), label: wLabel, amount: wAmount })
 
   const winItem: ReelItem = { label: wLabel, amount: wAmount, icon: lootIcon(wAmount) }
@@ -280,8 +285,6 @@ async function openOne(){
     sfx('win')
     result.value = wLabel
     resultAmount.value = wAmount
-    // refresh balance after round (win or lose)
-    await (auth as any).fetchBalance?.().catch(() => {})
     opening.value = false
     return
   }
@@ -307,8 +310,6 @@ async function openOne(){
 
   result.value = wLabel
   resultAmount.value = wAmount
-  // refresh balance after round (win or lose)
-  await (auth as any).fetchBalance?.().catch(() => {})
   opening.value = false
 }
 
