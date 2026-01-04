@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
 import { useAuthStore } from '../stores/auth'
@@ -10,22 +10,8 @@ import { minesFinish, minesGetSession, minesMultiplier, minesStart, minesStep } 
 
 type Cell = { id: number; hasMine: boolean; revealed: boolean }
 
-type OpenedCell = { row: number; col: number }
-
-type FieldDTO = { field: boolean[][]; opened: boolean[][] }
-
 const auth = useAuthStore()
 const bigwinStore = useBigWinStore()
-
-async function safeFetchBalance() {
-  const fn = (auth as any)?.fetchBalance
-  if (typeof fn !== 'function') return
-  try {
-    await fn.call(auth)
-  } catch {
-    // ignore
-  }
-}
 
 const bet = ref(20)
 const mines = ref(3) // 1..24
@@ -37,7 +23,6 @@ const lost = ref(false)
 const safePicks = ref(0)
 const multiplier = ref(1)
 const message = ref('')
-const ending = ref(false)
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 
@@ -46,7 +31,7 @@ const gems = computed(() => SIZE - mines.value)
 const canStart = computed(
   () => !!auth.user && !inGame.value && Number(bet.value) > 0 && auth.user.balance >= Number(bet.value)
 )
-const canClick = computed(() => inGame.value && !lost.value && !ending.value)
+const canClick = computed(() => inGame.value && !lost.value)
 
 const payoutAmount = computed(() => {
   if (!inGame.value || safePicks.value <= 0) return 0
@@ -67,13 +52,7 @@ function cellToRC(id: number) {
   return { row: Math.floor(id / 5), col: id % 5 }
 }
 
-function rcToId(row: number, col: number) {
-  return row * 5 + col
-}
-
-function applyField(field: FieldDTO) {
-  // Defensive: backend can theoretically return null/undefined.
-  if (!field) return
+function applyField(field: { field: boolean[][]; opened: boolean[][] }) {
   for (const c of grid.value) {
     const { row, col } = cellToRC(c.id)
     c.hasMine = !!field.field?.[row]?.[col]
@@ -81,60 +60,12 @@ function applyField(field: FieldDTO) {
   }
 }
 
-function revealAll(field: FieldDTO) {
-  if (!field) return
-  // Defensive: make sure grid exists
-  if (!grid.value.length) buildGrid()
-  for (const c of grid.value) {
-    const { row, col } = cellToRC(c.id)
-    c.hasMine = !!field.field?.[row]?.[col]
-    c.revealed = true
-  }
-}
-
-function applyOpened(opened: OpenedCell[]) {
-  for (const oc of opened || []) {
-    const id = rcToId(oc.row, oc.col)
-    const c = grid.value[id]
-    if (!c) continue
-    c.revealed = true
-    c.hasMine = false
-  }
-}
-
 async function refreshMultiplierFromServer() {
   try {
-    // IMPORTANT: backend step response has an off-by-one nextMultiplier;
-    // the multiplier endpoint is the source of truth.
     const m = await minesMultiplier(Number(safePicks.value), Number(mines.value))
     multiplier.value = Number(m)
   } catch {
     // keep previous
-  }
-}
-
-async function syncSession() {
-  // Resume a running session if backend has one.
-  try {
-    const s = await minesGetSession()
-    buildGrid()
-    inGame.value = true
-    lost.value = false
-
-    const opened = (s as any)?.opened as OpenedCell[] | undefined
-    safePicks.value = Array.isArray(opened) ? opened.length : 0
-    applyOpened(Array.isArray(opened) ? opened : [])
-
-    // If user changed mines count in UI while a session exists – lock it to session value.
-    if (typeof (s as any)?.minesCount === 'number') mines.value = Number((s as any).minesCount)
-
-    await refreshMultiplierFromServer()
-  } catch {
-    // no active session
-    inGame.value = false
-    lost.value = false
-    safePicks.value = 0
-    multiplier.value = 1
   }
 }
 
@@ -144,8 +75,6 @@ async function start() {
   sfx('click')
 
   try {
-    // balance before start (project convention)
-    await safeFetchBalance()
     await minesStart({ bet: Number(bet.value), mines: Number(mines.value) })
 
     // game started: reset UI state
@@ -156,10 +85,14 @@ async function start() {
     multiplier.value = 1
 
     // balance decreased on backend
-    await safeFetchBalance()
+    await auth.fetchMe()
 
-    // sync session (opened cells etc.)
-    await syncSession()
+    // try to sync session (opened cells etc.)
+    try {
+      const s = await minesGetSession()
+      safePicks.value = (s.opened?.length ?? 0)
+      await refreshMultiplierFromServer()
+    } catch {}
   } catch (e: any) {
     message.value = e?.message ? String(e.message) : 'Ошибка старта'
     inGame.value = false
@@ -172,53 +105,40 @@ async function reveal(cell: Cell) {
   message.value = ''
   sfx('click')
 
-  // Optimistic flip for better UX (and avoids "nothing happens" feeling)
-  // We will correct the content after backend response.
-  cell.revealed = true
-
   const { row, col } = cellToRC(cell.id)
   try {
     const res = await minesStep({ row, col })
 
-    if (res.finish) {
-      // mine hit: backend returns full field
-      lost.value = true
-      inGame.value = false
-      // Ensure the clicked tile is marked as a mine even if field is missing for any reason.
-      cell.hasMine = true
-
-      if (res.field) {
-        revealAll(res.field as any)
-      } else {
-        // Fallback: at least show the clicked mine.
-        // (Session is already deleted on backend, so /finish may 404.)
-        for (const c of grid.value) {
-          if (c.id !== cell.id) c.revealed = c.revealed || false
-        }
-      }
-      message.value = 'Бомба! Проигрыш'
-      sfx('mine_boom')
-      await safeFetchBalance()
-      return
-    }
-
-    // safe step
+    // backend doesn't return opened matrix on success; we update UI optimistically
+    cell.revealed = true
     cell.hasMine = false
     safePicks.value += 1
-    sfx('mine_safe')
-    await refreshMultiplierFromServer()
-  } catch (e: any) {
-    // If request failed, revert optimistic flip unless we can fetch a final field.
-    cell.revealed = false
-    message.value = e?.message ? String(e.message) : 'Ошибка'
 
-    // If backend ended the game, try to reveal the full field.
+    if (res.nextMultiplier != null) {
+      multiplier.value = Number(res.nextMultiplier)
+    } else {
+      await refreshMultiplierFromServer()
+    }
+
+    if (res.finish) {
+      // finish=true here means we hit a mine (backend returns field)
+      lost.value = true
+      inGame.value = false
+      if (res.field) applyField(res.field)
+      message.value = 'Бомба! Проигрыш'
+      sfx('lose')
+      await auth.fetchMe()
+    }
+  } catch (e: any) {
+    // backend might throw on invalid state / mine hit
+    message.value = e?.message ? String(e.message) : 'Ошибка'
+    // try to fetch full field to reveal (if game already ended)
     try {
       const fin = await minesFinish()
-      revealAll(fin.field as any)
+      applyField(fin.field)
       inGame.value = false
-      lost.value = Number(fin.win) <= 0
-      await safeFetchBalance()
+      lost.value = true
+      await auth.fetchMe()
     } catch {}
   }
 }
@@ -234,15 +154,14 @@ async function cashOut() {
     const win = Number(res.win)
     const profit = Math.max(0, win - Number(bet.value))
     message.value = `Кэш-аут: +${fmt(profit, 2)} (x${formatNumber(multiplier.value, 4)})`
-    // BIG/MEGA/SUPER overlay (global)
-    bigwinStore.maybeShow(win, bet.value)
+	    // BIG/MEGA/SUPER overlay (global)
+	    bigwinStore.maybeShow(win, bet.value)
 
-    // show full board (where mines were)
-    revealAll(res.field as any)
+    applyField(res.field)
 
     inGame.value = false
     lost.value = false
-    await safeFetchBalance()
+    await auth.fetchMe()
   } catch (e: any) {
     message.value = e?.message ? String(e.message) : 'Ошибка вывода'
   }
@@ -256,43 +175,18 @@ async function randomPick() {
   await reveal(pick)
 }
 
-async function reset() {
+function reset() {
   sfx('click')
-  message.value = ''
-
-  // Temporary "Reset" = "End game" request.
-  if (inGame.value) {
-    ending.value = true
-    try {
-      const res = await minesFinish()
-      // end-game reveals all
-      revealAll(res.field as any)
-      inGame.value = false
-      lost.value = false
-      await safeFetchBalance()
-      message.value = 'Игра завершена'
-    } catch (e: any) {
-      message.value = e?.message ? String(e.message) : 'Ошибка завершения'
-    } finally {
-      ending.value = false
-    }
-    return
-  }
-
-  // If not in game – just reset UI.
   inGame.value = false
   lost.value = false
   safePicks.value = 0
   multiplier.value = 1
+  message.value = ''
   buildGrid()
 }
 
 // initial
 buildGrid()
-
-onMounted(() => {
-  void syncSession()
-})
 </script>
 
 <template>
@@ -334,11 +228,11 @@ onMounted(() => {
             </div>
           </div>
 
-          <button class="btn btn-primary" @click="cashOut" :disabled="!(inGame && safePicks > 0) || ending">
+          <button class="btn btn-primary" @click="cashOut" :disabled="!(inGame && safePicks > 0)">
             Cashout ({{ fmt(payoutAmount, 2) }}K)
           </button>
 
-          <button class="btn btn-ghost" @click="reset" :disabled="ending">
+          <button class="btn btn-ghost" @click="reset" :disabled="inGame">
             Reset
           </button>
         </template>

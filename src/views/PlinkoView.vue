@@ -444,7 +444,7 @@ function binGradient(mult: number) {
 }
 // dev helper
 if (typeof window !== 'undefined') {
-  ;(window as any).__testBigWin = (mult: number, amount: number) => bigwinStore.showBigWin(mult, amount)
+  ;(window as any).__testBigWin = (mult: number, amount: number) => bigwinStore.show(mult, amount)
 }
 
 </script>

@@ -13,35 +13,42 @@ const bigwinStore = useBigWinStore()
 
 const amount = ref(0)
 
-// ✅ Слайдер теперь = Roll Over (то, что ждёт бэк)
-// Win, если roll >= rollOver
+// Slider = Roll Over
 const rollOverUi = ref(30) // 1..99
 
 const running = ref(false)
 const lastRoll = ref<number | null>(null)
 const message = ref('')
 
-// local odds/payout (avoid extra API calls)
+// local odds/payout
 const payoutMul = ref<number>(0)
-const winChancePct = ref<number>(0)
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100
 
 const bet = computed(() => Math.max(0, Number(amount.value) || 0))
 
-// ✅ WinChance = 100 - rollOver
 const rollOver = computed(() => Math.max(1, Math.min(99, round2(Number(rollOverUi.value || 0)))))
 const winChance = computed(() => round2(100 - rollOver.value))
 
 const multiplier = computed(() => payoutMul.value || 0)
-const winnings = computed(() => Math.round(bet.value * multiplier.value * 10000) / 10000)
 const profitOnWin = computed(() => Math.round(bet.value * (multiplier.value - 1) * 10000) / 10000)
 
-// UI needle position (0..100)
+// UI
 const needle = ref(50)
 const bump = ref(false)
 const flashZone = ref<'win' | 'lose' | ''>('')
+const trailOn = ref(false)
+const linePulse = ref(false)
+
+// Smooth but NO up/down wobble
+const puckScale = ref(1)
+const puckGlow = ref(0)
+
+// particles + micro shake
+const burst = ref<'win' | 'lose' | ''>('')
+const burstTick = ref(0)
+const barShake = ref(false)
 
 const resultLabel = computed(() => needle.value.toFixed(2))
 
@@ -58,19 +65,30 @@ function stopAnim() {
 
 function flash(kind: 'win' | 'lose') {
   flashZone.value = kind
-  window.setTimeout(() => {
-    flashZone.value = ''
-  }, 520)
+  window.setTimeout(() => (flashZone.value = ''), 520)
 }
 
-// ==== Slider behavior (NO lag) ====
+function pulseLine() {
+  linePulse.value = true
+  window.setTimeout(() => (linePulse.value = false), 420)
+}
+
+function triggerBurst(kind: 'win' | 'lose') {
+  burst.value = kind
+  burstTick.value += 1
+  window.setTimeout(() => (burst.value = ''), 520)
+}
+
+function triggerBarShake() {
+  barShake.value = true
+  window.setTimeout(() => (barShake.value = false), 180)
+}
+
+// ==== Slider behavior ====
 function recalcLocalPayout() {
-  // Win if roll >= rollOver
-  // winChance = 100 - rollOver
   const wc = Math.max(0.01, winChance.value)
-  // Classic dice formula with 1% edge: multiplier = 99 / winChance
+  // classic 1% edge: multiplier = 99 / winChance
   payoutMul.value = round2(99 / wc)
-  winChancePct.value = round2(wc)
 }
 
 function onSliderInput() {
@@ -78,32 +96,31 @@ function onSliderInput() {
   recalcLocalPayout()
 }
 
+function onSliderCommit() {
+  sfx('ui_tick')
+}
+
 recalcLocalPayout()
+
+// easing
+const clamp01 = (x: number) => Math.max(0, Math.min(1, x))
+const easeOutCubic = (p: number) => 1 - Math.pow(1 - p, 3)
+const easeInOutCubic = (p: number) =>
+  p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2
 
 async function play() {
   if (running.value) return
   message.value = ''
 
-  if (!auth.user) {
-    message.value = 'Нужен вход'
-    return
-  }
-  if (bet.value <= 0) {
-    message.value = 'Укажи Amount'
-    return
-  }
-  if (auth.user.balance < bet.value) {
-    message.value = 'Недостаточно баланса'
-    return
-  }
+  if (!auth.user) return (message.value = 'Нужен вход')
+  if (bet.value <= 0) return (message.value = 'Укажи Amount')
+  if (auth.user.balance < bet.value) return (message.value = 'Недостаточно баланса')
 
   running.value = true
   lastRoll.value = null
   sfx('click')
 
-  // ✅ отправляем РЕАЛЬНЫЙ rollOver (без инверсии!)
   const ro = round2(Number(rollOverUi.value))
-
   let res: any
   try {
     res = await dicePlay({ bet: Number(bet.value), rollOver: ro })
@@ -113,28 +130,35 @@ async function play() {
     return
   }
 
-  const target = Number(res.roll) // 0..100 (2 decimals)
+  const target = Number(res.roll)
   const resultIsWin = !!res.isWin
   const resultPayout = Number(res.payout)
 
-  const duration = 1400
+  // animation: spin → brake → snap
+  const SPIN_MS = 1100
+  const BRAKE_MS = 950
+  const SNAP_MS = 240
+
   const t0 = performance.now()
   const start = needle.value
+  const spinSeed = Math.random() * 1000
 
-  const TOTAL_TICKS = 10
-  lastTick = 0
+  trailOn.value = true
+  puckGlow.value = 0.9
 
   const finalize = async () => {
     if (resultIsWin) {
       sfx('win')
       flash('win')
+      triggerBurst('win')
       const profit = Math.max(0, resultPayout - Number(bet.value))
       message.value = `Победа: +${fmt(profit, 2)} (x${formatNumber(multiplier.value, 4)})`
-	      // BIG/MEGA/SUPER overlay (global)
-	      bigwinStore.maybeShow(resultPayout, bet.value)
+      bigwinStore.maybeShow(resultPayout, bet.value)
     } else {
       sfx('lose')
       flash('lose')
+      triggerBurst('lose')
+      triggerBarShake()
       message.value = 'Проигрыш'
     }
 
@@ -145,29 +169,94 @@ async function play() {
     running.value = false
   }
 
-  const step = (t: number) => {
-    const p = Math.min(1, (t - t0) / duration)
-    const e = 1 - Math.pow(1 - p, 3)
-    needle.value = start + (target - start) * e
-
-    const curTick = Math.floor(e * TOTAL_TICKS)
-    if (curTick > lastTick) {
-      lastTick = curTick
+  const tickDynamic = (speed: number, t: number) => {
+    const interval = speed > 0.65 ? 70 : speed > 0.4 ? 95 : 130
+    const desired = Math.floor((t - t0) / interval)
+    if (desired > lastTick) {
+      lastTick = desired
       sfx('dice_tick')
+      if (desired % 3 === 0) pulseLine()
     }
+  }
 
-    if (p < 1) {
+  const step = (t: number) => {
+    const elapsed = t - t0
+
+    // phase 1: spin (multiple laps + wobble)
+    if (elapsed < SPIN_MS) {
+      const p = clamp01(elapsed / SPIN_MS)
+      const e = easeOutCubic(p)
+
+      const laps = 2.4
+      const base = start + e * (laps * 100)
+      const wobble = Math.sin((t + spinSeed) / 55) * 7.0 + Math.sin((t + spinSeed) / 19) * 2.0
+      needle.value = (base + wobble + 1000) % 100
+
+      // NO vertical wobble
+      puckScale.value = 1 + 0.09 * (0.6 + 0.4 * Math.sin((t + spinSeed) / 80))
+      puckGlow.value = 0.95
+
+      tickDynamic(1.0, t)
       raf = requestAnimationFrame(step)
       return
     }
 
+    // phase 2: brake (approach target with fading oscillation)
+    const t1 = elapsed - SPIN_MS
+    if (t1 < BRAKE_MS) {
+      const p = clamp01(t1 / BRAKE_MS)
+      const e = easeInOutCubic(p)
+
+      const from = needle.value
+      let delta = target - from
+      if (delta > 50) delta -= 100
+      if (delta < -50) delta += 100
+
+      const pos = from + delta * (0.22 + 0.78 * e)
+      const osc = Math.sin((t + spinSeed) / 65) * (1 - e) * 6.0
+      needle.value = (pos + osc + 1000) % 100
+
+      puckScale.value = 1 + 0.07 * (1 - e)
+      puckGlow.value = 0.78 + 0.22 * (1 - e)
+
+      tickDynamic(0.55, t)
+      raf = requestAnimationFrame(step)
+      return
+    }
+
+    // phase 3: snap (short overshoot)
+    const t2 = t1 - BRAKE_MS
+    if (t2 < SNAP_MS) {
+      const p = clamp01(t2 / SNAP_MS)
+      const e = easeOutCubic(p)
+
+      const overshoot = (1 - e) * Math.sin(p * Math.PI) * 1.6
+      needle.value = target + overshoot
+
+      puckScale.value = 1.14 - 0.14 * e
+      puckGlow.value = 1.0
+
+      raf = requestAnimationFrame(step)
+      return
+    }
+
+    // final
     stopAnim()
+    trailOn.value = false
     lastRoll.value = target
+    needle.value = target
+
+    puckScale.value = 1
+    puckGlow.value = 0
+
     sfx('dice_stop')
 
+    // haptic-style double bump
     bump.value = false
     requestAnimationFrame(() => {
       bump.value = true
+      window.setTimeout(() => (bump.value = false), 120)
+      window.setTimeout(() => (bump.value = true), 155)
       window.setTimeout(() => (bump.value = false), 240)
     })
 
@@ -224,56 +313,69 @@ onBeforeUnmount(() => stopAnim())
         <div class="tick" style="left: 100%"><span>100</span></div>
       </div>
 
-      <div class="bar stake" :class="flashZone">
-        <div class="track">
-          <!-- ✅ Lose зона слева: 0..rollOver -->
-          <div class="split red" :style="{ width: rollOver + '%' }" />
-          <!-- ✅ Win зона справа: rollOver..100 -->
-          <div class="split green" :style="{ width: (100 - rollOver) + '%' }" />
-          <div class="track-shine" aria-hidden="true" />
-        </div>
-
-        <input
-          class="bar-slider"
-          type="range"
-          min="1"
-          max="99"
-          step="0.01"
-          v-model.number="rollOverUi"
-          @input="onSliderInput"
-          @change="onSliderCommit"
-          @pointerup="onSliderCommit"
-          @keyup.enter="onSliderCommit"
-          :disabled="running"
-          aria-label="Roll Over"
-        />
-
-        <!-- Mark line (thin + glow) -->
-        <div class="roll-line" :style="{ left: rollOver + '%' }" aria-hidden="true" />
-
-        <!-- Thumb / ролик -->
-        <div class="roll-thumb" :style="{ left: rollOver + '%' }" aria-hidden="true">
-          <div class="thumb-grip">
-            <span class="grip-bar"></span>
-            <span class="grip-bar"></span>
-            <span class="grip-bar"></span>
+      <div class="bar-wrap">
+        <div class="bar stake" :class="[flashZone, { shake: barShake }]">
+          <div class="track">
+            <div class="split red" :style="{ width: rollOver + '%' }" />
+            <div class="split green" :style="{ width: (100 - rollOver) + '%' }" />
+            <div class="track-shine" aria-hidden="true" />
           </div>
 
-          <!-- value bubble -->
-          <div class="thumb-bubble">
-            <div class="bubble-top">ROLL OVER</div>
-            <div class="bubble-val">{{ fmt(rollOver, 2) }}</div>
+          <input
+            class="bar-slider"
+            type="range"
+            min="1"
+            max="99"
+            step="0.01"
+            v-model.number="rollOverUi"
+            @input="onSliderInput"
+            @change="onSliderCommit"
+            @pointerup="onSliderCommit"
+            @keyup.enter="onSliderCommit"
+            :disabled="running"
+            aria-label="Roll Over"
+          />
+
+          <div class="roll-line" :class="{ pulse: linePulse }" :style="{ left: rollOver + '%' }" aria-hidden="true" />
+
+          <div class="roll-thumb" :style="{ left: rollOver + '%' }" aria-hidden="true">
+            <div class="thumb-grip">
+              <span class="grip-bar"></span><span class="grip-bar"></span><span class="grip-bar"></span>
+            </div>
+
+            <div class="thumb-bubble">
+              <div class="bubble-top">ROLL OVER</div>
+              <div class="bubble-val">{{ fmt(rollOver, 2) }}</div>
+            </div>
+          </div>
+
+          <div
+            class="result-puck"
+            :class="[flashZone, { bump, trail: trailOn }]"
+            :style="{
+              left: needle + '%',
+              transform: `translate(-50%, -50%) scale(${puckScale})`,
+              '--glow': String(puckGlow)
+            }"
+            :data-v="resultLabel"
+            aria-hidden="true"
+          >
+            <div
+              v-if="burst"
+              class="burst"
+              :class="burst"
+              :key="`burst-${burst}-${burstTick}`"
+              aria-hidden="true"
+            >
+              <span class="p p1"></span>
+              <span class="p p2"></span>
+              <span class="p p3"></span>
+              <span class="p p4"></span>
+              <span class="p p5"></span>
+              <span class="p p6"></span>
+            </div>
           </div>
         </div>
-
-
-        <div
-          class="result-puck"
-          :class="[flashZone, { bump }]"
-          :style="{ left: needle + '%' }"
-          :data-v="resultLabel"
-          aria-hidden="true"
-        />
       </div>
 
       <div class="controls">
@@ -295,7 +397,6 @@ onBeforeUnmount(() => stopAnim())
 </template>
 
 <style scoped>
-/* ===== Summary panel ===== */
 .summary {
   margin-top: 14px;
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -313,7 +414,6 @@ onBeforeUnmount(() => stopAnim())
   gap: 10px;
 }
 
-/* ===== Dial wrapper ===== */
 .dial {
   width: min(920px, 100%);
   margin: 0 auto;
@@ -321,7 +421,13 @@ onBeforeUnmount(() => stopAnim())
   padding-top: 28px;
 }
 
-/* ===== Stake-like top ticks ===== */
+/* bubble fix */
+.bar-wrap {
+  position: relative;
+  overflow: visible;
+  z-index: 1;
+}
+
 .scale-top {
   position: absolute;
   top: 0;
@@ -329,6 +435,7 @@ onBeforeUnmount(() => stopAnim())
   right: 8px;
   height: 22px;
   pointer-events: none;
+  z-index: 0;
 }
 .tick {
   position: absolute;
@@ -341,8 +448,6 @@ onBeforeUnmount(() => stopAnim())
 }
 .tick::after {
   content: "";
-  width: 0;
-  height: 0;
   border-left: 7px solid transparent;
   border-right: 7px solid transparent;
   border-top: 10px solid rgba(255, 255, 255, 0.18);
@@ -355,10 +460,9 @@ onBeforeUnmount(() => stopAnim())
   text-shadow: 0 10px 18px rgba(0, 0, 0, 0.55);
 }
 
-/* ===== Main bar ===== */
 .bar.stake {
   position: relative;
-  height: 48px; /* чуть выше */
+  height: 48px;
   border-radius: 999px;
   padding: 8px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -368,9 +472,18 @@ onBeforeUnmount(() => stopAnim())
     inset 0 18px 28px rgba(0, 0, 0, 0.35),
     0 18px 40px rgba(0, 0, 0, 0.36);
   overflow: hidden;
+  z-index: 1;
 }
 
-/* inner track */
+.bar.stake.shake { animation: barShake 180ms ease-in-out; }
+@keyframes barShake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  50% { transform: translateX(6px); }
+  75% { transform: translateX(-4px); }
+  100% { transform: translateX(0); }
+}
+
 .track {
   position: relative;
   height: 100%;
@@ -383,7 +496,6 @@ onBeforeUnmount(() => stopAnim())
   display: flex;
 }
 
-/* split zones */
 .split { height: 100%; }
 .split.red {
   background-image:
@@ -399,7 +511,6 @@ onBeforeUnmount(() => stopAnim())
   background-blend-mode: normal, multiply;
 }
 
-/* subtle moving sheen */
 .track-shine {
   position: absolute;
   inset: -40% -60%;
@@ -420,7 +531,6 @@ onBeforeUnmount(() => stopAnim())
   100% { transform: translateX(40%); }
 }
 
-/* ===== Invisible slider (input) ===== */
 .bar-slider {
   position: absolute;
   inset: 0;
@@ -428,7 +538,7 @@ onBeforeUnmount(() => stopAnim())
   height: 48px;
   margin: 0;
   opacity: 0;
-  z-index: 8; /* above track */
+  z-index: 8;
   -webkit-appearance: none;
   appearance: none;
 }
@@ -437,7 +547,6 @@ onBeforeUnmount(() => stopAnim())
 .bar-slider::-moz-range-track { height: 48px; background: transparent; border: none; }
 .bar-slider::-moz-range-thumb { width: 64px; height: 44px; border: none; background: transparent; }
 
-/* ===== Roll line (thin + glow) ===== */
 .roll-line {
   position: absolute;
   top: 6px;
@@ -452,8 +561,13 @@ onBeforeUnmount(() => stopAnim())
   pointer-events: none;
   border-radius: 2px;
 }
+.roll-line.pulse { animation: linePulse 420ms ease-out; }
+@keyframes linePulse {
+  0% { box-shadow: 0 0 0 1px rgba(0,0,0,.35), 0 0 10px rgba(255,255,255,.14); opacity: .9; }
+  50% { box-shadow: 0 0 0 1px rgba(0,0,0,.35), 0 0 26px rgba(255,255,255,.22); opacity: 1; }
+  100% { box-shadow: 0 0 0 1px rgba(0,0,0,.35), 0 0 14px rgba(255,255,255,.12); opacity: .95; }
+}
 
-/* ===== Thumb / ролик: четкий, понятный ===== */
 .roll-thumb {
   position: absolute;
   top: 50%;
@@ -461,30 +575,25 @@ onBeforeUnmount(() => stopAnim())
   width: 24px;
   height: 40px;
   border-radius: 14px;
-  background:
-    linear-gradient(180deg, rgba(120, 205, 255, 0.96), rgba(56, 145, 255, 0.96));
+  background: linear-gradient(180deg, rgba(120, 205, 255, 0.96), rgba(56, 145, 255, 0.96));
   border: 1px solid rgba(255, 255, 255, 0.20);
   box-shadow:
     0 18px 32px rgba(0, 0, 0, 0.48),
     0 0 0 1px rgba(0, 0, 0, 0.40),
     inset 0 1px 0 rgba(255, 255, 255, 0.24),
     inset 0 -10px 18px rgba(0, 0, 0, 0.14);
-  z-index: 7;
+  z-index: 9;
   pointer-events: none;
   backdrop-filter: blur(6px);
 }
-
-/* glossy overlay */
 .roll-thumb::after {
   content: "";
   position: absolute;
   inset: 2px;
   border-radius: 13px;
   background: linear-gradient(180deg, rgba(255,255,255,0.20), rgba(255,255,255,0));
-  pointer-events: none;
 }
 
-/* grip lines */
 .thumb-grip {
   position: absolute;
   inset: 0;
@@ -494,33 +603,26 @@ onBeforeUnmount(() => stopAnim())
   z-index: 2;
 }
 .grip-bar {
-  display: block;
   width: 7px;
   height: 3px;
   border-radius: 999px;
   background: rgba(10, 26, 40, 0.78);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.12),
-    0 8px 18px rgba(0,0,0,0.25);
-  opacity: 0.95;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 8px 18px rgba(0,0,0,0.25);
 }
 
-/* value bubble above thumb */
 .thumb-bubble {
   position: absolute;
   left: 50%;
-  top: -48px;
+  top: -54px;
   transform: translateX(-50%);
   min-width: 108px;
   padding: 8px 10px;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.10);
   background: rgba(0, 0, 0, 0.38);
-  box-shadow:
-    0 18px 34px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255,255,255,0.08);
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255,255,255,0.08);
   text-align: center;
-  z-index: 10;
+  z-index: 9999;
 }
 .thumb-bubble::after {
   content: "";
@@ -528,8 +630,6 @@ onBeforeUnmount(() => stopAnim())
   left: 50%;
   bottom: -8px;
   transform: translateX(-50%);
-  width: 0;
-  height: 0;
   border-left: 9px solid transparent;
   border-right: 9px solid transparent;
   border-top: 9px solid rgba(0, 0, 0, 0.38);
@@ -549,22 +649,35 @@ onBeforeUnmount(() => stopAnim())
   text-shadow: 0 10px 18px rgba(0,0,0,0.55);
 }
 
-/* ===== Result puck ===== */
 .result-puck {
   position: absolute;
   top: 50%;
-  transform: translate(-50%, -50%);
   width: 22px;
   height: 22px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.92);
   border: 2px solid rgba(0, 0, 0, 0.55);
-  box-shadow: 0 10px 16px rgba(0, 0, 0, 0.45), 0 0 26px rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 10px 16px rgba(0,0,0,0.45),
+    0 0 calc(18px + 20px * var(--glow)) rgba(255,255,255, calc(0.10 + 0.22 * var(--glow)));
+  filter: drop-shadow(0 0 calc(10px * var(--glow)) rgba(255,255,255,0.18));
   z-index: 5;
   pointer-events: none;
 }
-.result-puck.win { box-shadow: 0 10px 16px rgba(0,0,0,.45), 0 0 26px rgba(0,231,1,.28); }
-.result-puck.lose{ box-shadow: 0 10px 16px rgba(0,0,0,.45), 0 0 26px rgba(255,64,87,.28); }
+
+.result-puck.trail::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44px;
+  height: 14px;
+  transform: translate(-10px, -50%);
+  border-radius: 999px;
+  background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.38), rgba(255,255,255,0));
+  filter: blur(1px);
+  opacity: 0.85;
+}
 
 .result-puck::after {
   content: attr(data-v);
@@ -584,16 +697,38 @@ onBeforeUnmount(() => stopAnim())
   white-space: nowrap;
 }
 
-.result-puck.bump { animation: bump 220ms ease-out; }
-@keyframes bump {
-  0% { transform: translate(-50%, -50%); }
-  50% { transform: translate(-50%, calc(-50% + 2px)); }
-  100% { transform: translate(-50%, -50%); }
+.burst {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+.burst .p {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  opacity: 0;
+  animation: particle 520ms ease-out forwards;
+}
+.burst.win .p { background: rgba(0, 231, 1, 0.92); box-shadow: 0 0 18px rgba(0,231,1,0.28); }
+.burst.lose .p { background: rgba(255, 64, 87, 0.92); box-shadow: 0 0 18px rgba(255,64,87,0.28); }
+.burst .p1 { animation-delay: 0ms;  --dx: -22px; --dy: -14px; }
+.burst .p2 { animation-delay: 18ms; --dx: 18px;  --dy: -18px; }
+.burst .p3 { animation-delay: 28ms; --dx: -14px; --dy: 20px; }
+.burst .p4 { animation-delay: 10ms; --dx: 24px;  --dy: 10px; }
+.burst .p5 { animation-delay: 36ms; --dx: 0px;   --dy: -26px; }
+.burst .p6 { animation-delay: 44ms; --dx: 0px;   --dy: 26px; }
+
+@keyframes particle {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  10% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.0); }
 }
 
-/* ===== Text areas ===== */
 .controls { margin-top: 16px; }
-.hint { margin-top: 10px; }
 .last { margin-top: 14px; color: rgba(255, 255, 255, 0.85); }
 
 .legend {
@@ -617,5 +752,4 @@ onBeforeUnmount(() => stopAnim())
 @media (prefers-reduced-motion: reduce) {
   .track-shine { animation: none; opacity: 0.25; }
 }
-
 </style>
