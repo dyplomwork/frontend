@@ -17,6 +17,16 @@ type FieldDTO = { field: boolean[][]; opened: boolean[][] }
 const auth = useAuthStore()
 const bigwinStore = useBigWinStore()
 
+async function safeFetchBalance() {
+  const fn = (auth as any)?.fetchBalance
+  if (typeof fn !== 'function') return
+  try {
+    await fn.call(auth)
+  } catch {
+    // ignore
+  }
+}
+
 const bet = ref(20)
 const mines = ref(3) // 1..24
 const SIZE = 25 // 5x5
@@ -62,10 +72,23 @@ function rcToId(row: number, col: number) {
 }
 
 function applyField(field: FieldDTO) {
+  // Defensive: backend can theoretically return null/undefined.
+  if (!field) return
   for (const c of grid.value) {
     const { row, col } = cellToRC(c.id)
     c.hasMine = !!field.field?.[row]?.[col]
     c.revealed = !!field.opened?.[row]?.[col]
+  }
+}
+
+function revealAll(field: FieldDTO) {
+  if (!field) return
+  // Defensive: make sure grid exists
+  if (!grid.value.length) buildGrid()
+  for (const c of grid.value) {
+    const { row, col } = cellToRC(c.id)
+    c.hasMine = !!field.field?.[row]?.[col]
+    c.revealed = true
   }
 }
 
@@ -121,6 +144,8 @@ async function start() {
   sfx('click')
 
   try {
+    // balance before start (project convention)
+    await safeFetchBalance()
     await minesStart({ bet: Number(bet.value), mines: Number(mines.value) })
 
     // game started: reset UI state
@@ -131,7 +156,7 @@ async function start() {
     multiplier.value = 1
 
     // balance decreased on backend
-    await auth.fetchMe()
+    await safeFetchBalance()
 
     // sync session (opened cells etc.)
     await syncSession()
@@ -147,6 +172,10 @@ async function reveal(cell: Cell) {
   message.value = ''
   sfx('click')
 
+  // Optimistic flip for better UX (and avoids "nothing happens" feeling)
+  // We will correct the content after backend response.
+  cell.revealed = true
+
   const { row, col } = cellToRC(cell.id)
   try {
     const res = await minesStep({ row, col })
@@ -155,28 +184,41 @@ async function reveal(cell: Cell) {
       // mine hit: backend returns full field
       lost.value = true
       inGame.value = false
-      if (res.field) applyField(res.field as any)
+      // Ensure the clicked tile is marked as a mine even if field is missing for any reason.
+      cell.hasMine = true
+
+      if (res.field) {
+        revealAll(res.field as any)
+      } else {
+        // Fallback: at least show the clicked mine.
+        // (Session is already deleted on backend, so /finish may 404.)
+        for (const c of grid.value) {
+          if (c.id !== cell.id) c.revealed = c.revealed || false
+        }
+      }
       message.value = 'Бомба! Проигрыш'
-      sfx('lose')
-      await auth.fetchMe()
+      sfx('mine_boom')
+      await safeFetchBalance()
       return
     }
 
     // safe step
-    cell.revealed = true
     cell.hasMine = false
     safePicks.value += 1
+    sfx('mine_safe')
     await refreshMultiplierFromServer()
   } catch (e: any) {
+    // If request failed, revert optimistic flip unless we can fetch a final field.
+    cell.revealed = false
     message.value = e?.message ? String(e.message) : 'Ошибка'
 
     // If backend ended the game, try to reveal the full field.
     try {
       const fin = await minesFinish()
-      applyField(fin.field as any)
+      revealAll(fin.field as any)
       inGame.value = false
       lost.value = Number(fin.win) <= 0
-      await auth.fetchMe()
+      await safeFetchBalance()
     } catch {}
   }
 }
@@ -195,11 +237,12 @@ async function cashOut() {
     // BIG/MEGA/SUPER overlay (global)
     bigwinStore.maybeShow(win, bet.value)
 
-    applyField(res.field as any)
+    // show full board (where mines were)
+    revealAll(res.field as any)
 
     inGame.value = false
     lost.value = false
-    await auth.fetchMe()
+    await safeFetchBalance()
   } catch (e: any) {
     message.value = e?.message ? String(e.message) : 'Ошибка вывода'
   }
@@ -222,10 +265,11 @@ async function reset() {
     ending.value = true
     try {
       const res = await minesFinish()
-      applyField(res.field as any)
+      // end-game reveals all
+      revealAll(res.field as any)
       inGame.value = false
       lost.value = false
-      await auth.fetchMe()
+      await safeFetchBalance()
       message.value = 'Игра завершена'
     } catch (e: any) {
       message.value = e?.message ? String(e.message) : 'Ошибка завершения'
