@@ -342,7 +342,10 @@ onBeforeUnmount(() => stopAnim())
             <div class="thumb-grip">
               <span class="grip-bar"></span><span class="grip-bar"></span><span class="grip-bar"></span>
             </div>
+          </div>
 
+          <!-- ✅ bubble вынесена в отдельный слой -->
+          <div class="thumb-bubble-layer" :style="{ left: rollOver + '%' }" aria-hidden="true">
             <div class="thumb-bubble">
               <div class="bubble-top">ROLL OVER</div>
               <div class="bubble-val">{{ fmt(rollOver, 2) }}</div>
@@ -419,6 +422,9 @@ onBeforeUnmount(() => stopAnim())
   margin: 0 auto;
   position: relative;
   padding-top: 28px;
+
+  /* если вдруг где-то сверху есть странные слои — это лечит почти всё */
+  isolation: isolate;
 }
 
 /* bubble fix */
@@ -475,12 +481,14 @@ onBeforeUnmount(() => stopAnim())
   z-index: 1;
 }
 
-.bar.stake.shake { animation: barShake 180ms ease-in-out; }
-@keyframes barShake {
-  0% { transform: translateX(0); }
-  25% { transform: translateX(-6px); }
-  50% { transform: translateX(6px); }
-  75% { transform: translateX(-4px); }
+/* ✅ мягче и меньше shake */
+.bar.stake.shake { animation: barShakeSoft 180ms ease-in-out; }
+@keyframes barShakeSoft {
+  0%   { transform: translateX(0); }
+  15%  { transform: translateX(-3px); }
+  35%  { transform: translateX(2px); }
+  55%  { transform: translateX(-2px); }
+  75%  { transform: translateX(1px); }
   100% { transform: translateX(0); }
 }
 
@@ -608,6 +616,16 @@ onBeforeUnmount(() => stopAnim())
   border-radius: 999px;
   background: rgba(10, 26, 40, 0.78);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 8px 18px rgba(0,0,0,0.25);
+}
+
+/* ✅ bubble теперь в отдельном слое */
+.thumb-bubble-layer {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 50;
+  pointer-events: none;
+  overflow: visible;
 }
 
 .thumb-bubble {
