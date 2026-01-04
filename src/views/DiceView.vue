@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
 import { useAuthStore } from '../stores/auth'
 import { sfx } from '../utils/sfx'
 import { formatNumber } from '../utils/format'
+import { dicePayout, dicePlay } from '../api/games'
 
 const auth = useAuthStore()
 
@@ -16,8 +17,10 @@ const running = ref(false)
 const lastRoll = ref<number | null>(null)
 const message = ref('')
 
-// Stake-like: 1% house edge
-const HOUSE_EDGE = 0.01
+// server-driven odds/payout
+const payoutMul = ref<number>(0)
+const winChancePct = ref<number>(0)
+
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 
@@ -30,16 +33,28 @@ function sliderSfx() {
   sfx('click')
 }
 
+// fetch payout info from backend (debounced by latest-only)
+let payoutReqId = 0
+watch(rollOver, async (v) => {
+  const id = ++payoutReqId
+  try {
+    const res = await dicePayout(Number(v))
+    if (id !== payoutReqId) return
+    payoutMul.value = Number(res.payout)
+    winChancePct.value = Number(res.winChancePercentage)
+  } catch {
+    // ignore (keep previous)
+  }
+}, { immediate: true })
+
+
 const bet = computed(() => Math.max(0, Number(amount.value) || 0))
 const winChance = computed(() => {
   const c = 100 - Number(rollOver.value || 0)
   // allow full range like Stake: 1%..99%
   return Math.max(1, Math.min(99, c))
 })
-const multiplier = computed(() => {
-  const m = (100 / winChance.value) * (1 - HOUSE_EDGE)
-  return Math.max(1, Math.round(m * 10000) / 10000)
-})
+const multiplier = computed(() => payoutMul.value || 0)
 const winnings = computed(() => Math.round(bet.value * multiplier.value * 10000) / 10000)
 const profitOnWin = computed(() => Math.round(bet.value * (multiplier.value - 1) * 10000) / 10000)
 
@@ -92,10 +107,13 @@ async function play() {
   running.value = true
   lastRoll.value = null
 
-  await auth.applyBalance(-bet.value)
   sfx('click')
 
-  const target = Math.round(Math.random() * 10000) / 100 // 0..100 with 2 decimals
+  // server decides roll + win + payout
+  const res = await dicePlay({ bet: Number(bet.value), rollOver: Number(rollOver.value) })
+  const target = Number(res.roll) // 0..100 (2 decimals)
+  const resultIsWin = !!res.isWin
+  const resultPayout = Number(res.payout)
   const duration = 1400
   const t0 = performance.now()
   const start = needle.value
@@ -103,6 +121,28 @@ async function play() {
   // tick cadence
   const TOTAL_TICKS = 10
   lastTick = 0
+
+  // ✅ async-часть вынесена сюда
+  const finalize = async () => {
+    const isWin = resultIsWin
+    if (isWin) {
+      sfx('win')
+      flash('win')
+      const profit = Math.max(0, resultPayout - Number(bet.value))
+      message.value = `Победа: +${fmt(profit, 2)} (x${formatNumber(multiplier.value, 4)})`
+    } else {
+      sfx('lose')
+      flash('lose')
+      message.value = 'Проигрыш'
+    }
+
+    // refresh balance from auth service
+    try {
+      await auth.fetchMe()
+    } finally {
+      running.value = false
+    }
+  }
 
   const step = (t: number) => {
     const p = Math.min(1, (t - t0) / duration)
@@ -130,19 +170,8 @@ async function play() {
       window.setTimeout(() => (bump.value = false), 240)
     })
 
-    const isWin = target >= Number(rollOver.value)
-    if (isWin) {
-      void auth.applyBalance(winnings.value)
-      sfx('win')
-      flash('win')
-      message.value = `Победа: +${fmt(profitOnWin.value, 2)} (x${formatNumber(multiplier.value, 4)})`
-    } else {
-      sfx('lose')
-      flash('lose')
-      message.value = 'Проигрыш'
-    }
-
-    running.value = false
+    // 👇 запускаем async-финализацию без await
+    void finalize()
   }
 
   raf = requestAnimationFrame(step)

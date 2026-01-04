@@ -5,14 +5,14 @@ import GamePanel from '../components/GamePanel.vue'
 import { useAuthStore } from '../stores/auth'
 import { sfx } from '../utils/sfx'
 import { formatNumber } from '../utils/format'
+import { minesFinish, minesStart, minesStep } from '../api/games'
 
-type Cell = { id:number; hasMine:boolean; revealed:boolean }
+type Cell = { id: number; hasMine: boolean; revealed: boolean }
 
 const auth = useAuthStore()
 
 const bet = ref(20)
 const mines = ref(3) // 1..24
-const HOUSE_EDGE = 0.97
 const SIZE = 25 // 5x5
 
 const grid = ref<Cell[]>([])
@@ -23,118 +23,132 @@ const multiplier = ref(1)
 const message = ref('')
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
-
 const gems = computed(() => SIZE - mines.value)
 
 const canStart = computed(() => !!auth.user && bet.value > 0 && auth.user.balance >= bet.value && !inGame.value)
 const canClick = computed(() => inGame.value && !lost.value)
 
-function buildGrid(){
-  const arr: Cell[] = Array.from({length: SIZE}, (_,i) => ({ id:i, hasMine:false, revealed:false }))
-  // place mines
-  const idxs = new Set<number>()
-  while(idxs.size < mines.value){
-    idxs.add(Math.floor(Math.random()*SIZE))
-  }
-  for(const i of idxs) arr[i].hasMine = true
-  grid.value = arr
+function buildGrid() {
+  grid.value = Array.from({ length: SIZE }, (_, i) => ({ id: i, hasMine: false, revealed: false }))
 }
 
-function calcMultiplier(picks: number){
-  // inverse of survival probability after `picks` safe picks, * house edge
-  let inv = 1
-  for(let i=0; i<picks; i++){
-    const remainingTotal = SIZE - i
-    const remainingSafe = (SIZE - mines.value) - i
-    inv *= remainingTotal / remainingSafe
-  }
-  const m = inv * HOUSE_EDGE
-  return Math.round(m * 100)/100
-}
-
-const totalNetGain = computed(() => {
-  if(!inGame.value || safePicks.value === 0) return 0
-  const payout = bet.value * multiplier.value
-  return Math.round((payout - bet.value) * 100) / 100
-})
-
-const payoutAmount = computed(() => {
-  if(!inGame.value || safePicks.value === 0) return 0
-  return Math.round((bet.value * multiplier.value) * 100) / 100
-})
-
-async function start(){
-  message.value = ''
-  if(!auth.user){ message.value = 'Нужен вход'; return }
-  if(bet.value <= 0){ message.value = 'Ставка > 0'; return }
-  if(mines.value < 1 || mines.value >= SIZE){ message.value = 'Некорректно'; return }
-  if(auth.user.balance < bet.value){ message.value = 'Недостаточно баланса'; return }
-
+function reset() {
   sfx('click')
-  buildGrid()
-  inGame.value = true
+  inGame.value = false
   lost.value = false
   safePicks.value = 0
   multiplier.value = 1
-
-  await auth.applyBalance(-bet.value)
+  message.value = ''
+  buildGrid()
 }
 
-async function reveal(cell: Cell){
-  if(!canClick.value) return
-  if(cell.revealed) return
+// 👉 Сумма выплаты по текущему множителю (то, что ожидаешь получить, если нажмёшь Cashout)
+// ВАЖНО: сервер всё равно является источником истины, это только UI-превью.
+const payoutAmount = computed(() => {
+  if (!inGame.value || safePicks.value === 0) return 0
+  const b = Number(bet.value) || 0
+  return Math.max(0, b * Number(multiplier.value))
+})
 
+// 👉 Чистая “чистая прибыль” (payout - bet)
+const totalNetGain = computed(() => {
+  if (!inGame.value || safePicks.value === 0) return 0
+  const b = Number(bet.value) || 0
+  return Math.max(0, payoutAmount.value - b)
+})
+
+async function start() {
+  if (!canStart.value) return
+  sfx('click')
+  message.value = ''
+  lost.value = false
+  safePicks.value = 0
+  multiplier.value = 1
+  buildGrid()
+
+  // старт игры на бэке (он “знает” размещение мин)
+  // IMPORTANT: если minesStart ожидает другой body — подстрой по своей openapi/беку
+  await minesStart({ bet: Number(bet.value), mines: Number(mines.value) })
+
+  inGame.value = true
+  await auth.fetchMe()
+}
+
+async function reveal(cell: Cell) {
+  if (!canClick.value) return
+  if (cell.revealed) return
+
+  sfx('click')
+
+  const r = Math.floor(cell.id / 5)
+  const c = cell.id % 5
+
+  // шаг на бэке: открыть клетку
+  // IMPORTANT: если у тебя coords называются иначе (row/col, x/y) — подстрой.
+  const res = await minesStep({ row: r, col: c })
+
+  // ожидаем, что сервер вернёт win/lose и multiplier
+  // Примерно:
+  // { hitMine: boolean, multiplier: number, done?: boolean, field?: ... }
   cell.revealed = true
+  cell.hasMine = !!res.hitMine
 
-  if(cell.hasMine){
+  if (res.hitMine) {
+    sfx('boom')
     lost.value = true
     inGame.value = false
-    message.value = 'Мина. Раунд проигран.'
-    sfx('mine_boom')
-    // reveal all
-    grid.value.forEach(c => c.revealed = true)
+    message.value = 'Ты подорвался 💥'
+
+    // если сервер возвращает поле на проигрыше — раскрываем всё
+    if (res.field?.field) {
+      const f = res.field.field
+      for (const cc of grid.value) {
+        const rr = Math.floor(cc.id / 5)
+        const col = cc.id % 5
+        cc.hasMine = !!f?.[rr]?.[col]
+        cc.revealed = true
+      }
+    }
+
+    await auth.fetchMe()
     return
   }
 
   safePicks.value += 1
-  multiplier.value = calcMultiplier(safePicks.value)
-  sfx('mine_safe')
+  if (typeof res.multiplier === 'number') {
+    multiplier.value = res.multiplier
+  }
 }
 
-async function cashOut(){
-  if(!auth.user) return
-  if(!inGame.value) return
-  if(lost.value) return
-  if(safePicks.value === 0){ message.value = 'Сначала открой 1 клетку'; return }
+async function cashOut() {
+  if (!(inGame.value && safePicks.value > 0)) return
 
-  const payout = bet.value * multiplier.value
-  await auth.applyBalance(payout)
+  const res = await minesFinish()
   sfx('cashout')
-  message.value = `Кэш-аут: +${payoutAmount.value} (x${multiplier.value})`
-  inGame.value = false
-}
 
-async function randomPick(){
-  if(!canClick.value) return
-  const candidates = grid.value.filter(c => !c.revealed)
-  if(!candidates.length) return
-  const pick = candidates[Math.floor(Math.random()*candidates.length)]
-  await reveal(pick)
-}
+  const win = Number(res.win ?? 0)
+  const profit = Math.max(0, win - Number(bet.value))
+  message.value = `Кэш-аут: +${fmt(profit, 2)} (x${formatNumber(multiplier.value, 4)})`
 
-function reset(){
-  sfx('click')
+  // раскрываем поле по ответу finish
+  const f = res.field
+  if (f?.field) {
+    for (const c of grid.value) {
+      const r = Math.floor(c.id / 5)
+      const cc = c.id % 5
+      c.hasMine = !!f.field?.[r]?.[cc]
+      c.revealed = true
+    }
+  }
+
   inGame.value = false
-  lost.value = false
-  safePicks.value = 0
-  multiplier.value = 1
-  message.value = ''
-  buildGrid()
+  await auth.fetchMe()
 }
 
 // initial
 buildGrid()
 </script>
+
 
 <template>
   <GameLayout :min-height="560">

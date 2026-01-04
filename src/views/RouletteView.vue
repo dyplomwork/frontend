@@ -2,9 +2,9 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
 import { useAuthStore } from '../stores/auth'
-import { api } from '../utils/api'
 import { sfx } from '../utils/sfx'
 import { formatNumber } from '../utils/format'
+import { normalizeRouletteKey, roulettePlay } from '../api/games'
 
 type BetKey =
   | `n:${number}`
@@ -256,7 +256,7 @@ onBeforeUnmount(() => {
 })
 
 /** ✅ TEMP: allow spin regardless of auth/bets/balance */
-const TEMP_ALLOW_FREE_SPIN = true
+const TEMP_ALLOW_FREE_SPIN = false
 
 async function spin() {
   if (spinning.value) return
@@ -281,25 +281,15 @@ async function spin() {
       if (totalBet.value <= 0) { message.value = 'Сделай ставку'; return }
       if (auth.user.balance < totalBet.value) { message.value = 'Недостаточно баланса'; return }
 
-      const res = await api<{
-        ok: boolean
-        winNumber: number
-        totalBet: number
-        totalReturn: number
-        net: number
-        balance: number
-      }>('/api/roulette/spin', {
-        method: 'POST',
-        body: JSON.stringify({ bets: bets.value })
-      })
+      const payload = Object.entries(bets.value)
+        .filter(([,amount]) => Number(amount) > 0)
+        .map(([key, amount]) => ({ key: normalizeRouletteKey(key), amount: Number(amount) }))
 
-      win = res.winNumber
+      const res = await roulettePlay({ bets: payload })
+      win = Number(res.number)
 
-      // баланс обновим
-      if (auth.user) {
-        auth.user = { ...auth.user, balance: res.balance }
-        localStorage.setItem('casino_sim_user_v1', JSON.stringify(auth.user))
-      }
+      // refresh balance from auth service
+      await auth.fetchMe()
     }
 
 
