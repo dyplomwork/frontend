@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter, RouterView, RouterLink } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { isSfxOn, setSfxOn, sfx } from './utils/sfx'

@@ -1,14 +1,19 @@
-export function formatNumber(
-  value: number | string,
-  opts?: {
-    decimals?: number
-    trimZeros?: boolean
-  }
-): string {
+type FormatNumberOpts = {
+  decimals?: number
+  trimZeros?: boolean
+}
+
+// Backward-compatible signature: formatNumber(x, 2)
+export function formatNumber(value: number | string, decimals?: number): string
+export function formatNumber(value: number | string, opts?: FormatNumberOpts): string
+export function formatNumber(value: number | string, optsOrDecimals?: FormatNumberOpts | number): string {
   if (value === null || value === undefined) return '0'
 
   const num = Number(value)
   if (!Number.isFinite(num)) return '0'
+
+  const opts: FormatNumberOpts | undefined =
+    typeof optsOrDecimals === 'number' ? { decimals: optsOrDecimals } : optsOrDecimals
 
   const decimals =
     typeof opts?.decimals === 'number'

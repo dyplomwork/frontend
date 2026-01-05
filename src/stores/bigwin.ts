@@ -54,5 +54,8 @@ export const useBigWinStore = defineStore('bigwin', () => {
     }
   }
 
-  return { bigWin, showBigWin, maybeShow, dispose }
+  // Backward-compatible alias (some views used bigwinStore.show(mult, amount))
+  const show = (mult: number, amount: number) => showBigWin(mult, amount)
+
+  return { bigWin, showBigWin, show, maybeShow, dispose }
 })

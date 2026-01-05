@@ -28,7 +28,7 @@ function getToken(): string {
   return localStorage.getItem(LS_TOKEN) ?? ''
 }
 
-function resolveServiceBase(path: string): string {
+function resolveServiceBase(_path: string): string {
   // твой текущий base
   return getEnv('VITE_API_BASE_URL') || 'https://api.scxdrop.online'
 }
@@ -38,12 +38,19 @@ function looksLikeJsonString(s: string): boolean {
   return (t.startsWith('{') && t.endsWith('}')) || (t.startsWith('[') && t.endsWith(']'))
 }
 
-export type ApiCallOptions = RequestInit & {
+/**
+ * NOTE:
+ * `fetch` expects `RequestInit.body` to be `BodyInit`.
+ * In this project we intentionally allow passing plain objects as `body`,
+ * which are auto-serialized to JSON inside `api()`.
+ */
+export type ApiCallOptions = Omit<RequestInit, 'body' | 'headers'> & {
   baseUrl?: string
   noAuth?: boolean
+  headers?: Record<string, string>
+  body?: any
   /**
-   * Если true — принудительно считаем body JSON
-   * (даже если это строка)
+   * If true — force treating body as JSON (even if it's a string)
    */
   json?: boolean
 }

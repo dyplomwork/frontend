@@ -196,14 +196,6 @@ function desiredWheelDegForNumber(n: number){
   return normalizeDeg(-idx * SLICE_ANGLE.value)
 }
 
-function labelRotation(i: number){
-  // Make numbers always face "outwards" of the wheel (radial orientation).
-  // top slice (mid=-90) => rot=0; right (mid=0)=>90; bottom (mid=90)=>180
-  const mid = sliceAngles(i).mid
-  return mid + 90
-}
-
-
 /** 🔥 highlight winning slice for 1s */
 const highlightIdx = ref<number | null>(null)
 let highlightTimer: number | null = null

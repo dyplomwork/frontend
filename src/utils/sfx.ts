@@ -8,9 +8,11 @@ let ctx: AudioContext | null = null
 let master: GainNode | null = null
 
 export function isSfxOn(){
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') return true
   return localStorage.getItem(KEY) !== '0'
 }
 export function setSfxOn(v: boolean){
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') return
   localStorage.setItem(KEY, v ? '1' : '0')
 }
 
@@ -63,35 +65,42 @@ function noise(durMs: number){
   src.stop(t1)
 }
 
-export function sfx(
-  kind:
-    | 'click'
-    | 'spin'
-    | 'stop'
-    | 'win'
-    | 'lose'
-    | 'plinko_tick'
-    | 'plinko_drop'
-    | 'mine_safe'
-    | 'mine_boom'
-    | 'cashout'
-    | 'bonus'
-    | 'case_spin'
-    | 'case_stop'
-    | 'dice_tick'
-    | 'dice_stop'
-){
+export type SfxKey =
+  | 'click'
+  | 'spin'
+  | 'stop'
+  | 'win'
+  | 'lose'
+  | 'plinko_tick'
+  | 'plinko_drop'
+  | 'plinko_hit'
+  | 'mine_safe'
+  | 'mine_boom'
+  | 'cashout'
+  | 'bonus'
+  | 'case_spin'
+  | 'case_stop'
+  | 'dice_tick'
+  | 'dice_stop'
+  | 'ui_tick'
+  | 'big_win'
+
+/**
+ * Accepts both known keys (typed) and any string (to avoid TS friction when integrating).
+ * Unknown keys are ignored at runtime.
+ */
+export function sfx(kind: SfxKey | string) {
   if(!isSfxOn()) return
 
   // Quality: throttle repetitive sounds and limit "polyphony" per kind.
   // This keeps tick sounds from spamming on slower devices.
   const now = performance.now()
-  const minInterval: Partial<Record<Parameters<typeof sfx>[0], number>> = {
+  const minInterval: Partial<Record<SfxKey, number>> = {
     dice_tick: 180,
     plinko_tick: 70,
     spin: 90,
   }
-  const mi = minInterval[kind]
+  const mi = minInterval[kind as SfxKey]
 
   // per-kind last played timestamp
   ;(sfx as any)._last = (sfx as any)._last || new Map<string, number>()
@@ -103,7 +112,10 @@ export function sfx(
   }
 
   // IMPORTANT: keep this demo sfx lightweight (no assets). We just vary pitch + noise.
-  switch(kind){
+  // alias some UI keys to keep older code working
+  const k = kind === 'ui_tick' ? 'click' : kind === 'plinko_hit' ? 'plinko_tick' : kind
+
+  switch(k){
     case 'click':
       beep(520, 70, 'triangle')
       break
@@ -168,6 +180,16 @@ export function sfx(
     case 'bonus':
       beep(900, 80, 'sine')
       beep(1200, 120, 'triangle')
+      break
+
+    // overlay / misc
+    case 'big_win':
+      beep(740, 120, 'triangle')
+      beep(980, 160, 'sine')
+      break
+
+    default:
+      // ignore unknown keys
       break
   }
 }

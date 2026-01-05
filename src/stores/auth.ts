@@ -121,6 +121,11 @@ export const useAuthStore = defineStore('auth', {
         // ignore in offline dev
       }
     },
+
+    // Some views still call `fetchMe()`; keep it as an alias.
+    async fetchMe(){
+      return this.refreshMe()
+    },
     async fetchBalance(){
       if(!isBrowser()) return { ok: false as const }
       if(!this.user) return { ok: false as const, message: 'Not logged in' }

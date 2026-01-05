@@ -13,7 +13,7 @@ const message = ref('')
 
 const loading = computed(() => tickets.loading)
 const mineSafe = computed(() => tickets.mine ?? [])
-const pending = computed(() => mineSafe.value.filter(t => t.status === 'pending'))
+const pending = computed(() => mineSafe.value.filter(t => t.status === 'PENDING'))
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 

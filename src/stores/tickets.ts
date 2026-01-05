@@ -15,8 +15,6 @@ export type Ticket = {
   note?: string | null
 }
 
-const LS_TOKEN = 'casino_sim_token_v1'
-
 const isBrowser = () => typeof window !== 'undefined' && typeof localStorage !== 'undefined'
 
 
@@ -36,7 +34,7 @@ export const useTicketsStore = defineStore('tickets', {
       if(!isBrowser()) return
       this.loading = true
       try{
-        const res = await api<{ method:'GET', ok:boolean; tickets: Ticket[] }>('/api/v1/tickets/me')
+        const res = await api<{ ok:boolean; tickets: Ticket[] }>('/api/v1/tickets/me')
         this.mine = res.tickets
       } finally {
         this.loading = false
@@ -57,7 +55,8 @@ export const useTicketsStore = defineStore('tickets', {
       // Backend expects an explicit status transition.
       await api(`/api/v1/admin/tickets/${id}`, {
         method:'PATCH',
-        body: { status: 'APPROVED' }
+        body: { status: 'APPROVED' },
+        json: true
       })
       await this.fetchAdmin()
     },
@@ -66,7 +65,8 @@ export const useTicketsStore = defineStore('tickets', {
       // Reject must also explicitly set status; note is optional.
       await api(`/api/v1/admin/tickets/${id}`, {
         method:'PATCH',
-        body: { status: 'REJECTED', note }
+        body: { status: 'REJECTED', note },
+        json: true
       })
       await this.fetchAdmin()
     }

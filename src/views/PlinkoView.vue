@@ -53,6 +53,8 @@ const multipliers = ref<number[]>(fallbackTable())
 const loadingMult = ref(false)
 
 async function loadMultipliers() {
+  // During prerender (vite-ssg) there is no API / no browser.
+  if (typeof window === 'undefined') return
   loadingMult.value = true
   try {
     const url =
@@ -200,7 +202,6 @@ function setGlow(i: number){
 }
 
 
-function easeOutCubic(t: number){ return 1 - Math.pow(1 - t, 3) }
 function easeInOutCubic(t: number){ return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3)/2 }
 
 // deterministic tiny jitter (so same path isn't a clone, but landing stays correct)
