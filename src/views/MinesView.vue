@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
+import BaseSelect from '../components/BaseSelect.vue'
 import { useAuthStore } from '../stores/auth'
 import { useBigWinStore } from '../stores/bigwin'
 import { sfx } from '../utils/sfx'
@@ -15,6 +16,13 @@ const bigwinStore = useBigWinStore()
 
 const bet = ref(20)
 const mines = ref(3) // 1..24
+
+const minesOptions = computed(() =>
+  Array.from({ length: 24 }, (_, i) => {
+    const v = i + 1
+    return { value: v, label: String(v) }
+  })
+)
 const SIZE = 25 // 5x5
 
 const grid = ref<Cell[]>([])
@@ -25,6 +33,10 @@ const multiplier = ref(1)
 const message = ref('')
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
+
+const mineOptions = computed(() =>
+  Array.from({ length: 24 }, (_, i) => ({ value: i + 1, label: String(i + 1) }))
+)
 
 const gems = computed(() => SIZE - mines.value)
 
@@ -214,9 +226,13 @@ buildGrid()
       >
         <div class="field">
           <div class="label">Mines</div>
-          <select class="input" v-model.number="mines" :disabled="inGame" @change="sfx('click')">
-            <option v-for="n in 24" :key="n" :value="n">{{ n }}</option>
-          </select>
+          <BaseSelect
+            v-model="mines"
+            :options="minesOptions"
+            :disabled="inGame"
+            aria-label="Mines"
+            @update:modelValue="sfx('click')"
+          />
         </div>
 
         <div class="field">

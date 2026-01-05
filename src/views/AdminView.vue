@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
+import BaseSelect from '../components/BaseSelect.vue'
 import { api } from '../utils/api'
 import { useAuthStore } from '../stores/auth'
 
@@ -75,6 +76,11 @@ const editingId = ref<string | null>(null)
 const editNickname = ref('')
 const editRole = ref<Role>('user')
 const editBalance = ref<number>(0)
+
+const roleOptions = [
+  { value: 'user', label: 'User' },
+  { value: 'admin', label: 'Admin' },
+] as const
 
 function startEdit(u: AdminUser) {
   editingId.value = u.id
@@ -297,10 +303,12 @@ onMounted(async () => {
 
               <td>
                 <template v-if="editingId === u.id">
-                  <select class="input input-sm" v-model="editRole">
-                    <option value="user">user</option>
-                    <option value="admin">admin</option>
-                  </select>
+                  <BaseSelect
+                    class="input input-sm"
+                    v-model="editRole"
+                    :options="roleOptions as any"
+                    aria-label="Role"
+                  />
                 </template>
                 <template v-else>
                   <span class="badge">{{ u.role }}</span>

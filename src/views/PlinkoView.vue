@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
+import BaseSelect from '../components/BaseSelect.vue'
 import { useAuthStore } from '../stores/auth'
 import { useBigWinStore } from '../stores/bigwin'
 import { api } from '../utils/api'
@@ -22,6 +23,14 @@ const bigwinStore = useBigWinStore()
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 
 const rowsList = [8, 12, 16]
+
+const difficultyOptions = [
+  { value: 'LOW', label: 'Low' },
+  { value: 'MEDIUM', label: 'Medium' },
+  { value: 'HIGH', label: 'High' },
+] as const
+
+const rowsOptions = computed(() => rowsList.map((r) => ({ value: r, label: String(r) })))
 
 /** fallback multipliers */
 const baseTables: Record<string, number[]> = {
@@ -473,18 +482,24 @@ if (typeof window !== 'undefined') {
       >
         <div class="field">
           <div class="label">Difficulty</div>
-          <select class="input" v-model="difficulty" @change="sfx('click')">
-            <option value="LOW">Low</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="HIGH">High</option>
-          </select>
+          <BaseSelect
+            v-model="difficulty"
+            :options="difficultyOptions"
+            :disabled="spinning"
+            aria-label="Difficulty"
+            @update:modelValue="() => sfx('click')"
+          />
         </div>
 
         <div class="field">
           <div class="label">Rows</div>
-          <select class="input" v-model.number="rows" @change="sfx('click')">
-            <option v-for="r in rowsList" :key="r" :value="r">{{ r }}</option>
-          </select>
+          <BaseSelect
+            v-model="rows"
+            :options="rowsOptions"
+            :disabled="spinning"
+            aria-label="Rows"
+            @update:modelValue="() => sfx('click')"
+          />
         </div>
 
         <div class="field">
