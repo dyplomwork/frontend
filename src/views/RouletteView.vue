@@ -25,14 +25,15 @@ type BetKey =
 const auth = useAuthStore()
 const bigwinStore = useBigWinStore()
 
-// Chip denominations (K-currency)
-const chips = [1, 2, 5, 10, 25, 50, 100, 500, 1000, 5000]
+// ✅ Chip denominations (K-currency) — removed 2 and 25
+const chips = [1, 5, 10, 50, 100, 500, 1000, 5000]
 const chip = ref(10)
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100
 
-type BetState = { amount: number; color: string } // color = цвет номинала фишки
+// ✅ Bet state is ONLY amount (no color stored)
+type BetState = { amount: number }
 const bets = ref<Record<string, BetState>>({})
 const history = ref<{ key: BetKey; amount: number }[]>([])
 const spinning = ref(false)
@@ -80,7 +81,6 @@ const hoverBet = ref<BetKey | ''>('')
 function setHover(key: BetKey | '') {
   hoverBet.value = key
 }
-
 function numbersForOutsideBet(key: BetKey): number[] {
   switch (key) {
     case 'Диапазон1':
@@ -90,11 +90,11 @@ function numbersForOutsideBet(key: BetKey): number[] {
     case 'Диапазон3':
       return Array.from({ length: 12 }, (_, i) => i + 25)
     case 'Ряд1':
-      return Array.from({ length: 12 }, (_, i) => (i + 1) * 3) // 3..36 step 3
+      return Array.from({ length: 12 }, (_, i) => (i + 1) * 3)
     case 'Ряд2':
-      return Array.from({ length: 12 }, (_, i) => 2 + i * 3) // 2..35 step 3
+      return Array.from({ length: 12 }, (_, i) => 2 + i * 3)
     case 'Ряд3':
-      return Array.from({ length: 12 }, (_, i) => 1 + i * 3) // 1..34 step 3
+      return Array.from({ length: 12 }, (_, i) => 1 + i * 3)
     case 'red':
       return Array.from(redSet)
     case 'black':
@@ -103,7 +103,6 @@ function numbersForOutsideBet(key: BetKey): number[] {
       return []
   }
 }
-
 const hoverNums = computed(() => {
   if (!hoverBet.value) return new Set<number>()
   return new Set(numbersForOutsideBet(hoverBet.value as BetKey))
@@ -111,60 +110,61 @@ const hoverNums = computed(() => {
 
 const totalBet = computed(() => Object.values(bets.value).reduce((a, b) => a + (b?.amount ?? 0), 0))
 
-function tierForValue(v: number) {
-  if (v >= 5000) return 't6'
-  if (v >= 1000) return 't5'
-  if (v >= 500) return 't4'
-  if (v >= 100) return 't3'
-  if (v >= 25) return 't2'
+// --- Tier logic (depends on SUM; aligned with your chip nominals) ---
+type Tier = 't1' | 't2' | 't3' | 't4' | 't5' | 't6' | 't7' | 't8'
+function tierForValue(v: number): Tier {
+  if (v >= 5000) return 't8'
+  if (v >= 1000) return 't7'
+  if (v >= 500) return 't6'
+  if (v >= 100) return 't5'
+  if (v >= 50) return 't4'
+  if (v >= 10) return 't3'
+  if (v >= 5) return 't2'
   return 't1'
 }
-
-function tierColorForValue(v: number) {
-  const t = tierForValue(v)
-  switch (t) {
-    case 't6':
-      return '#7f1d1d'
-    case 't5':
-      return '#ef4444'
-    case 't4':
-      return '#6d28d9'
-    case 't3':
-      return '#06b6d4'
-    case 't2':
-      return '#1d4ed8'
-    default:
-      return '#ec4899'
-  }
-}
-
-function chipStyle(v: number) {
-  const colors: Record<number, string> = {
-    1: '#ec4899',
-    2: '#1d4ed8',
-    5: '#06b6d4',
-    10: '#6d28d9',
-    25: '#ef4444',
-    50: '#f97316',
-    100: '#facc15',
-    500: '#22c55e',
-    1000: '#1e40af',
-    5000: '#7f1d1d',
-  }
-  return { '--chip': colors[v] ?? tierColorForValue(v) } as Record<string, string>
-}
-
-function chipColor(v: number) {
-  const s = chipStyle(v) as any
-  return String(s['--chip'] || '#f5c542')
-}
-
 function betBadgeClass(v: number) {
   return `bet-${tierForValue(v)}`
 }
 
-function betBadgeStyleByColor(color: string) {
-  return { '--bet': color } as Record<string, string>
+// ✅ Chip palette (single source of truth; no 2 and no 25)
+const CHIP_COLORS: Record<number, string> = {
+  1: '#ec4899', // pink
+  5: '#06b6d4', // cyan
+  10: '#6d28d9', // purple
+  50: '#f97316', // orange
+  100: '#facc15', // yellow
+  500: '#22c55e', // green
+  1000: '#1e40af', // navy
+  5000: '#7f1d1d', // maroon
+}
+const CHIP_DENOMS = Object.keys(CHIP_COLORS)
+  .map(Number)
+  .sort((a, b) => a - b)
+
+function chipStyle(v: number) {
+  return { '--chip': CHIP_COLORS[v] ?? '#60a5fa' } as Record<string, string>
+}
+
+// ✅ Color derived from TOTAL bet amount (sum) -> nearest chip nominal color
+function nearestChipDenom(sum: number): number {
+  const v = Math.max(0, Number(sum) || 0)
+  let best = CHIP_DENOMS[0]
+  let bestDiff = Math.abs(v - best)
+  for (const d of CHIP_DENOMS) {
+    const diff = Math.abs(v - d)
+    if (diff < bestDiff) {
+      best = d
+      bestDiff = diff
+    }
+  }
+  return best
+}
+function betColorByAmount(totalAmount: number) {
+  const denom = nearestChipDenom(totalAmount)
+  return CHIP_COLORS[denom] ?? 'rgba(245, 197, 66, 0.92)'
+}
+function betBadgeStyleByAmount(totalAmount: number) {
+  return { '--bet': betColorByAmount(totalAmount) } as Record<string, string>
 }
 
 function selectChip(c: number) {
@@ -177,14 +177,42 @@ function addBet(key: BetKey) {
   message.value = ''
 
   const cur = bets.value[key]?.amount ?? 0
-  bets.value[key] = {
-    amount: cur + chip.value,
-    color: chipColor(chip.value),
-  }
+  const next = cur + chip.value
+  bets.value[key] = { amount: next }
 
   history.value.push({ key, amount: chip.value })
   tap(key)
   sfx('click')
+}
+
+// ПКМ: минус текущий chip, Shift+ПКМ: убрать всю ставку поля
+function removeBetOnce(key: BetKey) {
+  if (spinning.value) return
+  message.value = ''
+
+  const cur = bets.value[key]?.amount ?? 0
+  if (cur <= 0) return
+
+  const next = Math.max(0, cur - chip.value)
+  if (next === 0) delete bets.value[key]
+  else bets.value[key] = { amount: next }
+
+  tap(key)
+  sfx('click')
+}
+function clearBet(key: BetKey) {
+  if (spinning.value) return
+  message.value = ''
+
+  if (bets.value[key]) {
+    delete bets.value[key]
+    tap(key)
+    sfx('click')
+  }
+}
+function onBetContext(e: MouseEvent, key: BetKey) {
+  if (e.shiftKey) clearBet(key)
+  else removeBetOnce(key)
 }
 
 function undo() {
@@ -197,7 +225,7 @@ function undo() {
 
   const next = Math.max(0, cur.amount - last.amount)
   if (next === 0) delete bets.value[last.key]
-  else bets.value[last.key] = { ...cur, amount: next }
+  else bets.value[last.key] = { amount: next }
 
   sfx('click')
 }
@@ -429,10 +457,6 @@ const numGrid = [
 function betOf(key: BetKey) {
   return bets.value[key]?.amount ?? 0
 }
-
-function betColorOf(key: BetKey) {
-  return bets.value[key]?.color ?? 'rgba(245, 197, 66, 0.92)'
-}
 </script>
 
 <template>
@@ -482,7 +506,11 @@ function betColorOf(key: BetKey) {
         <div class="wheel-area">
           <div class="pointer" aria-hidden="true"></div>
 
-          <div class="wheel-svg" :class="{ spinning, flash: wheelFlash }" :style="{ transform: `rotate(${wheelDeg}deg)` }">
+          <div
+            class="wheel-svg"
+            :class="{ spinning, flash: wheelFlash }"
+            :style="{ transform: `rotate(${wheelDeg}deg)` }"
+          >
             <svg class="wheel-svg__el" viewBox="0 0 200 200" aria-hidden="true">
               <g>
                 <path
@@ -527,13 +555,18 @@ function betColorOf(key: BetKey) {
       <div class="board">
         <div class="grid grid-vertical">
           <div class="main-table">
-            <button class="cell-zero" :class="{ win: isWinKey('n:0'), tap: tappedKey === 'n:0' }" @click="addBet('n:0')">
+            <button
+              class="cell-zero"
+              :class="{ win: isWinKey('n:0'), tap: tappedKey === 'n:0' }"
+              @click="addBet('n:0')"
+              @contextmenu.prevent="onBetContext($event, 'n:0')"
+            >
               0
               <span
                 v-if="betOf('n:0')"
                 class="chip-badge"
                 :class="betBadgeClass(betOf('n:0'))"
-                :style="betBadgeStyleByColor(betColorOf('n:0'))"
+                :style="betBadgeStyleByAmount(betOf('n:0'))"
               >
                 {{ fmt(betOf('n:0'), 0) }}
               </span>
@@ -555,13 +588,14 @@ function betColorOf(key: BetKey) {
                     },
                   ]"
                   @click="addBet(`n:${n}` as any)"
+                  @contextmenu.prevent="onBetContext($event, `n:${n}` as any)"
                 >
                   {{ n }}
                   <span
                     v-if="betOf(`n:${n}` as any)"
                     class="chip-badge"
                     :class="betBadgeClass(betOf(`n:${n}` as any))"
-                    :style="betBadgeStyleByColor(betColorOf(`n:${n}` as any))"
+                    :style="betBadgeStyleByAmount(betOf(`n:${n}` as any))"
                   >
                     {{ fmt(betOf(`n:${n}` as any), 0) }}
                   </span>
@@ -572,62 +606,170 @@ function betColorOf(key: BetKey) {
 
           <div class="side-table">
             <div class="col-bets">
-              <button class="cell out" :class="{ win: isWinKey('Ряд1'), has: !!betOf('Ряд1'), tap: tappedKey === 'Ряд1' }" @click="addBet('Ряд1')" @mouseenter="setHover('Ряд1')" @mouseleave="setHover('')">
+              <button
+                class="cell out"
+                :class="{ win: isWinKey('Ряд1'), has: !!betOf('Ряд1'), tap: tappedKey === 'Ряд1' }"
+                @click="addBet('Ряд1')"
+                @contextmenu.prevent="onBetContext($event, 'Ряд1')"
+                @mouseenter="setHover('Ряд1')"
+                @mouseleave="setHover('')"
+              >
                 2:1
-                <span v-if="betOf('Ряд1')" class="chip-badge" :class="betBadgeClass(betOf('Ряд1'))" :style="betBadgeStyleByColor(betColorOf('Ряд1'))">
+                <span
+                  v-if="betOf('Ряд1')"
+                  class="chip-badge"
+                  :class="betBadgeClass(betOf('Ряд1'))"
+                  :style="betBadgeStyleByAmount(betOf('Ряд1'))"
+                >
                   {{ fmt(betOf('Ряд1'), 0) }}
                 </span>
               </button>
 
-              <button class="cell out" :class="{ win: isWinKey('Ряд2'), has: !!betOf('Ряд2'), tap: tappedKey === 'Ряд2' }" @click="addBet('Ряд2')" @mouseenter="setHover('Ряд2')" @mouseleave="setHover('')">
+              <button
+                class="cell out"
+                :class="{ win: isWinKey('Ряд2'), has: !!betOf('Ряд2'), tap: tappedKey === 'Ряд2' }"
+                @click="addBet('Ряд2')"
+                @contextmenu.prevent="onBetContext($event, 'Ряд2')"
+                @mouseenter="setHover('Ряд2')"
+                @mouseleave="setHover('')"
+              >
                 2:1
-                <span v-if="betOf('Ряд2')" class="chip-badge" :class="betBadgeClass(betOf('Ряд2'))" :style="betBadgeStyleByColor(betColorOf('Ряд2'))">
+                <span
+                  v-if="betOf('Ряд2')"
+                  class="chip-badge"
+                  :class="betBadgeClass(betOf('Ряд2'))"
+                  :style="betBadgeStyleByAmount(betOf('Ряд2'))"
+                >
                   {{ fmt(betOf('Ряд2'), 0) }}
                 </span>
               </button>
 
-              <button class="cell out" :class="{ win: isWinKey('Ряд3'), has: !!betOf('Ряд3'), tap: tappedKey === 'Ряд3' }" @click="addBet('Ряд3')" @mouseenter="setHover('Ряд3')" @mouseleave="setHover('')">
+              <button
+                class="cell out"
+                :class="{ win: isWinKey('Ряд3'), has: !!betOf('Ряд3'), tap: tappedKey === 'Ряд3' }"
+                @click="addBet('Ряд3')"
+                @contextmenu.prevent="onBetContext($event, 'Ряд3')"
+                @mouseenter="setHover('Ряд3')"
+                @mouseleave="setHover('')"
+              >
                 2:1
-                <span v-if="betOf('Ряд3')" class="chip-badge" :class="betBadgeClass(betOf('Ряд3'))" :style="betBadgeStyleByColor(betColorOf('Ряд3'))">
+                <span
+                  v-if="betOf('Ряд3')"
+                  class="chip-badge"
+                  :class="betBadgeClass(betOf('Ряд3'))"
+                  :style="betBadgeStyleByAmount(betOf('Ряд3'))"
+                >
                   {{ fmt(betOf('Ряд3'), 0) }}
                 </span>
               </button>
             </div>
 
             <div class="col-bets">
-              <button class="cell big" :class="{ win: isWinKey('Диапазон1'), has: !!betOf('Диапазон1'), tap: tappedKey === 'Диапазон1' }" @click="addBet('Диапазон1')" @mouseenter="setHover('Диапазон1')" @mouseleave="setHover('')">
+              <button
+                class="cell big"
+                :class="{
+                  win: isWinKey('Диапазон1'),
+                  has: !!betOf('Диапазон1'),
+                  tap: tappedKey === 'Диапазон1',
+                }"
+                @click="addBet('Диапазон1')"
+                @contextmenu.prevent="onBetContext($event, 'Диапазон1')"
+                @mouseenter="setHover('Диапазон1')"
+                @mouseleave="setHover('')"
+              >
                 1 to 12
-                <span v-if="betOf('Диапазон1')" class="chip-badge" :class="betBadgeClass(betOf('Диапазон1'))" :style="betBadgeStyleByColor(betColorOf('Диапазон1'))">
+                <span
+                  v-if="betOf('Диапазон1')"
+                  class="chip-badge"
+                  :class="betBadgeClass(betOf('Диапазон1'))"
+                  :style="betBadgeStyleByAmount(betOf('Диапазон1'))"
+                >
                   {{ fmt(betOf('Диапазон1'), 0) }}
                 </span>
               </button>
 
-              <button class="cell big" :class="{ win: isWinKey('Диапазон2'), has: !!betOf('Диапазон2'), tap: tappedKey === 'Диапазон2' }" @click="addBet('Диапазон2')" @mouseenter="setHover('Диапазон2')" @mouseleave="setHover('')">
+              <button
+                class="cell big"
+                :class="{
+                  win: isWinKey('Диапазон2'),
+                  has: !!betOf('Диапазон2'),
+                  tap: tappedKey === 'Диапазон2',
+                }"
+                @click="addBet('Диапазон2')"
+                @contextmenu.prevent="onBetContext($event, 'Диапазон2')"
+                @mouseenter="setHover('Диапазон2')"
+                @mouseleave="setHover('')"
+              >
                 13 to 24
-                <span v-if="betOf('Диапазон2')" class="chip-badge" :class="betBadgeClass(betOf('Диапазон2'))" :style="betBadgeStyleByColor(betColorOf('Диапазон2'))">
+                <span
+                  v-if="betOf('Диапазон2')"
+                  class="chip-badge"
+                  :class="betBadgeClass(betOf('Диапазон2'))"
+                  :style="betBadgeStyleByAmount(betOf('Диапазон2'))"
+                >
                   {{ fmt(betOf('Диапазон2'), 0) }}
                 </span>
               </button>
 
-              <button class="cell big" :class="{ win: isWinKey('Диапазон3'), has: !!betOf('Диапазон3'), tap: tappedKey === 'Диапазон3' }" @click="addBet('Диапазон3')" @mouseenter="setHover('Диапазон3')" @mouseleave="setHover('')">
+              <button
+                class="cell big"
+                :class="{
+                  win: isWinKey('Диапазон3'),
+                  has: !!betOf('Диапазон3'),
+                  tap: tappedKey === 'Диапазон3',
+                }"
+                @click="addBet('Диапазон3')"
+                @contextmenu.prevent="onBetContext($event, 'Диапазон3')"
+                @mouseenter="setHover('Диапазон3')"
+                @mouseleave="setHover('')"
+              >
                 25 to 36
-                <span v-if="betOf('Диапазон3')" class="chip-badge" :class="betBadgeClass(betOf('Диапазон3'))" :style="betBadgeStyleByColor(betColorOf('Диапазон3'))">
+                <span
+                  v-if="betOf('Диапазон3')"
+                  class="chip-badge"
+                  :class="betBadgeClass(betOf('Диапазон3'))"
+                  :style="betBadgeStyleByAmount(betOf('Диапазон3'))"
+                >
                   {{ fmt(betOf('Диапазон3'), 0) }}
                 </span>
               </button>
             </div>
 
             <div class="col-bets">
-              <button class="cell big bet-red" :class="{ win: isWinKey('red'), has: !!betOf('red'), tap: tappedKey === 'red' }" @click="addBet('red')" @mouseenter="setHover('red')" @mouseleave="setHover('')">
+              <button
+                class="cell big bet-red"
+                :class="{ win: isWinKey('red'), has: !!betOf('red'), tap: tappedKey === 'red' }"
+                @click="addBet('red')"
+                @contextmenu.prevent="onBetContext($event, 'red')"
+                @mouseenter="setHover('red')"
+                @mouseleave="setHover('')"
+              >
                 RED
-                <span v-if="betOf('red')" class="chip-badge" :class="betBadgeClass(betOf('red'))" :style="betBadgeStyleByColor(betColorOf('red'))">
+                <span
+                  v-if="betOf('red')"
+                  class="chip-badge"
+                  :class="betBadgeClass(betOf('red'))"
+                  :style="betBadgeStyleByAmount(betOf('red'))"
+                >
                   {{ fmt(betOf('red'), 0) }}
                 </span>
               </button>
 
-              <button class="cell big bet-black" :class="{ win: isWinKey('black'), has: !!betOf('black'), tap: tappedKey === 'black' }" @click="addBet('black')" @mouseenter="setHover('black')" @mouseleave="setHover('')">
+              <button
+                class="cell big bet-black"
+                :class="{ win: isWinKey('black'), has: !!betOf('black'), tap: tappedKey === 'black' }"
+                @click="addBet('black')"
+                @contextmenu.prevent="onBetContext($event, 'black')"
+                @mouseenter="setHover('black')"
+                @mouseleave="setHover('')"
+              >
                 BLACK
-                <span v-if="betOf('black')" class="chip-badge" :class="betBadgeClass(betOf('black'))" :style="betBadgeStyleByColor(betColorOf('black'))">
+                <span
+                  v-if="betOf('black')"
+                  class="chip-badge"
+                  :class="betBadgeClass(betOf('black'))"
+                  :style="betBadgeStyleByAmount(betOf('black'))"
+                >
                   {{ fmt(betOf('black'), 0) }}
                 </span>
               </button>
@@ -642,7 +784,8 @@ function betColorOf(key: BetKey) {
               v-for="(b, k) in bets"
               :key="k"
               class="mini-pill"
-              :style="betBadgeStyleByColor(b.color)"
+              :style="betBadgeStyleByAmount(b.amount)"
+              @contextmenu.prevent="onBetContext($event, k as any)"
             >
               <span class="k">{{ k }}</span>
               <span class="v">{{ fmt(b.amount, 0) }}</span>
@@ -654,9 +797,9 @@ function betColorOf(key: BetKey) {
   </GameLayout>
 </template>
 
-<style scoped>
-/* --- ТВОЙ СТИЛЬ ОСТАВИЛ КАК ЕСТЬ (только без логических конфликтов) --- */
 
+<style scoped>
+/* --- оставил твои стили как есть --- */
 .panel-stack {
   display: flex;
   flex-direction: column;
@@ -671,14 +814,13 @@ function betColorOf(key: BetKey) {
   margin-bottom: 8px;
   font-weight: 600;
 }
-
 .chip-row {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
 
-/* ===== Casino chip (single source of truth) ===== */
+/* ===== Casino chip ===== */
 .chip {
   --c: var(--chip, #60a5fa);
   position: relative;
@@ -691,28 +833,23 @@ function betColorOf(key: BetKey) {
   color: #fff;
   user-select: none;
   overflow: hidden;
-
   background:
     radial-gradient(18px 18px at 32% 28%, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 60%),
     radial-gradient(70% 70% at 50% 60%, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0) 62%), var(--c);
-
   box-shadow:
     0 10px 18px rgba(0, 0, 0, 0.45),
     inset 0 2px 0 rgba(255, 255, 255, 0.2),
     inset 0 -6px 10px rgba(0, 0, 0, 0.35);
-
   transition:
     transform 0.12s ease,
     filter 0.12s ease,
     box-shadow 0.18s ease;
   outline: none;
 }
-
 .chip:hover {
   filter: brightness(1.05);
   transform: translateY(-1px);
 }
-
 .chip.on {
   transform: translateY(-2px) scale(1.04);
   box-shadow:
@@ -721,8 +858,6 @@ function betColorOf(key: BetKey) {
     inset 0 2px 0 rgba(255, 255, 255, 0.22),
     inset 0 -7px 12px rgba(0, 0, 0, 0.35);
 }
-
-/* outer segmented ring */
 .chip::before {
   content: '';
   position: absolute;
@@ -730,30 +865,42 @@ function betColorOf(key: BetKey) {
   border-radius: 999px;
   background:
     radial-gradient(circle at 50% 8px, rgba(255, 255, 255, 0.95) 0 2px, transparent 3px),
-    radial-gradient(circle at calc(100% - 8px) 50%, rgba(255, 255, 255, 0.95) 0 2px, transparent 3px),
-    radial-gradient(circle at 50% calc(100% - 8px), rgba(255, 255, 255, 0.95) 0 2px, transparent 3px),
+    radial-gradient(
+      circle at calc(100% - 8px) 50%,
+      rgba(255, 255, 255, 0.95) 0 2px,
+      transparent 3px
+    ),
+    radial-gradient(
+      circle at 50% calc(100% - 8px),
+      rgba(255, 255, 255, 0.95) 0 2px,
+      transparent 3px
+    ),
     radial-gradient(circle at 8px 50%, rgba(255, 255, 255, 0.95) 0 2px, transparent 3px),
-    repeating-conic-gradient(from -10deg, rgba(255, 255, 255, 0.95) 0 14deg, rgba(255, 255, 255, 0) 14deg 62deg);
+    repeating-conic-gradient(
+      from -10deg,
+      rgba(255, 255, 255, 0.95) 0 14deg,
+      rgba(255, 255, 255, 0) 14deg 62deg
+    );
   -webkit-mask: radial-gradient(circle, transparent 0 58%, #000 60% 100%);
   mask: radial-gradient(circle, transparent 0 58%, #000 60% 100%);
   opacity: 0.95;
   z-index: 1;
 }
-
-/* inner dashed ring */
 .chip::after {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: 999px;
-  background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, 0.75) 0 10deg, rgba(255, 255, 255, 0) 10deg 20deg);
+  background: repeating-conic-gradient(
+    from 0deg,
+    rgba(255, 255, 255, 0.75) 0 10deg,
+    rgba(255, 255, 255, 0) 10deg 20deg
+  );
   -webkit-mask: radial-gradient(circle, transparent 0 34%, #000 36% 44%, transparent 46% 100%);
   mask: radial-gradient(circle, transparent 0 34%, #000 36% 44%, transparent 46% 100%);
   opacity: 0.55;
   z-index: 1;
 }
-
-/* center cap + centered text */
 .chip-core {
   position: absolute;
   inset: 22%;
@@ -763,13 +910,7 @@ function betColorOf(key: BetKey) {
   z-index: 3;
   background: radial-gradient(circle, rgba(0, 0, 0, 0.35) 0 55%, rgba(0, 0, 0, 0) 58%);
 }
-
 .chip-val {
-  position: static;
-  display: block;
-  line-height: 1;
-  margin: 0;
-  padding: 0;
   font-weight: 900;
   font-size: 12px;
   letter-spacing: 0.2px;
@@ -778,16 +919,6 @@ function betColorOf(key: BetKey) {
     0 0 10px rgba(0, 0, 0, 0.35);
   -webkit-text-stroke: 0.35px rgba(0, 0, 0, 0.35);
   transform: translateY(-0.5px);
-}
-
-@media (max-width: 420px) {
-  .chip {
-    width: 50px;
-    height: 50px;
-  }
-  .chip-val {
-    font-size: 11px;
-  }
 }
 
 .amount-total {
@@ -908,41 +1039,6 @@ function betColorOf(key: BetKey) {
   padding-top: 6px;
   overflow-x: auto;
 }
-
-@media (max-width: 980px) {
-  .roulette-wrap {
-    grid-template-columns: 1fr;
-  }
-  .wheel-area {
-    width: 320px;
-    height: 320px;
-  }
-  .wheel-svg {
-    width: 300px;
-    height: 300px;
-    margin: 12px auto 0;
-  }
-  .history-under {
-    width: min(363px, 100%);
-  }
-  .main-table {
-    overflow-x: auto;
-  }
-  .board {
-    padding-top: 14px;
-  }
-}
-
-@media (max-width: 420px) {
-  .board {
-    --cell: 40px;
-    --gap: 6px;
-  }
-  .cell-zero {
-    width: 62px;
-  }
-}
-
 .board {
   --cell: 44px;
   --gap: 6px;
@@ -953,13 +1049,11 @@ function betColorOf(key: BetKey) {
   flex-direction: column;
   gap: 12px;
 }
-
 .main-table {
   display: flex;
   gap: 10px;
   align-items: flex-start;
 }
-
 .side-table {
   display: flex;
   gap: 10px;
@@ -975,7 +1069,10 @@ function betColorOf(key: BetKey) {
   color: rgba(255, 255, 255, 0.92);
   font-weight: 900;
   cursor: pointer;
-  transition: transform 0.12s ease, filter 0.12s ease, box-shadow 0.18s ease;
+  transition:
+    transform 0.12s ease,
+    filter 0.12s ease,
+    box-shadow 0.18s ease;
   position: relative;
   overflow: hidden;
 }
@@ -995,7 +1092,10 @@ function betColorOf(key: BetKey) {
   color: rgba(255, 255, 255, 0.92);
   font-weight: 900;
   cursor: pointer;
-  transition: transform 0.12s ease, filter 0.12s ease, box-shadow 0.18s ease;
+  transition:
+    transform 0.12s ease,
+    filter 0.12s ease,
+    box-shadow 0.18s ease;
   position: relative;
   overflow: hidden;
 }
@@ -1003,7 +1103,6 @@ function betColorOf(key: BetKey) {
   transform: translateY(-1px);
   filter: brightness(1.08);
 }
-
 .cell.red {
   background: rgba(255, 58, 84, 0.86);
   color: #081018;
@@ -1019,7 +1118,6 @@ function betColorOf(key: BetKey) {
 .cell.bet-black {
   background: rgba(44, 58, 72, 0.92);
 }
-
 .cell.out {
   width: var(--cell);
   height: var(--cell);
@@ -1032,7 +1130,6 @@ function betColorOf(key: BetKey) {
   gap: var(--gap);
   margin-left: 0;
 }
-
 .big {
   width: calc(var(--cell) * 3 + var(--gap) * 2);
   height: var(--cell);
@@ -1041,7 +1138,6 @@ function betColorOf(key: BetKey) {
 .cell.has {
   box-shadow: inset 0 0 0 1px rgba(245, 197, 66, 0.28);
 }
-
 .cell.hover {
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.1),
@@ -1049,10 +1145,11 @@ function betColorOf(key: BetKey) {
     0 0 26px rgba(245, 197, 66, 0.12);
   filter: brightness(1.08);
 }
-
 .cell.win,
 .cell-zero.win {
-  box-shadow: 0 0 0 1px rgba(245, 197, 66, 0.55), 0 0 28px rgba(245, 197, 66, 0.22);
+  box-shadow:
+    0 0 0 1px rgba(245, 197, 66, 0.55),
+    0 0 28px rgba(245, 197, 66, 0.22);
   filter: brightness(1.12);
 }
 
@@ -1092,6 +1189,7 @@ function betColorOf(key: BetKey) {
   flex-wrap: wrap;
   gap: 8px;
 }
+
 .mini-pill {
   --bet: rgba(245, 197, 66, 0.92);
   position: relative;
@@ -1124,18 +1222,15 @@ function betColorOf(key: BetKey) {
   height: 363px;
   border-radius: 50%;
   overflow: hidden;
-
   box-shadow:
     inset 0 0 0 10px rgba(255, 255, 255, 0.06),
     inset 0 -18px 26px rgba(0, 0, 0, 0.25),
     0 14px 60px rgba(0, 0, 0, 0.52);
-
   transition: none;
   transform-origin: 50% 50%;
   margin: 18px auto 0;
   position: relative;
 }
-
 .wheel-svg::after {
   content: '';
   position: absolute;
@@ -1144,7 +1239,6 @@ function betColorOf(key: BetKey) {
   border: 1px solid rgba(245, 197, 66, 0.22);
   pointer-events: none;
 }
-
 .wheel-svg.flash {
   box-shadow:
     inset 0 0 0 10px rgba(255, 255, 255, 0.06),
@@ -1176,6 +1270,46 @@ function betColorOf(key: BetKey) {
   }
   to {
     filter: brightness(1.38);
+  }
+}
+
+@media (max-width: 980px) {
+  .roulette-wrap {
+    grid-template-columns: 1fr;
+  }
+  .wheel-area {
+    width: 320px;
+    height: 320px;
+  }
+  .wheel-svg {
+    width: 300px;
+    height: 300px;
+    margin: 12px auto 0;
+  }
+  .history-under {
+    width: min(363px, 100%);
+  }
+  .main-table {
+    overflow-x: auto;
+  }
+  .board {
+    padding-top: 14px;
+  }
+}
+@media (max-width: 420px) {
+  .board {
+    --cell: 40px;
+    --gap: 6px;
+  }
+  .cell-zero {
+    width: 62px;
+  }
+  .chip {
+    width: 50px;
+    height: 50px;
+  }
+  .chip-val {
+    font-size: 11px;
   }
 }
 </style>
