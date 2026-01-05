@@ -1,0 +1,20 @@
+.bgm-icon-btn{
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  line-height: 1;
+}
+.bgm-icon-btn:focus{ outline: none; }
+
+.bgm-icon-btn{
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  color: rgba(255,255,255,.90);
+}
+.bgm-icon-btn:hover{ background: rgba(255,255,255,.06); transform: translateY(-1px); }
+.bgm-vol.off .bgm-icon-btn{ opacity: .6; }

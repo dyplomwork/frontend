@@ -1,0 +1,35 @@
+/* ========= Base / reset ========= */
+*{ box-sizing: border-box; }
+html, body{ height:100%; }
+body{
+  margin:0;
+  color: var(--c-text);
+  background:
+    radial-gradient(900px 520px at 50% -10%, rgba(92,255,146,.10), rgba(0,0,0,0)),
+    linear-gradient(180deg, var(--c-bg), #091118 55%, #070d12);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+a{ color: rgba(92,255,146,.92); text-decoration: none; }
+a:hover{ text-decoration: underline; }
+
+::selection{ background: rgba(92,255,146,.22); }
+
+button, input, select, textarea{ font-family: inherit; color: inherit; }
+img{ max-width: 100%; display:block; }
+
+:focus-visible{
+  outline: 2px solid rgba(92,255,146,.55);
+  outline-offset: 2px;
+}
+
+/* Scrollbar (webkit) */
+*::-webkit-scrollbar{ width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb{
+  background: rgba(255,255,255,.10);
+  border: 2px solid rgba(0,0,0,0);
+  background-clip: padding-box;
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover{ background: rgba(255,255,255,.16); }

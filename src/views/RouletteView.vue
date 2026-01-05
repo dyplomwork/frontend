@@ -925,4 +925,39 @@ function betOf(key: BetKey) {
   from { filter: brightness(1.15); }
   to { filter: brightness(1.38); }
 }
+
+
+/* Realistic chip look */
+.chip{ position: relative; overflow: hidden; }
+.chip::before{
+  content:'';
+  position:absolute;
+  inset: 6px;
+  border-radius: 999px;
+  background:
+    repeating-conic-gradient(
+      from 0deg,
+      rgba(255,255,255,.86) 0 12deg,
+      rgba(0,0,0,0) 12deg 24deg
+    );
+  opacity: .28;
+  filter: blur(.2px);
+}
+.chip::after{
+  content:'';
+  position:absolute;
+  inset: 14px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.35), rgba(0,0,0,.15) 55%, rgba(0,0,0,.45));
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: inset 0 0 0 2px rgba(0,0,0,.35);
+}
+.chip > *{ position: relative; z-index: 1; }
+.chip.on{
+  transform: translateY(-2px) scale(1.03);
+  box-shadow:
+    inset 0 0 0 2px rgba(0,0,0,0.35),
+    0 18px 34px rgba(0,0,0,0.55);
+}
+
 </style>

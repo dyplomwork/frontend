@@ -770,4 +770,5 @@ onBeforeUnmount(() => stopAnim())
 @media (prefers-reduced-motion: reduce) {
   .track-shine { animation: none; opacity: 0.25; }
 }
+
 </style>

@@ -560,4 +560,5 @@ onMounted(async () => {
 @media (max-width: 900px){
   .table{ min-width: 760px; }
 }
+
 </style>

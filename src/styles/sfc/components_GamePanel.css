@@ -1,0 +1,6 @@
+.panel-stack{ display:flex; flex-direction:column; gap: 12px; }
+.field{ margin-top: 2px; }
+.label{ color: var(--muted); font-size: 12px; margin-bottom: 8px; font-weight: 600; }
+.amount-row{ display:grid; grid-template-columns: 1fr auto; gap: 10px; align-items:center; }
+.btn-row{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.hint{ color: rgba(255,255,255,.78); font-weight: 600; }

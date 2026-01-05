@@ -77,18 +77,18 @@ async function refreshAll(){
 </script>
 
 <template>
-  <div class="grid" style="gap:16px;">
+  <div class="profile-grid">
     <div class="card">
       <div class="row-between">
-        <h2 style="margin:0;">Профиль</h2>
-        <span v-if="auth.user" class="badge">Balance: {{ fmt(auth.user.balance, 2) }}</span>
+        <h2 class="profile-title">Профиль</h2>
+        <span v-if="auth.user" class="badge balance-badge">Balance: <span class="bal">{{ fmt(auth.user.balance, 2) }}</span><span class="coin" aria-label="Currency K">K</span></span>
       </div>
 
-      <p class="muted" style="margin-top:8px;">
+      <p class="muted profile-hint">
         Пополнение/вывод работают через <b>тикеты</b>: пользователь создаёт заявку, админ подтверждает или отклоняет.
       </p>
 
-      <div class="grid grid-2" style="margin-top:12px;">
+      <div class="grid grid-2 profile-panels">
         <div class="card2">
           <b>Пополнение</b>
           <div class="row" style="gap:10px; margin-top:10px; flex-wrap:wrap;">
@@ -142,4 +142,14 @@ async function refreshAll(){
 .st-pending{ border-color: rgba(250,204,21,.45); background: rgba(250,204,21,.10); }
 .st-approved{ border-color: rgba(34,197,94,.45); background: rgba(34,197,94,.10); }
 .st-rejected{ border-color: rgba(248,81,73,.45); background: rgba(248,81,73,.10); }
+
+
+.profile-grid{ display:grid; gap:16px; max-width: 1180px; margin: 0 auto; }
+.profile-title{ margin:0; }
+.profile-hint{ margin-top: 8px; }
+.profile-panels{ margin-top: 12px; }
+.balance-badge{ display:inline-flex; align-items:center; gap:8px; padding: 8px 12px; }
+.balance-badge .bal{ font-weight: 900; }
+.card2{ padding: 16px; border-radius: 16px; }
+
 </style>

@@ -1,0 +1,72 @@
+:root{
+  /* ========= Color system (Stake-ish) ========= */
+  --c-bg: #0b141d;
+  --c-bg-2: #09121a;
+  --c-surface: #13202c;
+  --c-surface-2: #182838;
+  --c-surface-3: #1b2f41;
+
+  --c-border: rgba(255,255,255,.06);
+  --c-border-2: rgba(255,255,255,.10);
+
+  --c-text: rgba(255,255,255,.92);
+  --c-muted: rgba(255,255,255,.66);
+  --c-dim: rgba(255,255,255,.46);
+
+  /* Primary brand (light green) */
+  --c-accent: #5CFF92;
+  --c-accent-2: #00e701;
+  --c-accent-soft: rgba(92,255,146,.16);
+
+  --c-success: #00e701;
+  --c-danger: #ff3b57;
+  --c-warning: #facc15;
+
+  /* ========= Shadows ========= */
+  --shadow-1: 0 10px 26px rgba(0,0,0,.35);
+  --shadow-2: 0 16px 44px rgba(0,0,0,.45);
+
+  /* ========= Radius ========= */
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+  --r-xl: 22px;
+
+  /* ========= Sizing ========= */
+  --control-h: 44px;
+  --control-h-sm: 40px;
+  --sidebar-w: 260px;
+  --sidebar-w-collapsed: 86px;
+  --left-panel-w: 320px;
+
+  /* ========= Spacing ========= */
+  --pad-10: 10px;
+  --pad-12: 12px;
+  --pad-14: 14px;
+  --pad-18: 18px;
+  --pad-22: 22px;
+
+  /* ========= Typography ========= */
+  --font-sans: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+
+  /* ========= Backward-compat vars (old names) ========= */
+  --bg0: var(--c-bg);
+  --bg1: var(--c-bg-2);
+  --panel: var(--c-surface);
+  --panel2: var(--c-surface-2);
+  --border: var(--c-border);
+  --border2: var(--c-border-2);
+  --text: var(--c-text);
+  --muted: var(--c-muted);
+  --blue: var(--c-accent);
+
+  --stakeGreen: var(--c-success);
+  --stakeRed: var(--c-danger);
+  --stakeYellow: var(--c-warning);
+
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+
+  font-family: var(--font-sans);
+  color-scheme: dark;
+}

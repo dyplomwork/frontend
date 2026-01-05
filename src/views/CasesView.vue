@@ -103,7 +103,6 @@ h2{ margin:0; color: #eaf3ff; }
 .emoji{ font-size: 56px; line-height: 1; filter: drop-shadow(0 10px 18px rgba(0,0,0,.35)); }
 .name{ font-weight: 900; }
 .price{ color: rgba(255,255,255,.72); font-weight: 800; display:flex; align-items:center; gap: 8px; }
-.coin{ display:inline-grid; place-items:center; width: 22px; height: 22px; border-radius: 8px; background: #f5c542; color:#131b22; font-weight: 1000; }
 .tile-bottom{ margin-top: 12px; display:flex; justify-content:flex-end; }
 .loot-preview{ display:flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .loot-chip{
@@ -122,4 +121,5 @@ h2{ margin:0; color: #eaf3ff; }
 .loot-chip.epic{ border-color: rgba(255,115,220,.30); }
 .loot-chip.legendary{ border-color: rgba(255,208,90,.32); }
 .pill{ padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.04); color: rgba(255,255,255,.82); font-weight: 800; }
+
 </style>

@@ -110,7 +110,7 @@ function logout(){ sfx('click'); auth.logout(); router.push('/') }
           <span class="side-txt" v-if="sidebarOpen">Plinko</span>
         </RouterLink>
         <RouterLink to="/mines" class="side-link" :class="{ active: route.path.startsWith('/mines') }" title="Mines">
-          <span class="side-ic">💎</span>
+          <span class="side-ic">💣</span>
           <span class="side-txt" v-if="sidebarOpen">Mines</span>
         </RouterLink>
         <RouterLink to="/cases" class="side-link" :class="{ active: route.path.startsWith('/cases') }" title="Cases">
@@ -124,44 +124,27 @@ function logout(){ sfx('click'); auth.logout(); router.push('/') }
         </nav>
 
       <div class="side-bottom">
-
-        <div class="bgm-vol" :class="{ off: !bgmOn }" :title="bgmOn ? 'Music volume' : 'Music is off'">
-          <button
-            class="bgm-icon-btn"
-            @click.stop="toggleMusicIcon"
-            :title="bgmOn ? 'Mute music' : 'Unmute music'"
-          >
+        <div class="audio-row" :class="{ off: !bgmOn }">
+          <button class="icon-btn audio-btn" @click.stop="toggleMusicIcon" :title="bgmOn ? 'Mute music' : 'Unmute music'">
             <span class="ic">{{ bgmOn ? '🎵' : '🔕' }}</span>
           </button>
-          <transition name="fade">
-            <div v-if="sidebarOpen" class="bgm-vol__content">
-              <div class="bgm-vol__top">
-                <span class="bgm-vol__label">Volume</span>
-                <span class="bgm-vol__pct">{{ Math.round(bgmVol * 100) }}%</span>
-              </div>
-
-              <input
-                class="bgm-vol__range"
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                :value="bgmVol"
-                @input="onBgmVolInput"
-                :disabled="!bgmOn"
-                :style="{ '--fill': `${Math.round(bgmVol * 100)}%` }"
-                aria-label="Background music volume"
-              />
-            </div>
-          </transition>
+          <input
+            v-if="sidebarOpen"
+            class="audio-slider"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            :value="bgmVol"
+            @input="onBgmVolInput"
+            aria-label="Background music volume"
+          />
         </div>
 
-
-        <button class="icon-btn" @click="toggleSfx" :title="sfxOn ? 'SFX on' : 'SFX off'">
+        <button class="icon-btn audio-btn" @click="toggleSfx" :class="{ off: !sfxOn }" :title="sfxOn ? 'SFX on' : 'SFX off'">
           <span class="ic">{{ sfxOn ? '🔊' : '🔇' }}</span>
         </button>
       </div>
-
 
     </aside>
 
@@ -184,7 +167,7 @@ function logout(){ sfx('click'); auth.logout(); router.push('/') }
             <div class="balance-pill">
               <span class="muted">Balance</span>
               <span class="bal">{{ fmt(auth.user.balance, 2) }}</span>
-              <span class="coin">K</span>
+              <span class="coin" aria-label="Currency K">K</span>
             </div>
             <button class="btn" @click="logout">Logout</button>
           </template>
@@ -205,14 +188,4 @@ function logout(){ sfx('click'); auth.logout(); router.push('/') }
     </div>
   </div>
 </template>
-<style>
-.bgm-icon-btn{
-  all: unset;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  line-height: 1;
-}
-.bgm-icon-btn:focus{ outline: none; }
-</style>
+

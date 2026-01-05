@@ -45,7 +45,4 @@ async function logout(){
   </header>
 </template>
 
-<style scoped>
-.sfx{ width: 44px; height: 40px; padding: 0; display:inline-grid; place-items:center; }
-.ic{ font-size: 18px; }
-</style>
+

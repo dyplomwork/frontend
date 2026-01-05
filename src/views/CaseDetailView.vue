@@ -466,7 +466,6 @@ watch(quickOpen, (v) => {
 }
 .title{ margin:0; color: #eaf3ff; }
 .price{ color: rgba(255,255,255,.75); font-weight: 900; display:flex; align-items:center; gap: 8px; }
-.coin{ display:inline-grid; place-items:center; width: 22px; height: 22px; border-radius: 8px; background: #f5c542; color:#131b22; font-weight: 1000; }
 
 .model{
   border: 1px solid rgba(255,255,255,.08);
@@ -719,4 +718,5 @@ watch(quickOpen, (v) => {
   15%{opacity:.6}
   100%{ transform: translateX(30%) rotate(12deg); opacity:0;}
 }
+
 </style>

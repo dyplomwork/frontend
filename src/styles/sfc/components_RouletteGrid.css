@@ -1,0 +1,31 @@
+.roulette{
+  display:grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap:10px;
+  margin-top:12px;
+}
+.slot{
+  height:74px;
+  display:grid;
+  place-items:center;
+  border-radius:14px;
+  background: #0f1117;
+  border:1px solid #232634;
+  overflow:hidden;
+  position:relative;
+}
+.sym{
+  font-size:34px;
+  transform: translateY(0) rotate(0deg) scale(1);
+}
+.spinning .sym{
+  animation: spin3s 3s cubic-bezier(.2,.9,.2,1) both;
+}
+@keyframes spin3s{
+  0%   { transform: translateY(0) rotate(0deg) scale(1); filter: blur(0px); opacity: 1; }
+  10%  { transform: translateY(-8px) rotate(120deg) scale(1.05); filter: blur(1px); opacity: .95; }
+  30%  { transform: translateY(8px) rotate(360deg) scale(1.08); filter: blur(1.2px); opacity: .9; }
+  60%  { transform: translateY(-6px) rotate(720deg) scale(1.06); filter: blur(.9px); opacity: .95; }
+  85%  { transform: translateY(4px) rotate(960deg) scale(1.02); filter: blur(.4px); opacity: 1; }
+  100% { transform: translateY(0) rotate(1080deg) scale(1); filter: blur(0px); opacity: 1; }
+}

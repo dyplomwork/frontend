@@ -175,8 +175,19 @@ async function randomPick() {
   await reveal(pick)
 }
 
-function reset() {
+async function reset() {
   sfx('click')
+
+  // If a game is currently running, finish it to clear backend session
+  if (inGame.value && !lost.value) {
+    try {
+      await minesFinish()
+      await auth.fetchMe()
+    } catch {
+      // ignore network/backend errors here - still reset UI
+    }
+  }
+
   inGame.value = false
   lost.value = false
   safePicks.value = 0
@@ -367,4 +378,10 @@ buildGrid()
     height: 64px;
   }
 }
+
+
+/* Keep amounts + coin inline */
+.amount, .value, .bal, .net, .summary .value { display:inline-flex; align-items:center; gap:6px; }
+.summary .value{ white-space: nowrap; }
+
 </style>

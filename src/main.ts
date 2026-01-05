@@ -4,9 +4,7 @@ import { ViteSSG } from 'vite-ssg'
 import App from './App.vue'
 import { routes, addAuthGuards } from './router'
 
-import './style.css'
-import './styles/theme.css'
-
+import './styles/index.css'
 /**
  * ViteSSG gives us prerendering (static HTML per route) which helps Google index a SPA.
  * Vercel can deploy it as a static site from /dist.

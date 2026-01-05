@@ -119,4 +119,5 @@ input:focus{ border-color: var(--border2); background: rgba(255,255,255,.06); }
   text-align: center;
 }
 .link{ color: var(--text); text-decoration: underline; }
+
 </style>

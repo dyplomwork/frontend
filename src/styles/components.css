@@ -1,0 +1,144 @@
+/* ========= Reusable components ========= */
+.card, .card2{
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.14) inset;
+}
+.card{ padding: var(--pad-18); }
+.card2{ padding: var(--pad-14); }
+
+.title{
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: .2px;
+}
+.text{ color: var(--c-muted); }
+
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--c-border);
+  background: rgba(255,255,255,.04);
+  color: var(--c-muted);
+  font-weight: 800;
+  font-size: 13px;
+}
+
+/* Currency coin (K) */
+.coin{
+  display:inline-grid;
+  place-items:center;
+  width: 22px;
+  height: 22px;
+  margin-left: 6px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.55), rgba(250,204,21,.85) 35%, rgba(234,179,8,.85));
+  border: 1px solid rgba(250,204,21,.45);
+  box-shadow: 0 6px 14px rgba(250,204,21,.12);
+  color: rgba(0,0,0,.85);
+  font-weight: 1000;
+  font-size: 12px;
+  line-height: 1;
+}
+
+
+/* Coin size in input rows */
+.amount-row .coin{
+  width: var(--control-h);
+  height: var(--control-h);
+  margin-left: 0;
+  font-size: 13px;
+}
+/* Buttons */
+.btn{
+  height: var(--control-h);
+  border-radius: 12px;
+  border: 1px solid var(--c-border);
+  background: rgba(255,255,255,.04);
+  color: var(--c-text);
+  padding: 0 14px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap: 10px;
+  cursor:pointer;
+  font-weight: 900;
+  letter-spacing: .2px;
+  transition: transform .12s ease, background .12s ease, border-color .12s ease, filter .12s ease;
+  user-select: none;
+
+  font-weight: 900;
+  letter-spacing: .2px;
+  transition: transform .12s ease, filter .12s ease, background .12s ease, border-color .12s ease;
+}
+.btn:hover{ transform: translateY(-1px); background: rgba(255,255,255,.06); border-color: var(--c-border-2); }
+.btn:active{ transform: translateY(0); filter: brightness(.98); }
+
+.btn-primary{
+  background: linear-gradient(180deg, rgba(92,255,146,.95), rgba(48,210,108,.92));
+  border-color: rgba(92,255,146,.55);
+  color: rgba(0,0,0,.92);
+  box-shadow: 0 10px 28px rgba(92,255,146,.20);
+}
+.btn-primary:hover{
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+/* Back-compat class name used across the project */
+.btn-blue{ 
+  background: linear-gradient(180deg, rgba(92,255,146,.95), rgba(0,231,1,.72));
+  border-color: rgba(92,255,146,.42);
+  box-shadow: 0 10px 22px rgba(92,255,146,.14);
+}
+.btn-blue:hover{ background: linear-gradient(180deg, rgba(92,255,146,1), rgba(0,231,1,.82)); }
+.btn-ghost{
+  background: rgba(255,255,255,.04);
+  border-color: rgba(255,255,255,.14);
+  color: rgba(255,255,255,.92);
+}
+.icon-btn{
+  width: 44px; height:44px;
+  border-radius: 12px;
+  border: 1px solid var(--c-border);
+  background: rgba(255,255,255,.04);
+  color: var(--c-text);
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+  transition: transform .12s ease, background .12s ease, border-color .12s ease;
+}
+.icon-btn:hover{ transform: translateY(-1px); background: rgba(255,255,255,.06); border-color: var(--c-border-2); }
+
+/* Inputs */
+.input, .select{
+  height: var(--control-h);
+  border-radius: 12px;
+  border: 1px solid var(--c-border);
+  background: rgba(0,0,0,.16);
+  padding: 0 12px;
+  color: var(--c-text);
+}
+.input::placeholder{ color: rgba(255,255,255,.38); }
+
+/* Alerts */
+.alert{
+  border-radius: 14px;
+  border: 1px solid var(--c-border);
+  padding: 12px 14px;
+}
+.alert-ok{ border-color: rgba(0,231,1,.35); background: rgba(0,231,1,.08); }
+.alert-err{ border-color: rgba(255,59,87,.35); background: rgba(255,59,87,.08); }
+
+.btn-ghost:hover{ background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.20); transform: translateY(-1px); }
+
+.row-between{ display:flex; align-items:center; justify-content:space-between; gap: 10px; }
+
+.summary{ margin-top: 14px; border: 1px solid rgba(255,255,255,.08); background: rgba(0,0,0,.18); border-radius: 14px; padding: 12px; display:flex; flex-direction:column; gap: 10px; }
+
+.net{ display:inline-flex; align-items:center; gap: 6px; }

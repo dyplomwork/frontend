@@ -71,21 +71,4 @@ function onPlay(){ emit('play') }
   </div>
 </template>
 
-<style scoped>
-.panel-stack{ display:flex; flex-direction:column; gap: 12px; }
-.field{ margin-top: 2px; }
-.label{ color: var(--muted); font-size: 12px; margin-bottom: 8px; font-weight: 600; }
-.amount-row{ display:grid; grid-template-columns: 1fr auto; gap: 10px; align-items:center; }
-.coin{
-  width: var(--control-h);
-  height: var(--control-h);
-  border-radius: 12px;
-  background: rgba(250,204,21,.92);
-  color: rgba(0,0,0,.85);
-  display:grid;
-  place-items:center;
-  font-weight: 900;
-}
-.btn-row{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-.hint{ color: rgba(255,255,255,.78); font-weight: 600; }
-</style>
+

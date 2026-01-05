@@ -26,7 +26,7 @@ const fmt = (v: number | string, d = 2) => formatNumber(v, d)
       <div class="hero-right">
         <div class="stat">
           <div class="label">Balance</div>
-          <div class="value">{{ fmt(balance, 2) }} <span class="coin">K</span></div>
+          <div class="value">{{ fmt(balance, 2) }} <span class="coin" aria-label="Currency K">K</span></div>
         </div>
         <div class="stat">
           <div class="label">Account</div>
@@ -76,19 +76,6 @@ const fmt = (v: number | string, d = 2) => formatNumber(v, d)
         </div>
       </RouterLink>
     </div>
-
-    <div class="card last">
-      <div class="row-between">
-        <h2>Last wins</h2>
-        <span class="badge">demo</span>
-      </div>
-      <div class="wins">
-        <div class="win"><span class="u">User123</span> <span class="m">Cases</span> <span class="g">+1200</span></div>
-        <div class="win"><span class="u">Player7</span> <span class="m">Roulette</span> <span class="g">+300</span></div>
-        <div class="win"><span class="u">LuckyFox</span> <span class="m">Plinko</span> <span class="g">+80</span></div>
-        <div class="win"><span class="u">Bully</span> <span class="m">Mines</span> <span class="g">+45</span></div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -113,8 +100,6 @@ h1{margin:10px 0 8px;font-size:34px;letter-spacing:.3px}
 h2{margin:0;font-size:18px}
 .muted{color:rgba(255,255,255,.65)}
 .cta{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.15);font-weight:900}
-.btn.primary{background:rgba(0,255,140,.18);border-color:rgba(0,255,140,.35)}
 .game{display:flex;align-items:center;gap:12px;transition:transform .12s ease}
 .game:hover{transform:translateY(-2px)}
 .icon{font-size:26px;width:44px;height:44px;display:grid;place-items:center;border-radius:14px;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.08)}
@@ -124,10 +109,29 @@ h2{margin:0;font-size:18px}
 .stat{padding:12px;border-radius:14px;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.08)}
 .stat .label{font-size:12px;color:rgba(255,255,255,.6);font-weight:800}
 .stat .value{font-size:16px;font-weight:1000}
-.coin{opacity:.8;font-weight:1000;margin-left:6px}
-.last .wins{display:flex;flex-direction:column;gap:8px;margin-top:12px}
-.win{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;background:rgba(0,0,0,.14);border:1px solid rgba(255,255,255,.08)}
-.win .u{font-weight:900}
-.win .m{color:rgba(255,255,255,.65)}
-.win .g{font-weight:1000;color:rgba(0,255,140,.9)}
+
+
+/* Home refinements */
+.hero{
+  background: radial-gradient(900px 420px at 10% 0%, rgba(92,255,146,.12), transparent 60%),
+              radial-gradient(700px 360px at 90% 10%, rgba(56,189,248,.10), transparent 55%),
+              rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.10);
+}
+.game .icon{
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.10), rgba(0,0,0,.22));
+  border: 1px solid rgba(255,255,255,.10);
+}
+
+
+/* Layout tuning for Home */
+.home{ max-width: 1180px; margin: 0 auto; }
+.hero.card{ padding: 22px; min-height: 210px; }
+.hero-left{ max-width: 560px; }
+.hero-right{ display:grid; grid-template-columns: repeat(2, minmax(160px, 1fr)); gap: 12px; align-content:start; }
+.stat{ min-height: 72px; padding: 14px; }
+.grid{ grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.game.card{ min-height: 86px; padding: 14px 16px; }
+.game .icon{ width: 48px; height: 48px; border-radius: 14px; display:grid; place-items:center; }
+
 </style>

@@ -636,5 +636,4 @@ if (typeof window !== 'undefined') {
 
 .bin-mult{ font-weight: 900; }
 
-
 </style>
