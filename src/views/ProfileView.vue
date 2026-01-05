@@ -149,7 +149,8 @@ async function refreshAll(){
 .profile-hint{ margin-top: 8px; }
 .profile-panels{ margin-top: 12px; }
 .balance-badge{ display:inline-flex; align-items:center; gap:8px; padding: 8px 12px; }
-.balance-badge .bal{ font-weight: 900; }
+.balance-badge{ max-width: 100%; flex-wrap: wrap; }
+.balance-badge .bal{ font-weight: 900; overflow-wrap: anywhere; }
 .card2{ padding: 16px; border-radius: 16px; }
 
 </style>

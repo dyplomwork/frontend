@@ -96,7 +96,14 @@ const table = computed(() =>
 )
 
 const bet = computed(() => Math.max(0, Number(amount.value) || 0))
+// User-requested hard limit: you shouldn't be able to input >50 balls.
 const ballsN = computed(() => Math.max(1, Math.min(50, Number(ballCount.value) || 1)))
+
+// Keep the input itself clamped (HTML max can be bypassed by typing).
+watch(ballCount, (v) => {
+  const n = Math.max(1, Math.min(50, Number(v) || 1))
+  if (n !== Number(v)) ballCount.value = n
+})
 const totalBet = computed(() => bet.value * ballsN.value)
 
 /** stage sizing */
