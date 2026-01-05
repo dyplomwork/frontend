@@ -9,10 +9,18 @@ import { normalizeRouletteKey, roulettePlay } from '../api/games'
 
 type BetKey =
   | `n:${number}`
-  | 'red' | 'black' | 'even' | 'odd'
-  | 'low' | 'high'
-  | 'Диапазон1' | 'Диапазон2' | 'Диапазон3'
-  | 'Ряд1' | 'Ряд2' | 'Ряд3'
+  | 'red'
+  | 'black'
+  | 'even'
+  | 'odd'
+  | 'low'
+  | 'high'
+  | 'Диапазон1'
+  | 'Диапазон2'
+  | 'Диапазон3'
+  | 'Ряд1'
+  | 'Ряд2'
+  | 'Ряд3'
 
 const auth = useAuthStore()
 const bigwinStore = useBigWinStore()
@@ -24,7 +32,8 @@ const chip = ref(10)
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100
 
-const bets = ref<Record<string, number>>({})
+type BetState = { amount: number; color: string } // color = цвет номинала фишки
+const bets = ref<Record<string, BetState>>({})
 const history = ref<{ key: BetKey; amount: number }[]>([])
 const spinning = ref(false)
 
@@ -39,6 +48,7 @@ function tap(key: BetKey) {
   if (tapTimer !== null) window.clearTimeout(tapTimer)
   tapTimer = window.setTimeout(() => (tappedKey.value = ''), 150)
 }
+
 let winTimer: number | null = null
 function setWinKeysFor(win: number) {
   if (winTimer !== null) {
@@ -67,19 +77,30 @@ function colorOf(n: number) {
 
 // --- Hover helpers: highlight covered numbers when hovering outside-bet buttons ---
 const hoverBet = ref<BetKey | ''>('')
-function setHover(key: BetKey | '') { hoverBet.value = key }
+function setHover(key: BetKey | '') {
+  hoverBet.value = key
+}
 
 function numbersForOutsideBet(key: BetKey): number[] {
   switch (key) {
-    case 'Диапазон1': return Array.from({ length: 12 }, (_, i) => i + 1)
-    case 'Диапазон2': return Array.from({ length: 12 }, (_, i) => i + 13)
-    case 'Диапазон3': return Array.from({ length: 12 }, (_, i) => i + 25)
-    case 'Ряд1': return Array.from({ length: 12 }, (_, i) => (i + 1) * 3) // 3..36 step 3
-    case 'Ряд2': return Array.from({ length: 12 }, (_, i) => 2 + i * 3)   // 2..35 step 3
-    case 'Ряд3': return Array.from({ length: 12 }, (_, i) => 1 + i * 3)   // 1..34 step 3
-    case 'red': return Array.from(redSet)
-    case 'black': return Array.from({ length: 36 }, (_, i) => i + 1).filter(n => !redSet.has(n))
-    default: return []
+    case 'Диапазон1':
+      return Array.from({ length: 12 }, (_, i) => i + 1)
+    case 'Диапазон2':
+      return Array.from({ length: 12 }, (_, i) => i + 13)
+    case 'Диапазон3':
+      return Array.from({ length: 12 }, (_, i) => i + 25)
+    case 'Ряд1':
+      return Array.from({ length: 12 }, (_, i) => (i + 1) * 3) // 3..36 step 3
+    case 'Ряд2':
+      return Array.from({ length: 12 }, (_, i) => 2 + i * 3) // 2..35 step 3
+    case 'Ряд3':
+      return Array.from({ length: 12 }, (_, i) => 1 + i * 3) // 1..34 step 3
+    case 'red':
+      return Array.from(redSet)
+    case 'black':
+      return Array.from({ length: 36 }, (_, i) => i + 1).filter((n) => !redSet.has(n))
+    default:
+      return []
   }
 }
 
@@ -88,13 +109,79 @@ const hoverNums = computed(() => {
   return new Set(numbersForOutsideBet(hoverBet.value as BetKey))
 })
 
-const totalBet = computed(() => Object.values(bets.value).reduce((a, b) => a + b, 0))
+const totalBet = computed(() => Object.values(bets.value).reduce((a, b) => a + (b?.amount ?? 0), 0))
+
+function tierForValue(v: number) {
+  if (v >= 5000) return 't6'
+  if (v >= 1000) return 't5'
+  if (v >= 500) return 't4'
+  if (v >= 100) return 't3'
+  if (v >= 25) return 't2'
+  return 't1'
+}
+
+function tierColorForValue(v: number) {
+  const t = tierForValue(v)
+  switch (t) {
+    case 't6':
+      return '#7f1d1d'
+    case 't5':
+      return '#ef4444'
+    case 't4':
+      return '#6d28d9'
+    case 't3':
+      return '#06b6d4'
+    case 't2':
+      return '#1d4ed8'
+    default:
+      return '#ec4899'
+  }
+}
+
+function chipStyle(v: number) {
+  const colors: Record<number, string> = {
+    1: '#ec4899',
+    2: '#1d4ed8',
+    5: '#06b6d4',
+    10: '#6d28d9',
+    25: '#ef4444',
+    50: '#f97316',
+    100: '#facc15',
+    500: '#22c55e',
+    1000: '#1e40af',
+    5000: '#7f1d1d',
+  }
+  return { '--chip': colors[v] ?? tierColorForValue(v) } as Record<string, string>
+}
+
+function chipColor(v: number) {
+  const s = chipStyle(v) as any
+  return String(s['--chip'] || '#f5c542')
+}
+
+function betBadgeClass(v: number) {
+  return `bet-${tierForValue(v)}`
+}
+
+function betBadgeStyleByColor(color: string) {
+  return { '--bet': color } as Record<string, string>
+}
+
+function selectChip(c: number) {
+  chip.value = c
+  sfx('click')
+}
 
 function addBet(key: BetKey) {
   if (spinning.value) return
   message.value = ''
-  const cur = bets.value[key] ?? 0
-  bets.value[key] = cur + chip.value
+
+  const cur = bets.value[key]?.amount ?? 0
+  bets.value[key] = {
+    amount: cur + chip.value,
+    color: chipColor(chip.value),
+  }
+
   history.value.push({ key, amount: chip.value })
   tap(key)
   sfx('click')
@@ -104,8 +191,14 @@ function undo() {
   if (spinning.value) return
   const last = history.value.pop()
   if (!last) return
-  bets.value[last.key] = Math.max(0, (bets.value[last.key] ?? 0) - last.amount)
-  if (bets.value[last.key] === 0) delete bets.value[last.key]
+
+  const cur = bets.value[last.key]
+  if (!cur) return
+
+  const next = Math.max(0, cur.amount - last.amount)
+  if (next === 0) delete bets.value[last.key]
+  else bets.value[last.key] = { ...cur, amount: next }
+
   sfx('click')
 }
 
@@ -139,9 +232,8 @@ function payoutFor(key: BetKey, win: number) {
 
 /** ✅ IMPORTANT: European wheel (0 только один раз) */
 const wheelNumbers: number[] = [
-  0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30,
-  8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29,
-  7, 28, 12, 35, 3, 26
+  0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31,
+  9, 22, 18, 29, 7, 28, 12, 35, 3, 26,
 ]
 const SLICE_COUNT = computed(() => wheelNumbers.length)
 const SLICE_ANGLE = computed(() => 360 / SLICE_COUNT.value)
@@ -154,7 +246,6 @@ function polar(cx: number, cy: number, r: number, deg: number) {
   return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) }
 }
 function sliceAngles(i: number) {
-  // Offset by half-slice so that slice centers align neatly and the pointer hits centers reliably.
   const a0 = -90 - SLICE_ANGLE.value / 2 + i * SLICE_ANGLE.value
   const a1 = a0 + SLICE_ANGLE.value
   return { a0, a1, mid: (a0 + a1) / 2 }
@@ -172,8 +263,6 @@ function labelPos(i: number) {
   const p = polar(100, 100, 68, mid)
   return { x: p.x, y: p.y }
 }
-
-// Wheel labels should always face "outward" from the wheel center.
 function labelRot(i: number) {
   return sliceAngles(i).mid + 90
 }
@@ -182,18 +271,12 @@ function sliceColor(n: number) {
   return redSet.has(n) ? '#ff3b57' : '#1d2731'
 }
 
-function normalizeDeg(d: number){
+function normalizeDeg(d: number) {
   return ((d % 360) + 360) % 360
 }
-
-/** какой угол (0..360) должен иметь wheelDeg, чтобы число было строго под указателем */
-function desiredWheelDegForNumber(n: number){
+function desiredWheelDegForNumber(n: number) {
   const idx = wheelNumbers.indexOf(n)
   if (idx < 0) return 0
-
-  // With the half-slice offset above, the center angle for slice idx is:
-  //   mid = -90 + idx * SLICE_ANGLE
-  // Pointer is at -90 => wheelDeg + mid = -90 => wheelDeg = -idx*SLICE_ANGLE
   return normalizeDeg(-idx * SLICE_ANGLE.value)
 }
 
@@ -271,39 +354,42 @@ async function spin() {
     let shouldRefreshBalance = false
 
     if (TEMP_ALLOW_FREE_SPIN) {
-      // локально (не зависит ни от чего)
       win = wheelNumbers[Math.floor(Math.random() * wheelNumbers.length)]
     } else {
-      // обычный режим
-      if (!auth.user) { message.value = 'Нужен вход'; return }
-      if (totalBet.value <= 0) { message.value = 'Сделай ставку'; return }
-      if (auth.user.balance < totalBet.value) { message.value = 'Недостаточно баланса'; return }
+      if (!auth.user) {
+        message.value = 'Нужен вход'
+        return
+      }
+      if (totalBet.value <= 0) {
+        message.value = 'Сделай ставку'
+        return
+      }
+      if (auth.user.balance < totalBet.value) {
+        message.value = 'Недостаточно баланса'
+        return
+      }
 
       const payload = Object.entries(bets.value)
-        .filter(([, amount]) => Number(amount) > 0)
-        // backend validates scale=2
-        .map(([key, amount]) => ({ key: normalizeRouletteKey(key), amount: round2(Number(amount)) }))
+        .filter(([, b]) => (b?.amount ?? 0) > 0)
+        .map(([key, b]) => ({
+          key: normalizeRouletteKey(key),
+          amount: round2(Number(b.amount)),
+        }))
 
       const res = await roulettePlay({ bets: payload })
-      win = Number(res.number)
-      payout = Number(res.amount ?? 0)
+      win = Number((res as any).number)
+      payout = Number((res as any).amount ?? (res as any).payout ?? 0)
       shouldRefreshBalance = true
     }
 
-
     const extra = 360 * (7 + Math.floor(Math.random() * 3))
-
     const current = normalizeDeg(wheelDeg.value)
     const desired = desiredWheelDegForNumber(win)
-
-// коррекция, чтобы попасть точно в сектор
     const correction = desired - current
 
     wheelDeg.value = wheelDeg.value + extra + correction
 
-
-
-    await new Promise(r => setTimeout(r, 3600))
+    await new Promise((r) => setTimeout(r, 3600))
     sfx('stop')
     wheelDeg.value = desiredWheelDegForNumber(win)
 
@@ -311,22 +397,21 @@ async function spin() {
     lastNumbers.value = [win, ...lastNumbers.value].slice(0, 30)
 
     flashWheel()
-    highlightNumber(win)     // ✅ подсветка сектора на 1s
+    highlightNumber(win)
     setWinKeysFor(win)
 
-    // Show result AFTER animation.
     if (payout > 0) {
       const profit = Math.max(0, payout - Number(totalBet.value))
       message.value = `Выпало ${win}. Выигрыш: +${fmt(profit, 2)}`
-      // BIG/MEGA/SUPER overlay (global): based on total payout vs total bet
       bigwinStore.maybeShow(payout, totalBet.value)
     } else {
       message.value = `Выпало ${win}`
     }
 
-    // Refresh balance only after spin animation ends
     if (shouldRefreshBalance) {
-      try { await auth.fetchMe() } catch {}
+      try {
+        await auth.fetchMe()
+      } catch {}
     }
   } catch (e: any) {
     message.value = e?.message ? String(e.message) : 'Ошибка'
@@ -342,28 +427,11 @@ const numGrid = [
 ]
 
 function betOf(key: BetKey) {
-  return bets.value[key] ?? 0
+  return bets.value[key]?.amount ?? 0
 }
 
-// --- Chip / bet visual tiers (colors depend on value) ---
-type Tier = 't1' | 't2' | 't3' | 't4' | 't5' | 't6'
-
-function tierForValue(v: number): Tier {
-  // tuned to your current denominations
-  if (v >= 5000) return 't6'
-  if (v >= 1000) return 't5'
-  if (v >= 500) return 't4'
-  if (v >= 100) return 't3'
-  if (v >= 25) return 't2'
-  return 't1'
-}
-
-function chipClass(v: number) {
-  return `chip-${tierForValue(v)}`
-}
-
-function betBadgeClass(v: number) {
-  return `bet-${tierForValue(v)}`
+function betColorOf(key: BetKey) {
+  return bets.value[key]?.color ?? 'rgba(245, 197, 66, 0.92)'
 }
 </script>
 
@@ -378,10 +446,13 @@ function betBadgeClass(v: number) {
               v-for="c in chips"
               :key="c"
               class="chip"
-              :class="[chipClass(c), { on: chip === c }]"
-              @click="chip = c; sfx('click')"
+              :style="chipStyle(c)"
+              :class="{ on: chip === c }"
+              @click="selectChip(c)"
             >
-              <span class="chip-val">{{ fmt(c, 0) }}</span>
+              <span class="chip-core">
+                <span class="chip-val">{{ fmt(c, 0) }}</span>
+              </span>
             </button>
           </div>
         </div>
@@ -398,7 +469,6 @@ function betBadgeClass(v: number) {
           </div>
         </div>
 
-        <!-- ✅ TEMP: always enabled -->
         <button class="btn btn-primary" :disabled="spinning" @click="spin">
           {{ spinning ? 'Spinning...' : 'Play' }}
         </button>
@@ -412,11 +482,7 @@ function betBadgeClass(v: number) {
         <div class="wheel-area">
           <div class="pointer" aria-hidden="true"></div>
 
-          <div
-            class="wheel-svg"
-            :class="[{ spinning }, { flash: wheelFlash }]"
-            :style="{ transform: `rotate(${wheelDeg}deg)` }"
-          >
+          <div class="wheel-svg" :class="{ spinning, flash: wheelFlash }" :style="{ transform: `rotate(${wheelDeg}deg)` }">
             <svg class="wheel-svg__el" viewBox="0 0 200 200" aria-hidden="true">
               <g>
                 <path
@@ -451,12 +517,7 @@ function betBadgeClass(v: number) {
         <div class="history-under" v-if="lastNumbers.length">
           <div class="history-title">Last</div>
           <div class="history-row">
-            <span
-              v-for="(n, idx) in lastNumbers"
-              :key="idx"
-              class="history-pill"
-              :class="colorOf(n)"
-            >
+            <span v-for="(n, idx) in lastNumbers" :key="idx" class="history-pill" :class="colorOf(n)">
               {{ n }}
             </span>
           </div>
@@ -466,13 +527,16 @@ function betBadgeClass(v: number) {
       <div class="board">
         <div class="grid grid-vertical">
           <div class="main-table">
-            <button
-              class="cell-zero"
-              :class="{ win: isWinKey('n:0'), tap: tappedKey === 'n:0' }"
-              @click="addBet('n:0')"
-            >
+            <button class="cell-zero" :class="{ win: isWinKey('n:0'), tap: tappedKey === 'n:0' }" @click="addBet('n:0')">
               0
-              <span class="chip-badge" :class="betBadgeClass(betOf('n:0'))" v-if="betOf('n:0')">{{ fmt(betOf('n:0'), 0) }}</span>
+              <span
+                v-if="betOf('n:0')"
+                class="chip-badge"
+                :class="betBadgeClass(betOf('n:0'))"
+                :style="betBadgeStyleByColor(betColorOf('n:0'))"
+              >
+                {{ fmt(betOf('n:0'), 0) }}
+              </span>
             </button>
 
             <div class="nums">
@@ -493,7 +557,14 @@ function betBadgeClass(v: number) {
                   @click="addBet(`n:${n}` as any)"
                 >
                   {{ n }}
-                  <span class="chip-badge" :class="betBadgeClass(betOf(`n:${n}` as any))" v-if="betOf(`n:${n}` as any)">{{ fmt(betOf(`n:${n}` as any), 0) }}</span>
+                  <span
+                    v-if="betOf(`n:${n}` as any)"
+                    class="chip-badge"
+                    :class="betBadgeClass(betOf(`n:${n}` as any))"
+                    :style="betBadgeStyleByColor(betColorOf(`n:${n}` as any))"
+                  >
+                    {{ fmt(betOf(`n:${n}` as any), 0) }}
+                  </span>
                 </button>
               </div>
             </div>
@@ -502,35 +573,63 @@ function betBadgeClass(v: number) {
           <div class="side-table">
             <div class="col-bets">
               <button class="cell out" :class="{ win: isWinKey('Ряд1'), has: !!betOf('Ряд1'), tap: tappedKey === 'Ряд1' }" @click="addBet('Ряд1')" @mouseenter="setHover('Ряд1')" @mouseleave="setHover('')">
-                2:1 <span class="chip-badge" :class="betBadgeClass(betOf('Ряд1'))" v-if="betOf('Ряд1')">{{ fmt(betOf('Ряд1'), 0) }}</span>
+                2:1
+                <span v-if="betOf('Ряд1')" class="chip-badge" :class="betBadgeClass(betOf('Ряд1'))" :style="betBadgeStyleByColor(betColorOf('Ряд1'))">
+                  {{ fmt(betOf('Ряд1'), 0) }}
+                </span>
               </button>
+
               <button class="cell out" :class="{ win: isWinKey('Ряд2'), has: !!betOf('Ряд2'), tap: tappedKey === 'Ряд2' }" @click="addBet('Ряд2')" @mouseenter="setHover('Ряд2')" @mouseleave="setHover('')">
-                2:1 <span class="chip-badge" :class="betBadgeClass(betOf('Ряд2'))" v-if="betOf('Ряд2')">{{ fmt(betOf('Ряд2'), 0) }}</span>
+                2:1
+                <span v-if="betOf('Ряд2')" class="chip-badge" :class="betBadgeClass(betOf('Ряд2'))" :style="betBadgeStyleByColor(betColorOf('Ряд2'))">
+                  {{ fmt(betOf('Ряд2'), 0) }}
+                </span>
               </button>
+
               <button class="cell out" :class="{ win: isWinKey('Ряд3'), has: !!betOf('Ряд3'), tap: tappedKey === 'Ряд3' }" @click="addBet('Ряд3')" @mouseenter="setHover('Ряд3')" @mouseleave="setHover('')">
-                2:1 <span class="chip-badge" :class="betBadgeClass(betOf('Ряд3'))" v-if="betOf('Ряд3')">{{ fmt(betOf('Ряд3'), 0) }}</span>
+                2:1
+                <span v-if="betOf('Ряд3')" class="chip-badge" :class="betBadgeClass(betOf('Ряд3'))" :style="betBadgeStyleByColor(betColorOf('Ряд3'))">
+                  {{ fmt(betOf('Ряд3'), 0) }}
+                </span>
               </button>
             </div>
 
             <div class="col-bets">
               <button class="cell big" :class="{ win: isWinKey('Диапазон1'), has: !!betOf('Диапазон1'), tap: tappedKey === 'Диапазон1' }" @click="addBet('Диапазон1')" @mouseenter="setHover('Диапазон1')" @mouseleave="setHover('')">
-                1 to 12 <span class="chip-badge" :class="betBadgeClass(betOf('Диапазон1'))" v-if="betOf('Диапазон1')">{{ fmt(betOf('Диапазон1'), 0) }}</span>
+                1 to 12
+                <span v-if="betOf('Диапазон1')" class="chip-badge" :class="betBadgeClass(betOf('Диапазон1'))" :style="betBadgeStyleByColor(betColorOf('Диапазон1'))">
+                  {{ fmt(betOf('Диапазон1'), 0) }}
+                </span>
               </button>
+
               <button class="cell big" :class="{ win: isWinKey('Диапазон2'), has: !!betOf('Диапазон2'), tap: tappedKey === 'Диапазон2' }" @click="addBet('Диапазон2')" @mouseenter="setHover('Диапазон2')" @mouseleave="setHover('')">
-                13 to 24 <span class="chip-badge" :class="betBadgeClass(betOf('Диапазон2'))" v-if="betOf('Диапазон2')">{{ fmt(betOf('Диапазон2'), 0) }}</span>
+                13 to 24
+                <span v-if="betOf('Диапазон2')" class="chip-badge" :class="betBadgeClass(betOf('Диапазон2'))" :style="betBadgeStyleByColor(betColorOf('Диапазон2'))">
+                  {{ fmt(betOf('Диапазон2'), 0) }}
+                </span>
               </button>
+
               <button class="cell big" :class="{ win: isWinKey('Диапазон3'), has: !!betOf('Диапазон3'), tap: tappedKey === 'Диапазон3' }" @click="addBet('Диапазон3')" @mouseenter="setHover('Диапазон3')" @mouseleave="setHover('')">
-                25 to 36 <span class="chip-badge" :class="betBadgeClass(betOf('Диапазон3'))" v-if="betOf('Диапазон3')">{{ fmt(betOf('Диапазон3'), 0) }}</span>
+                25 to 36
+                <span v-if="betOf('Диапазон3')" class="chip-badge" :class="betBadgeClass(betOf('Диапазон3'))" :style="betBadgeStyleByColor(betColorOf('Диапазон3'))">
+                  {{ fmt(betOf('Диапазон3'), 0) }}
+                </span>
               </button>
             </div>
 
-            <!-- NEW: Color bets -->
             <div class="col-bets">
               <button class="cell big bet-red" :class="{ win: isWinKey('red'), has: !!betOf('red'), tap: tappedKey === 'red' }" @click="addBet('red')" @mouseenter="setHover('red')" @mouseleave="setHover('')">
-                RED <span class="chip-badge" :class="betBadgeClass(betOf('red'))" v-if="betOf('red')">{{ fmt(betOf('red'), 0) }}</span>
+                RED
+                <span v-if="betOf('red')" class="chip-badge" :class="betBadgeClass(betOf('red'))" :style="betBadgeStyleByColor(betColorOf('red'))">
+                  {{ fmt(betOf('red'), 0) }}
+                </span>
               </button>
+
               <button class="cell big bet-black" :class="{ win: isWinKey('black'), has: !!betOf('black'), tap: tappedKey === 'black' }" @click="addBet('black')" @mouseenter="setHover('black')" @mouseleave="setHover('')">
-                BLACK <span class="chip-badge" :class="betBadgeClass(betOf('black'))" v-if="betOf('black')">{{ fmt(betOf('black'), 0) }}</span>
+                BLACK
+                <span v-if="betOf('black')" class="chip-badge" :class="betBadgeClass(betOf('black'))" :style="betBadgeStyleByColor(betColorOf('black'))">
+                  {{ fmt(betOf('black'), 0) }}
+                </span>
               </button>
             </div>
           </div>
@@ -539,9 +638,14 @@ function betBadgeClass(v: number) {
         <div class="bets-mini" v-if="Object.keys(bets).length">
           <div class="mini-title">Bets</div>
           <div class="mini-row">
-            <div v-for="(amt, k) in bets" :key="k" class="mini-pill" :class="betBadgeClass(Number(amt))">
+            <div
+              v-for="(b, k) in bets"
+              :key="k"
+              class="mini-pill"
+              :style="betBadgeStyleByColor(b.color)"
+            >
               <span class="k">{{ k }}</span>
-              <span class="v">{{ fmt(amt, 0) }}</span>
+              <span class="v">{{ fmt(b.amount, 0) }}</span>
             </div>
           </div>
         </div>
@@ -551,6 +655,8 @@ function betBadgeClass(v: number) {
 </template>
 
 <style scoped>
+/* --- ТВОЙ СТИЛЬ ОСТАВИЛ КАК ЕСТЬ (только без логических конфликтов) --- */
+
 .panel-stack {
   display: flex;
   flex-direction: column;
@@ -565,53 +671,123 @@ function betBadgeClass(v: number) {
   margin-bottom: 8px;
   font-weight: 600;
 }
+
 .chip-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
 }
 
-/* Realistic-ish chip buttons */
-.chip{
-  width: 48px;
-  height: 48px;
+/* ===== Casino chip (single source of truth) ===== */
+.chip {
+  --c: var(--chip, #60a5fa);
+  position: relative;
+  width: 54px;
+  height: 54px;
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.14);
-  background:
-    radial-gradient(18px 18px at 32% 30%, rgba(255,255,255,0.28), rgba(255,255,255,0) 60%),
-    radial-gradient(48px 48px at 50% 50%, rgba(245,197,66,0.18), rgba(0,0,0,0) 60%),
-    rgba(255,255,255,0.04);
-  color: rgba(255,255,255,0.92);
-  font-weight: 900;
+  border: 0;
   cursor: pointer;
+  padding: 0;
+  color: #fff;
+  user-select: none;
+  overflow: hidden;
+
+  background:
+    radial-gradient(18px 18px at 32% 28%, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 60%),
+    radial-gradient(70% 70% at 50% 60%, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0) 62%), var(--c);
+
   box-shadow:
-    inset 0 0 0 2px rgba(0,0,0,0.35),
-    0 10px 22px rgba(0,0,0,0.45);
-  transition: transform 0.12s ease, filter 0.12s ease, box-shadow 0.18s ease;
-}
-.chip-val{
-  font-size: 12px;
-  letter-spacing: .2px;
-  text-shadow:
-    0 1px 0 rgba(0,0,0,.65),
-    0 0 10px rgba(0,0,0,.35);
+    0 10px 18px rgba(0, 0, 0, 0.45),
+    inset 0 2px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -6px 10px rgba(0, 0, 0, 0.35);
+
+  transition:
+    transform 0.12s ease,
+    filter 0.12s ease,
+    box-shadow 0.18s ease;
+  outline: none;
 }
 
-/* Chip colors by value tier */
-.chip-t1{ background: radial-gradient(18px 18px at 32% 30%, rgba(255,255,255,0.30), rgba(255,255,255,0) 60%), radial-gradient(48px 48px at 50% 50%, rgba(110,231,183,0.18), rgba(0,0,0,0) 60%), rgba(16,185,129,0.18); }
-.chip-t2{ background: radial-gradient(18px 18px at 32% 30%, rgba(255,255,255,0.30), rgba(255,255,255,0) 60%), radial-gradient(48px 48px at 50% 50%, rgba(96,165,250,0.22), rgba(0,0,0,0) 60%), rgba(59,130,246,0.18); }
-.chip-t3{ background: radial-gradient(18px 18px at 32% 30%, rgba(255,255,255,0.30), rgba(255,255,255,0) 60%), radial-gradient(48px 48px at 50% 50%, rgba(250,204,21,0.22), rgba(0,0,0,0) 60%), rgba(245,197,66,0.18); }
-.chip-t4{ background: radial-gradient(18px 18px at 32% 30%, rgba(255,255,255,0.30), rgba(255,255,255,0) 60%), radial-gradient(48px 48px at 50% 50%, rgba(244,114,182,0.22), rgba(0,0,0,0) 60%), rgba(236,72,153,0.16); }
-.chip-t5{ background: radial-gradient(18px 18px at 32% 30%, rgba(255,255,255,0.30), rgba(255,255,255,0) 60%), radial-gradient(48px 48px at 50% 50%, rgba(192,132,252,0.22), rgba(0,0,0,0) 60%), rgba(168,85,247,0.16); }
-.chip-t6{ background: radial-gradient(18px 18px at 32% 30%, rgba(255,255,255,0.30), rgba(255,255,255,0) 60%), radial-gradient(48px 48px at 50% 50%, rgba(248,113,113,0.22), rgba(0,0,0,0) 60%), rgba(239,68,68,0.14); }
-.chip:hover{ transform: translateY(-1px); filter: brightness(1.08); }
-.chip.on{
+.chip:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+.chip.on {
+  transform: translateY(-2px) scale(1.04);
   box-shadow:
-    inset 0 0 0 2px rgba(0,0,0,0.35),
-    0 0 0 1px rgba(245,197,66,0.55),
-    0 0 24px rgba(245,197,66,0.22),
-    0 12px 26px rgba(0,0,0,0.50);
-  filter: brightness(1.12);
+    0 14px 26px rgba(0, 0, 0, 0.55),
+    0 0 0 3px rgba(255, 255, 255, 0.18),
+    inset 0 2px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -7px 12px rgba(0, 0, 0, 0.35);
+}
+
+/* outer segmented ring */
+.chip::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 8px, rgba(255, 255, 255, 0.95) 0 2px, transparent 3px),
+    radial-gradient(circle at calc(100% - 8px) 50%, rgba(255, 255, 255, 0.95) 0 2px, transparent 3px),
+    radial-gradient(circle at 50% calc(100% - 8px), rgba(255, 255, 255, 0.95) 0 2px, transparent 3px),
+    radial-gradient(circle at 8px 50%, rgba(255, 255, 255, 0.95) 0 2px, transparent 3px),
+    repeating-conic-gradient(from -10deg, rgba(255, 255, 255, 0.95) 0 14deg, rgba(255, 255, 255, 0) 14deg 62deg);
+  -webkit-mask: radial-gradient(circle, transparent 0 58%, #000 60% 100%);
+  mask: radial-gradient(circle, transparent 0 58%, #000 60% 100%);
+  opacity: 0.95;
+  z-index: 1;
+}
+
+/* inner dashed ring */
+.chip::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, 0.75) 0 10deg, rgba(255, 255, 255, 0) 10deg 20deg);
+  -webkit-mask: radial-gradient(circle, transparent 0 34%, #000 36% 44%, transparent 46% 100%);
+  mask: radial-gradient(circle, transparent 0 34%, #000 36% 44%, transparent 46% 100%);
+  opacity: 0.55;
+  z-index: 1;
+}
+
+/* center cap + centered text */
+.chip-core {
+  position: absolute;
+  inset: 22%;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  z-index: 3;
+  background: radial-gradient(circle, rgba(0, 0, 0, 0.35) 0 55%, rgba(0, 0, 0, 0) 58%);
+}
+
+.chip-val {
+  position: static;
+  display: block;
+  line-height: 1;
+  margin: 0;
+  padding: 0;
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: 0.2px;
+  text-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.55),
+    0 0 10px rgba(0, 0, 0, 0.35);
+  -webkit-text-stroke: 0.35px rgba(0, 0, 0, 0.35);
+  transform: translateY(-0.5px);
+}
+
+@media (max-width: 420px) {
+  .chip {
+    width: 50px;
+    height: 50px;
+  }
+  .chip-val {
+    font-size: 11px;
+  }
 }
 
 .amount-total {
@@ -730,22 +906,43 @@ function betBadgeClass(v: number) {
 
 .board {
   padding-top: 6px;
+  overflow-x: auto;
 }
-.board{ overflow-x: auto; }
 
 @media (max-width: 980px) {
-  .roulette-wrap{ grid-template-columns: 1fr; }
-  .wheel-area{ width: 320px; height: 320px; }
-  .wheel-svg{ width: 300px; height: 300px; margin: 12px auto 0; }
-  .history-under{ width: min(363px, 100%); }
-  .main-table{ overflow-x: auto; }
-  .board{ padding-top: 14px; }
+  .roulette-wrap {
+    grid-template-columns: 1fr;
+  }
+  .wheel-area {
+    width: 320px;
+    height: 320px;
+  }
+  .wheel-svg {
+    width: 300px;
+    height: 300px;
+    margin: 12px auto 0;
+  }
+  .history-under {
+    width: min(363px, 100%);
+  }
+  .main-table {
+    overflow-x: auto;
+  }
+  .board {
+    padding-top: 14px;
+  }
 }
 
 @media (max-width: 420px) {
-  .board{ --cell: 40px; --gap: 6px; }
-  .cell-zero{ width: 62px; }
+  .board {
+    --cell: 40px;
+    --gap: 6px;
+  }
+  .cell-zero {
+    width: 62px;
+  }
 }
+
 .board {
   --cell: 44px;
   --gap: 6px;
@@ -806,20 +1003,7 @@ function betBadgeClass(v: number) {
   transform: translateY(-1px);
   filter: brightness(1.08);
 }
-.cell.tap {
-  animation: cellTap 140ms ease-out both;
-}
-@keyframes cellTap {
-  0% {
-    transform: translateY(0) scale(1);
-  }
-  45% {
-    transform: translateY(0) scale(0.96);
-  }
-  100% {
-    transform: translateY(0) scale(1);
-  }
-}
+
 .cell.red {
   background: rgba(255, 58, 84, 0.86);
   color: #081018;
@@ -828,14 +1012,14 @@ function betBadgeClass(v: number) {
   background: rgba(44, 58, 72, 0.88);
 }
 
-/* Outside-bet red/black buttons */
-.cell.bet-red{
+.cell.bet-red {
   background: rgba(255, 58, 84, 0.86);
   color: #081018;
 }
-.cell.bet-black{
+.cell.bet-black {
   background: rgba(44, 58, 72, 0.92);
 }
+
 .cell.out {
   width: var(--cell);
   height: var(--cell);
@@ -857,13 +1041,15 @@ function betBadgeClass(v: number) {
 .cell.has {
   box-shadow: inset 0 0 0 1px rgba(245, 197, 66, 0.28);
 }
-.cell.hover{
+
+.cell.hover {
   box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,0.10),
-    0 0 0 1px rgba(245,197,66,0.35),
-    0 0 26px rgba(245,197,66,0.12);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 0 0 1px rgba(245, 197, 66, 0.35),
+    0 0 26px rgba(245, 197, 66, 0.12);
   filter: brightness(1.08);
 }
+
 .cell.win,
 .cell-zero.win {
   box-shadow: 0 0 0 1px rgba(245, 197, 66, 0.55), 0 0 28px rgba(245, 197, 66, 0.22);
@@ -871,38 +1057,25 @@ function betBadgeClass(v: number) {
 }
 
 .chip-badge {
+  --bet: rgba(245, 197, 66, 0.92);
   position: absolute;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  min-width: 20px;
-  padding: 2px 6px;
+  min-width: 22px;
+  padding: 2px 7px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: radial-gradient(10px 10px at 30% 30%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 55%),
-  rgba(245, 197, 66, 0.92);
-  color: #0b1218;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background:
+    radial-gradient(10px 10px at 30% 30%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 55%),
+    var(--bet);
+  color: #071018;
   font-weight: 900;
-  font-size: 11px;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.35);
+  font-size: 12px;
+  letter-spacing: 0.2px;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.22);
+  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.35);
 }
-
-/* Bet badge colors by total bet on that cell */
-.chip-badge.bet-t1{ background: radial-gradient(10px 10px at 30% 30%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 55%), rgba(16,185,129,0.92); }
-.chip-badge.bet-t2{ background: radial-gradient(10px 10px at 30% 30%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 55%), rgba(59,130,246,0.92); color:#071018; }
-.chip-badge.bet-t3{ background: radial-gradient(10px 10px at 30% 30%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 55%), rgba(250,204,21,0.92); }
-.chip-badge.bet-t4{ background: radial-gradient(10px 10px at 30% 30%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 55%), rgba(236,72,153,0.92); color:#071018; }
-.chip-badge.bet-t5{ background: radial-gradient(10px 10px at 30% 30%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 55%), rgba(168,85,247,0.92); color:#071018; }
-.chip-badge.bet-t6{ background: radial-gradient(10px 10px at 30% 30%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 55%), rgba(239,68,68,0.92); color:#071018; }
-
-/* Mini bet pills pick the same tier */
-.mini-pill{ position: relative; }
-.mini-pill.bet-t1{ border-color: rgba(16,185,129,0.35); background: rgba(16,185,129,0.10); }
-.mini-pill.bet-t2{ border-color: rgba(59,130,246,0.35); background: rgba(59,130,246,0.10); }
-.mini-pill.bet-t3{ border-color: rgba(250,204,21,0.35); background: rgba(250,204,21,0.10); }
-.mini-pill.bet-t4{ border-color: rgba(236,72,153,0.35); background: rgba(236,72,153,0.10); }
-.mini-pill.bet-t5{ border-color: rgba(168,85,247,0.35); background: rgba(168,85,247,0.10); }
-.mini-pill.bet-t6{ border-color: rgba(239,68,68,0.35); background: rgba(239,68,68,0.10); }
 
 .bets-mini {
   margin-top: 18px;
@@ -920,6 +1093,8 @@ function betBadgeClass(v: number) {
   gap: 8px;
 }
 .mini-pill {
+  --bet: rgba(245, 197, 66, 0.92);
+  position: relative;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.03);
   padding: 8px 10px;
@@ -927,6 +1102,17 @@ function betBadgeClass(v: number) {
   display: flex;
   gap: 8px;
   color: rgba(255, 255, 255, 0.8);
+  overflow: hidden;
+}
+.mini-pill::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: var(--bet);
+  opacity: 0.95;
 }
 .mini-pill .v {
   color: #eaf3ff;
@@ -939,8 +1125,10 @@ function betBadgeClass(v: number) {
   border-radius: 50%;
   overflow: hidden;
 
-  box-shadow: inset 0 0 0 10px rgba(255, 255, 255, 0.06), inset 0 -18px 26px rgba(0, 0, 0, 0.25),
-  0 14px 60px rgba(0, 0, 0, 0.52);
+  box-shadow:
+    inset 0 0 0 10px rgba(255, 255, 255, 0.06),
+    inset 0 -18px 26px rgba(0, 0, 0, 0.25),
+    0 14px 60px rgba(0, 0, 0, 0.52);
 
   transition: none;
   transform-origin: 50% 50%;
@@ -958,8 +1146,10 @@ function betBadgeClass(v: number) {
 }
 
 .wheel-svg.flash {
-  box-shadow: inset 0 0 0 10px rgba(255, 255, 255, 0.06), 0 12px 50px rgba(0, 0, 0, 0.45),
-  0 0 36px rgba(245, 197, 66, 0.18);
+  box-shadow:
+    inset 0 0 0 10px rgba(255, 255, 255, 0.06),
+    0 12px 50px rgba(0, 0, 0, 0.45),
+    0 0 36px rgba(245, 197, 66, 0.18);
 }
 .wheel-svg.spinning {
   transition: transform 3.6s cubic-bezier(0.12, 0.88, 0.18, 1);
@@ -974,49 +1164,18 @@ function betBadgeClass(v: number) {
   font-weight: 800;
   font-size: 8px;
 }
-.slice-win{
+.slice-win {
   filter: brightness(1.25);
-  stroke: rgba(245,197,66,.95);
+  stroke: rgba(245, 197, 66, 0.95);
   stroke-width: 2.2;
   animation: winPulse 260ms ease-in-out infinite alternate;
 }
-@keyframes winPulse{
-  from { filter: brightness(1.15); }
-  to { filter: brightness(1.38); }
+@keyframes winPulse {
+  from {
+    filter: brightness(1.15);
+  }
+  to {
+    filter: brightness(1.38);
+  }
 }
-
-
-/* Realistic chip look */
-.chip{ position: relative; overflow: hidden; }
-.chip::before{
-  content:'';
-  position:absolute;
-  inset: 6px;
-  border-radius: 999px;
-  background:
-    repeating-conic-gradient(
-      from 0deg,
-      rgba(255,255,255,.86) 0 12deg,
-      rgba(0,0,0,0) 12deg 24deg
-    );
-  opacity: .28;
-  filter: blur(.2px);
-}
-.chip::after{
-  content:'';
-  position:absolute;
-  inset: 14px;
-  border-radius: 999px;
-  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.35), rgba(0,0,0,.15) 55%, rgba(0,0,0,.45));
-  border: 1px solid rgba(255,255,255,.12);
-  box-shadow: inset 0 0 0 2px rgba(0,0,0,.35);
-}
-.chip > *{ position: relative; z-index: 1; }
-.chip.on{
-  transform: translateY(-2px) scale(1.03);
-  box-shadow:
-    inset 0 0 0 2px rgba(0,0,0,0.35),
-    0 18px 34px rgba(0,0,0,0.55);
-}
-
 </style>
