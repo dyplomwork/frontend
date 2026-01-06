@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
 import BaseSelect from '../components/BaseSelect.vue'
@@ -45,6 +45,25 @@ const canStart = computed(
 )
 const canClick = computed(() => inGame.value && !lost.value)
 
+onMounted(async () => {
+  // If there's an active session on backend, restore it (opened cells, bet, mines)
+  try {
+    const s = await minesGetSession()
+    bet.value = Number(s.bet)
+    mines.value = Number(s.minesCount)
+    buildGrid()
+    applyOpenedCells(s.opened ?? [])
+    safePicks.value = (s.opened?.length ?? 0)
+    inGame.value = true
+    lost.value = false
+    message.value = ''
+    await refreshMultiplierFromServer()
+  } catch {
+    // no active session -> ignore
+  }
+})
+
+
 const payoutAmount = computed(() => {
   if (!inGame.value || safePicks.value <= 0) return 0
   return Math.round(Number(bet.value) * Number(multiplier.value) * 100) / 100
@@ -62,6 +81,19 @@ function buildGrid() {
 
 function cellToRC(id: number) {
   return { row: Math.floor(id / 5), col: id % 5 }
+}
+
+function rcToId(row: number, col: number) {
+  return row * 5 + col
+}
+
+function applyOpenedCells(opened: { row: number; col: number }[]) {
+  for (const c of grid.value) c.revealed = false
+  for (const cell of opened ?? []) {
+    const id = rcToId(cell.row, cell.col)
+    const ui = grid.value[id]
+    if (ui) ui.revealed = true
+  }
 }
 
 function applyField(field: { field: boolean[][]; opened: boolean[][] }) {
