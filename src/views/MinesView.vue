@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
 import BaseSelect from '../components/BaseSelect.vue'
@@ -37,6 +37,16 @@ const message = ref('')
 const explodingId = ref<number | null>(null)
 const boardShake = ref(false)
 const cashPulse = ref(false)
+
+const roundId = ref(0)
+const timeouts: number[] = []
+const bumpRound = () => { roundId.value += 1 }
+const clearAllTimeouts = () => { while (timeouts.length) { const id = timeouts.pop()!; clearTimeout(id) } }
+const setSafeTimeout = (fn: () => void, ms: number) => {
+  const id = window.setTimeout(fn, ms)
+  timeouts.push(id)
+  return id
+}
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 
@@ -150,6 +160,14 @@ async function start() {
   message.value = ''
   sfx('click')
 
+
+  // New round: cancel any delayed reveals from previous game
+  bumpRound()
+  clearAllTimeouts()
+  explodingId.value = null
+  boardShake.value = false
+  cashPulse.value = false
+
   try {
     await minesStart({ bet: Number(bet.value), mines: Number(mines.value) })
 
@@ -212,7 +230,11 @@ async function reveal(cell: Cell) {
       cell.hasMine = true
       explodingId.value = cell.id
       boardShake.value = true
-      setTimeout(() => (boardShake.value = false), 180)
+      const ridShake = roundId.value
+      setSafeTimeout(() => {
+        if (ridShake !== roundId.value) return
+        boardShake.value = false
+      }, 180)
 
       lost.value = true
       inGame.value = false
@@ -220,7 +242,10 @@ async function reveal(cell: Cell) {
       sfx('lose')
 
       // After the explosion, reveal whole field (not only "opened")
-      setTimeout(() => {
+      const rid = roundId.value
+      setSafeTimeout(() => {
+        // If a new round has started, ignore late reveal
+        if (rid !== roundId.value) return
         if (res.field) revealWholeField(res.field)
         explodingId.value = null
       }, 680)
@@ -234,13 +259,18 @@ async function reveal(cell: Cell) {
     cell.hasMine = false
     safePicks.value += 1
 
+    // Always compute the *current* multiplier from opened cells.
+    // `res.nextMultiplier` (if provided) is the multiplier for the *next* pick.
+    await refreshMultiplierFromServer()
     if (res.nextMultiplier != null) {
-      // Some backends return the next multiplier after this pick
-      multiplier.value = Number(res.nextMultiplier)
-      await refreshNextMultiplierFromServer()
+      nextMultiplier.value = Number(res.nextMultiplier)
     } else {
-      await refreshMultiplierFromServer()
       await refreshNextMultiplierFromServer()
+    }
+
+    // If all safe cells are opened, there is no next move — auto cashout.
+    if (safePicks.value >= gems.value) {
+      await cashOut()
     }
   } catch (e: any) {
     // backend might throw on invalid state / mine hit
@@ -275,7 +305,9 @@ async function cashOut() {
 	    bigwinStore.maybeShow(win, bet.value)
 
     // Wait a bit so user sees the win pulse, then reveal the whole field for inspection
-    setTimeout(() => {
+    const rid = roundId.value
+    setSafeTimeout(() => {
+      if (rid !== roundId.value) return
       revealWholeField(res.field)
     }, 1000)
 
