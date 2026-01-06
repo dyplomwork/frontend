@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
 import BaseSelect from '../components/BaseSelect.vue'
@@ -30,7 +30,25 @@ const inGame = ref(false)
 const lost = ref(false)
 const safePicks = ref(0)
 const multiplier = ref(1)
+const nextMultiplier = ref<number | null>(null)
 const message = ref('')
+
+// UX effects
+const explodedId = ref<number | null>(null)
+const cashoutPulse = ref(false)
+let tRevealAll: number | null = null
+let tPulseOff: number | null = null
+
+function clearTimers() {
+  if (tRevealAll != null) window.clearTimeout(tRevealAll)
+  if (tPulseOff != null) window.clearTimeout(tPulseOff)
+  tRevealAll = null
+  tPulseOff = null
+}
+
+onBeforeUnmount(() => {
+  clearTimers()
+})
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 
@@ -45,25 +63,6 @@ const canStart = computed(
 )
 const canClick = computed(() => inGame.value && !lost.value)
 
-onMounted(async () => {
-  // If there's an active session on backend, restore it (opened cells, bet, mines)
-  try {
-    const s = await minesGetSession()
-    bet.value = Number(s.bet)
-    mines.value = Number(s.minesCount)
-    buildGrid()
-    applyOpenedCells(s.opened ?? [])
-    safePicks.value = (s.opened?.length ?? 0)
-    inGame.value = true
-    lost.value = false
-    message.value = ''
-    await refreshMultiplierFromServer()
-  } catch {
-    // no active session -> ignore
-  }
-})
-
-
 const payoutAmount = computed(() => {
   if (!inGame.value || safePicks.value <= 0) return 0
   return Math.round(Number(bet.value) * Number(multiplier.value) * 100) / 100
@@ -74,6 +73,12 @@ const totalNetGain = computed(() => {
   return Math.max(0, payoutAmount.value - Number(bet.value))
 })
 
+const nextNetGain = computed(() => {
+  if (!inGame.value || nextMultiplier.value == null) return 0
+  const nextPayout = Math.round(Number(bet.value) * Number(nextMultiplier.value) * 100) / 100
+  return Math.max(0, nextPayout - Number(bet.value))
+})
+
 function buildGrid() {
   // backend owns mine placement; frontend keeps only UI state
   grid.value = Array.from({ length: SIZE }, (_, i) => ({ id: i, hasMine: false, revealed: false }))
@@ -81,19 +86,6 @@ function buildGrid() {
 
 function cellToRC(id: number) {
   return { row: Math.floor(id / 5), col: id % 5 }
-}
-
-function rcToId(row: number, col: number) {
-  return row * 5 + col
-}
-
-function applyOpenedCells(opened: { row: number; col: number }[]) {
-  for (const c of grid.value) c.revealed = false
-  for (const cell of opened ?? []) {
-    const id = rcToId(cell.row, cell.col)
-    const ui = grid.value[id]
-    if (ui) ui.revealed = true
-  }
 }
 
 function applyField(field: { field: boolean[][]; opened: boolean[][] }) {
@@ -111,12 +103,33 @@ async function refreshMultiplierFromServer() {
   } catch {
     // keep previous
   }
+
+  // next multiplier preview (for the next safe pick)
+  try {
+    if (!inGame.value) {
+      nextMultiplier.value = null
+      return
+    }
+    const nextSafe = Number(safePicks.value) + 1
+    const maxSafe = SIZE - Number(mines.value)
+    if (nextSafe > maxSafe) {
+      nextMultiplier.value = null
+      return
+    }
+    const nm = await minesMultiplier(nextSafe, Number(mines.value))
+    nextMultiplier.value = Number(nm)
+  } catch {
+    nextMultiplier.value = null
+  }
 }
 
 async function start() {
   if (!canStart.value) return
   message.value = ''
   sfx('click')
+  clearTimers()
+  explodedId.value = null
+  cashoutPulse.value = false
 
   try {
     await minesStart({ bet: Number(bet.value), mines: Number(mines.value) })
@@ -153,28 +166,41 @@ async function reveal(cell: Cell) {
   try {
     const res = await minesStep({ row, col })
 
-    // backend doesn't return opened matrix on success; we update UI optimistically
+    // finish=true -> hit a mine; backend returns full field
+    if (res.finish) {
+      cell.revealed = true
+      cell.hasMine = true
+      explodedId.value = cell.id
+
+      lost.value = true
+      inGame.value = false
+      message.value = 'Бомба! Проигрыш'
+      sfx('lose')
+
+      const field = res.field
+      if (field) {
+        clearTimers()
+        tRevealAll = window.setTimeout(() => {
+          applyField(field)
+          explodedId.value = null
+        }, 650)
+      }
+
+      await auth.fetchMe()
+      return
+    }
+
+    // safe pick
     cell.revealed = true
     cell.hasMine = false
     safePicks.value += 1
 
     if (res.nextMultiplier != null) {
       multiplier.value = Number(res.nextMultiplier)
-    } else {
-      await refreshMultiplierFromServer()
     }
 
-    if (res.finish) {
-      // finish=true here means we hit a mine (backend returns field)
-      lost.value = true
-      inGame.value = false
-      if (res.field) applyField(res.field)
-      message.value = 'Бомба! Проигрыш'
-      sfx('lose')
-      await auth.fetchMe()
-    }
+    await refreshMultiplierFromServer()
   } catch (e: any) {
-    // backend might throw on invalid state / mine hit
     message.value = e?.message ? String(e.message) : 'Ошибка'
     // try to fetch full field to reveal (if game already ended)
     try {
@@ -198,13 +224,24 @@ async function cashOut() {
     const win = Number(res.win)
     const profit = Math.max(0, win - Number(bet.value))
     message.value = `Кэш-аут: +${fmt(profit, 2)} (x${formatNumber(multiplier.value, 4)})`
-	    // BIG/MEGA/SUPER overlay (global)
-	    bigwinStore.maybeShow(win, bet.value)
+    // BIG/MEGA/SUPER overlay (global)
+    bigwinStore.maybeShow(win, bet.value)
 
-    applyField(res.field)
-
+    // stop the game immediately, but reveal the whole field after a short "win" effect
     inGame.value = false
     lost.value = false
+
+    cashoutPulse.value = true
+    clearTimers()
+    tPulseOff = window.setTimeout(() => (cashoutPulse.value = false), 650)
+
+    const field = res.field
+    if (field) {
+      tRevealAll = window.setTimeout(() => {
+        applyField(field)
+      }, 1000)
+    }
+
     await auth.fetchMe()
   } catch (e: any) {
     message.value = e?.message ? String(e.message) : 'Ошибка вывода'
@@ -280,14 +317,29 @@ buildGrid()
 
         <template #summary>
           <div class="summary">
-            <div class="label">Net Profit (x{{ fmt(multiplier, 4) }})</div>
-            <div class="net">
-              <span class="num">{{ fmt(totalNetGain, 2) }}</span>
-              <span class="coin">K</span>
+            <div class="row">
+              <div class="label">Текущий профит:</div>
+              <div class="net">
+                <span class="num">{{ fmt(totalNetGain, 2) }}</span>
+                <span class="coin" aria-label="Currency K">K</span>
+                <span class="x">x{{ fmt(multiplier, 4) }}</span>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="label">Следующий множитель:</div>
+              <div class="net">
+                <span class="num">x{{ nextMultiplier != null ? fmt(nextMultiplier, 4) : '—' }}</span>
+                <template v-if="nextMultiplier != null">
+                  <span class="sep">•</span>
+                  <span class="num">{{ fmt(nextNetGain, 2) }}</span>
+                  <span class="coin" aria-label="Currency K">K</span>
+                </template>
+              </div>
             </div>
           </div>
 
-          <button class="btn btn-primary" @click="cashOut" :disabled="!(inGame && safePicks > 0)">
+          <button class="btn btn-primary" :class="{ 'cashout-pulse': cashoutPulse }" @click="cashOut" :disabled="!(inGame && safePicks > 0)">
             Cashout ({{ fmt(payoutAmount, 2) }}K)
           </button>
 
@@ -304,7 +356,7 @@ buildGrid()
           v-for="cell in grid"
           :key="cell.id"
           class="tile"
-          :class="{ revealed: cell.revealed, mine: cell.revealed && cell.hasMine, gem: cell.revealed && !cell.hasMine }"
+          :class="{ revealed: cell.revealed, mine: cell.revealed && cell.hasMine, gem: cell.revealed && !cell.hasMine, exploding: explodedId === cell.id }"
           @click="reveal(cell)"
           :disabled="!canClick"
         >
@@ -355,6 +407,9 @@ buildGrid()
 .tile:hover {
   transform: translateY(-1px);
 }
+.tile:not(.revealed):hover {
+  box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.75), inset 0 0 0 1px rgba(255,255,255,0.06);
+}
 .tile.revealed {
   background: rgba(255, 255, 255, 0.05);
 }
@@ -391,8 +446,24 @@ buildGrid()
   transform: rotateY(180deg);
 }
 
-.tile.mine .tile-inner {
-  animation: mineBoom 520ms ease-out;
+.tile.exploding .tile-inner {
+  animation: mineBoom 620ms ease-out;
+}
+
+.tile.exploding::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 14px;
+  background: radial-gradient(circle at 50% 50%, rgba(248, 81, 73, 0.55), rgba(248, 81, 73, 0) 60%);
+  animation: boomFlash 620ms ease-out;
+  pointer-events: none;
+}
+
+@keyframes boomFlash {
+  0% { opacity: 0; transform: scale(0.9); }
+  15% { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 0; transform: scale(1.15); }
 }
 
 @keyframes mineBoom {
@@ -413,6 +484,16 @@ buildGrid()
   }
 }
 
+/* Cashout win pulse */
+.cashout-pulse{
+  animation: cashoutPulse 650ms ease-out;
+}
+@keyframes cashoutPulse{
+  0%{ filter: brightness(1); transform: translateY(0); box-shadow: 0 0 0 0 rgba(34,197,94,0.0); }
+  35%{ filter: brightness(1.15); transform: translateY(-1px); box-shadow: 0 0 0 4px rgba(34,197,94,0.18); }
+  100%{ filter: brightness(1); transform: translateY(0); box-shadow: 0 0 0 0 rgba(34,197,94,0.0); }
+}
+
 @media (max-width: 980px) {
   .stake-layout {
     grid-template-columns: 1fr;
@@ -431,5 +512,10 @@ buildGrid()
 /* Keep amounts + coin inline */
 .amount, .value, .bal, .net, .summary .value { display:inline-flex; align-items:center; gap:6px; }
 .summary .value{ white-space: nowrap; }
+.summary .row{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.summary .label{ opacity:0.85; }
+.summary .net{ display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+.summary .x{ opacity:0.75; font-size: 12px; }
+.summary .sep{ opacity:0.55; margin: 0 2px; }
 
 </style>
