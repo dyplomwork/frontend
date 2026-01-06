@@ -9,7 +9,7 @@ type Opt<T = any> = {
 
 const props = defineProps<{
   modelValue: any
-  options: Opt[]
+  options: ReadonlyArray<Opt>
   disabled?: boolean
   placeholder?: string
   ariaLabel?: string

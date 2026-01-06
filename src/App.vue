@@ -24,24 +24,19 @@ const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 onMounted(() => {
   sidebarOpen.value = localStorage.getItem(LS_SIDEBAR) === '1'
 
-
   bgmOn.value = isBgmOn()
   bgmVol.value = getBgmVolume()
   initBgm()
-
 
   if (!bgmOn.value) {
     bgmVol.value = 0
     setBgmVolume(0)
   } else {
-
     setBgmVolume(bgmVol.value)
   }
 })
 
-
-function toggleMusicIcon(){
-
+function toggleMusicIcon() {
   if (bgmVol.value > 0 && bgmOn.value) {
     bgmVol.value = 0
     bgmOn.value = false
@@ -49,12 +44,10 @@ function toggleMusicIcon(){
     return
   }
 
-
   bgmVol.value = 0.2
   bgmOn.value = true
   setBgmVolume(0.2)
 }
-
 
 function onBgmVolInput(e: Event) {
   const v = Number((e.target as HTMLInputElement).value)
@@ -63,7 +56,7 @@ function onBgmVolInput(e: Event) {
   setBgmVolume(v)
 }
 
-function toggleSidebar(){
+function toggleSidebar() {
   sfx('click')
   sidebarOpen.value = !sidebarOpen.value
   localStorage.setItem(LS_SIDEBAR, sidebarOpen.value ? '1' : '0')
@@ -71,15 +64,24 @@ function toggleSidebar(){
 
 const sfxOn = ref(isSfxOn())
 watch(sfxOn, (v) => setSfxOn(!!v), { immediate: true })
-function toggleSfx(){
+function toggleSfx() {
   sfxOn.value = !sfxOn.value
 }
 
-function goLogin(){ sfx('click'); router.push('/login') }
-function goRegister(){ sfx('click'); router.push('/register') }
-function logout(){ sfx('click'); auth.logout(); router.push('/') }
+function goLogin() {
+  sfx('click')
+  router.push('/login')
+}
+function goRegister() {
+  sfx('click')
+  router.push('/register')
+}
+function logout() {
+  sfx('click')
+  auth.logout()
+  router.push('/')
+}
 </script>
-
 
 <template>
   <SeoHead />
@@ -97,39 +99,80 @@ function logout(){ sfx('click'); auth.logout(); router.push('/') }
           <span class="side-ic">🏠</span>
           <span class="side-txt" v-if="sidebarOpen">Home</span>
         </RouterLink>
-        <RouterLink to="/roulette" class="side-link" :class="{ active: route.path.startsWith('/roulette') }" title="Roulette">
+        <RouterLink
+          to="/roulette"
+          class="side-link"
+          :class="{ active: route.path.startsWith('/roulette') }"
+          title="Roulette"
+        >
           <span class="side-ic">🎡</span>
           <span class="side-txt" v-if="sidebarOpen">Roulette</span>
         </RouterLink>
-        <RouterLink to="/dice" class="side-link" :class="{ active: route.path.startsWith('/dice') }" title="Dice">
+        <RouterLink
+          to="/dice"
+          class="side-link"
+          :class="{ active: route.path.startsWith('/dice') }"
+          title="Dice"
+        >
           <span class="side-ic">🎲</span>
           <span class="side-txt" v-if="sidebarOpen">Dice</span>
         </RouterLink>
-        <RouterLink to="/coinflip" class="side-link" :class="{ active: route.path.startsWith('/coinflip') }" title="Coin Flip">
-          <span class="side-ic">🪙</span>
+        <RouterLink
+          to="/coinflip"
+          class="side-link"
+          :class="{ active: route.path.startsWith('/coinflip') }"
+          title="Coin Flip"
+        >
+          <span class="side-ic">
+            <img src="/icon/coinflip.svg" alt="Coin Flip" />
+          </span>
           <span class="side-txt" v-if="sidebarOpen">Coin Flip</span>
         </RouterLink>
-        <RouterLink to="/plinko" class="side-link" :class="{ active: route.path.startsWith('/plinko') }" title="Plinko">
+        <RouterLink
+          to="/plinko"
+          class="side-link"
+          :class="{ active: route.path.startsWith('/plinko') }"
+          title="Plinko"
+        >
           <span class="side-ic">🔻</span>
           <span class="side-txt" v-if="sidebarOpen">Plinko</span>
         </RouterLink>
-        <RouterLink to="/mines" class="side-link" :class="{ active: route.path.startsWith('/mines') }" title="Mines">
+        <RouterLink
+          to="/mines"
+          class="side-link"
+          :class="{ active: route.path.startsWith('/mines') }"
+          title="Mines"
+        >
           <span class="side-ic">💣</span>
           <span class="side-txt" v-if="sidebarOpen">Mines</span>
         </RouterLink>
-        <RouterLink to="/cases" class="side-link" :class="{ active: route.path.startsWith('/cases') }" title="Cases">
+        <RouterLink
+          to="/cases"
+          class="side-link"
+          :class="{ active: route.path.startsWith('/cases') }"
+          title="Cases"
+        >
           <span class="side-ic">🎁</span>
           <span class="side-txt" v-if="sidebarOpen">Cases</span>
         </RouterLink>
-        <RouterLink to="/profile" class="side-link" :class="{ active: route.path.startsWith('/profile') }" title="Profile">
+        <RouterLink
+          to="/profile"
+          class="side-link"
+          :class="{ active: route.path.startsWith('/profile') }"
+          title="Profile"
+        >
           <span class="side-ic">👤</span>
           <span class="side-txt" v-if="sidebarOpen">Profile</span>
         </RouterLink>
-        </nav>
+      </nav>
 
       <div class="side-bottom">
         <div class="audio-row" :class="{ off: !bgmOn }">
-          <button class="icon-btn audio-btn" @click.stop="toggleMusicIcon" :title="bgmOn ? 'Mute music' : 'Unmute music'">
+          <button
+            class="icon-btn audio-btn"
+            @click.stop="toggleMusicIcon"
+            :title="bgmOn ? 'Mute music' : 'Unmute music'"
+          >
             <span class="ic">{{ bgmOn ? '🎵' : '🔕' }}</span>
           </button>
           <input
@@ -145,20 +188,23 @@ function logout(){ sfx('click'); auth.logout(); router.push('/') }
           />
         </div>
 
-        <button class="icon-btn audio-btn" @click="toggleSfx" :class="{ off: !sfxOn }" :title="sfxOn ? 'SFX on' : 'SFX off'">
+        <button
+          class="icon-btn audio-btn"
+          @click="toggleSfx"
+          :class="{ off: !sfxOn }"
+          :title="sfxOn ? 'SFX on' : 'SFX off'"
+        >
           <span class="ic">{{ sfxOn ? '🔊' : '🔇' }}</span>
         </button>
       </div>
-
     </aside>
-
 
     <div class="stake-main">
       <header class="stake-topbar">
         <div class="top-left">
           <button class="icon-btn topbar-menu" @click="toggleSidebar" aria-label="Menu">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-              <path fill="currentColor" d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z"/>
+              <path fill="currentColor" d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z" />
             </svg>
           </button>
           <div class="logo" @click="router.push('/')">
@@ -192,4 +238,3 @@ function logout(){ sfx('click'); auth.logout(); router.push('/') }
     </div>
   </div>
 </template>
-

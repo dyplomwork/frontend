@@ -366,8 +366,9 @@ onBeforeUnmount(() => stopAnim())
 
           <div class="roll-thumb" :style="{ left: rollOver + '%' }" aria-hidden="true">
             <div class="thumb-grip">
-              <span class="grip-bar"></span><span class="grip-bar"></span
-              ><span class="grip-bar"></span>
+              <span class="grip-bar"></span>
+              <span class="grip-bar"></span>
+              <span class="grip-bar"></span>
             </div>
           </div>
 

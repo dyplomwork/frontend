@@ -40,10 +40,6 @@ const cashPulse = ref(false)
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 
-const mineOptions = computed(() =>
-  Array.from({ length: 24 }, (_, i) => ({ value: i + 1, label: String(i + 1) }))
-)
-
 const gems = computed(() => SIZE - mines.value)
 
 const canStart = computed(
@@ -120,14 +116,6 @@ function applyOpenedCells(opened: { row: number; col: number }[]) {
     const id = rcToId(cell.row, cell.col)
     const ui = grid.value[id]
     if (ui) ui.revealed = true
-  }
-}
-
-function applyField(field: { field: boolean[][]; opened: boolean[][] }) {
-  for (const c of grid.value) {
-    const { row, col } = cellToRC(c.id)
-    c.hasMine = !!field.field?.[row]?.[col]
-    c.revealed = !!field.opened?.[row]?.[col]
   }
 }
 
@@ -351,7 +339,7 @@ buildGrid()
             :options="minesOptions"
             :disabled="inGame"
             aria-label="Mines"
-            @update:modelValue="sfx('click')"
+            @update:model-value="sfx('click')"
           />
         </div>
 

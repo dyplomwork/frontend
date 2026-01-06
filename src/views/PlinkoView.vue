@@ -487,7 +487,7 @@ if (typeof window !== 'undefined') {
             :options="difficultyOptions"
             :disabled="spinning"
             aria-label="Difficulty"
-            @update:modelValue="() => sfx('click')"
+            @update:model-value="() => sfx('click')"
           />
         </div>
 
@@ -498,7 +498,7 @@ if (typeof window !== 'undefined') {
             :options="rowsOptions"
             :disabled="spinning"
             aria-label="Rows"
-            @update:modelValue="() => sfx('click')"
+            @update:model-value="() => sfx('click')"
           />
         </div>
 

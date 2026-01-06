@@ -82,11 +82,21 @@ const sortUsersDir = ref<SortDir>('asc')
 const sortTicketsKey = ref<keyof Ticket | ''>('')
 const sortTicketsDir = ref<SortDir>('asc')
 
-function toggleSort<T extends object>(keyRef: { value: keyof T | '' }, dirRef: { value: SortDir }, key: keyof T) {
-  if (keyRef.value === key) dirRef.value = dirRef.value === 'asc' ? 'desc' : 'asc'
+// NOTE: In Vue templates refs are auto-unwrapped, so don't pass refs as arguments.
+// Keep tiny wrappers for type-safety and to avoid TS errors.
+function toggleSortUsers(key: keyof AdminUser) {
+  if (sortUsersKey.value === key) sortUsersDir.value = sortUsersDir.value === 'asc' ? 'desc' : 'asc'
   else {
-    keyRef.value = key
-    dirRef.value = 'asc'
+    sortUsersKey.value = key
+    sortUsersDir.value = 'asc'
+  }
+}
+
+function toggleSortTickets(key: keyof Ticket) {
+  if (sortTicketsKey.value === key) sortTicketsDir.value = sortTicketsDir.value === 'asc' ? 'desc' : 'asc'
+  else {
+    sortTicketsKey.value = key
+    sortTicketsDir.value = 'asc'
   }
 }
 
@@ -329,16 +339,16 @@ onMounted(async () => {
           <table class="table">
             <thead>
             <tr>
-              <th style="width: 220px;" :class="thClass(sortUsersKey==='nickname')" @click="toggleSort(sortUsersKey, sortUsersDir, 'nickname')">
+              <th style="width: 220px;" :class="thClass(sortUsersKey==='nickname')" @click="toggleSortUsers('nickname')">
                 User <span class="caret">{{ sortCaret(sortUsersKey==='nickname', sortUsersDir) }}</span>
               </th>
-              <th :class="thClass(sortUsersKey==='discord')" @click="toggleSort(sortUsersKey, sortUsersDir, 'discord')">
+              <th :class="thClass(sortUsersKey==='discord')" @click="toggleSortUsers('discord')">
                 Discord <span class="caret">{{ sortCaret(sortUsersKey==='discord', sortUsersDir) }}</span>
               </th>
-              <th style="width: 120px;" :class="thClass(sortUsersKey==='role')" @click="toggleSort(sortUsersKey, sortUsersDir, 'role')">
+              <th style="width: 120px;" :class="thClass(sortUsersKey==='role')" @click="toggleSortUsers('role')">
                 Role <span class="caret">{{ sortCaret(sortUsersKey==='role', sortUsersDir) }}</span>
               </th>
-              <th style="width: 160px; text-align:right;" :class="thClass(sortUsersKey==='balance')" @click="toggleSort(sortUsersKey, sortUsersDir, 'balance')">
+              <th style="width: 160px; text-align:right;" :class="thClass(sortUsersKey==='balance')" @click="toggleSortUsers('balance')">
                 Balance <span class="caret">{{ sortCaret(sortUsersKey==='balance', sortUsersDir) }}</span>
               </th>
               <th style="width: 260px; text-align:right;">Actions</th>
@@ -429,19 +439,19 @@ onMounted(async () => {
           <table class="table">
             <thead>
             <tr>
-              <th style="width: 220px;" :class="thClass(sortTicketsKey==='id')" @click="toggleSort(sortTicketsKey, sortTicketsDir, 'id')">
+              <th style="width: 220px;" :class="thClass(sortTicketsKey==='id')" @click="toggleSortTickets('id')">
                 Ticket <span class="caret">{{ sortCaret(sortTicketsKey==='id', sortTicketsDir) }}</span>
               </th>
-              <th style="width: 200px;" :class="thClass(sortTicketsKey==='nickname')" @click="toggleSort(sortTicketsKey, sortTicketsDir, 'nickname')">
+              <th style="width: 200px;" :class="thClass(sortTicketsKey==='nickname')" @click="toggleSortTickets('nickname')">
                 User <span class="caret">{{ sortCaret(sortTicketsKey==='nickname', sortTicketsDir) }}</span>
               </th>
-              <th style="width: 120px;" :class="thClass(sortTicketsKey==='type')" @click="toggleSort(sortTicketsKey, sortTicketsDir, 'type')">
+              <th style="width: 120px;" :class="thClass(sortTicketsKey==='type')" @click="toggleSortTickets('type')">
                 Type <span class="caret">{{ sortCaret(sortTicketsKey==='type', sortTicketsDir) }}</span>
               </th>
-              <th style="width: 140px; text-align:right;" :class="thClass(sortTicketsKey==='amount')" @click="toggleSort(sortTicketsKey, sortTicketsDir, 'amount')">
+              <th style="width: 140px; text-align:right;" :class="thClass(sortTicketsKey==='amount')" @click="toggleSortTickets('amount')">
                 Amount <span class="caret">{{ sortCaret(sortTicketsKey==='amount', sortTicketsDir) }}</span>
               </th>
-              <th style="width: 140px;" :class="thClass(sortTicketsKey==='status')" @click="toggleSort(sortTicketsKey, sortTicketsDir, 'status')">
+              <th style="width: 140px;" :class="thClass(sortTicketsKey==='status')" @click="toggleSortTickets('status')">
                 Status <span class="caret">{{ sortCaret(sortTicketsKey==='status', sortTicketsDir) }}</span>
               </th>
               <th style="width: 260px; text-align:right;">Actions</th>

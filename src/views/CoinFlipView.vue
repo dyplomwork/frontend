@@ -440,7 +440,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <Modal v-if="createOpen" @close="createOpen = false">
+    <Modal v-if="createOpen" :open="createOpen" @close="createOpen = false">
       <div class="modal-title">Create Coin Flip Battle</div>
       <div class="modal-body">
         <div class="form">

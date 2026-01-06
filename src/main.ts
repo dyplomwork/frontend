@@ -3,6 +3,7 @@ import { ViteSSG } from 'vite-ssg'
 
 import App from './App.vue'
 import { routes, addAuthGuards } from './router'
+import { useAuthStore } from './stores/auth'
 
 import './styles/index.css'
 /**
@@ -20,7 +21,6 @@ export const createApp = ViteSSG(
 
     // In client only, init auth (uses localStorage).
     if (isClient) {
-      const { useAuthStore } = await import('./stores/auth')
       const auth = useAuthStore(pinia)
       await auth.init()
     }
