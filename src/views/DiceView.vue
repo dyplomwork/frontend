@@ -52,6 +52,17 @@ const barShake = ref(false)
 
 const resultLabel = computed(() => needle.value.toFixed(2))
 
+// ===== Ultra-smooth needle (low-pass) =====
+const needleTarget = ref(needle.value)
+
+// dt in seconds + low-pass smoothing
+let prevFrameTs = 0
+const smooth = (cur: number, target: number, dt: number, tau = 0.09) => {
+  // tau: больше = более "масляно"
+  const a = 1 - Math.exp(-dt / tau)
+  return cur + (target - cur) * a
+}
+
 let raf: number | null = null
 let lastTick = 0
 
@@ -105,8 +116,7 @@ recalcLocalPayout()
 // easing
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x))
 const easeOutCubic = (p: number) => 1 - Math.pow(1 - p, 3)
-const easeInOutCubic = (p: number) =>
-  p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2
+const easeInOutCubic = (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2)
 
 async function play() {
   if (running.value) return
@@ -137,9 +147,12 @@ async function play() {
   // animation: spin → brake → snap
   const SPIN_MS = 1100
   const BRAKE_MS = 950
-  const SNAP_MS = 240
+  const SNAP_MS = 360
 
   const t0 = performance.now()
+  prevFrameTs = 0
+  lastTick = 0
+
   const start = needle.value
   const spinSeed = Math.random() * 1000
 
@@ -163,7 +176,7 @@ async function play() {
     }
 
     try {
-      await auth.fetchMe()
+      await auth.fetchBalance()
     } catch {}
 
     running.value = false
@@ -180,20 +193,25 @@ async function play() {
   }
 
   const step = (t: number) => {
+    const dt = Math.max(0.001, (t - (prevFrameTs || t)) / 1000)
+    prevFrameTs = t
+
     const elapsed = t - t0
 
-    // phase 1: spin (multiple laps + wobble)
     if (elapsed < SPIN_MS) {
       const p = clamp01(elapsed / SPIN_MS)
       const e = easeOutCubic(p)
 
       const laps = 2.4
       const base = start + e * (laps * 100)
-      const wobble = Math.sin((t + spinSeed) / 55) * 7.0 + Math.sin((t + spinSeed) / 19) * 2.0
-      needle.value = (base + wobble + 1000) % 100
 
-      // NO vertical wobble
-      puckScale.value = 1 + 0.09 * (0.6 + 0.4 * Math.sin((t + spinSeed) / 80))
+      const wT = (t + spinSeed) / 1000
+      const wobble = Math.sin(wT * Math.PI * 2 * 1.35) * 3.4
+
+      needleTarget.value = (base + wobble + 1000) % 100
+      needle.value = smooth(needle.value, needleTarget.value, dt, 0.075)
+
+      puckScale.value = 1 + 0.06 * (0.5 + 0.5 * Math.sin(wT * Math.PI * 2 * 0.9))
       puckGlow.value = 0.95
 
       tickDynamic(1.0, t)
@@ -201,7 +219,6 @@ async function play() {
       return
     }
 
-    // phase 2: brake (approach target with fading oscillation)
     const t1 = elapsed - SPIN_MS
     if (t1 < BRAKE_MS) {
       const p = clamp01(t1 / BRAKE_MS)
@@ -213,25 +230,32 @@ async function play() {
       if (delta < -50) delta += 100
 
       const pos = from + delta * (0.22 + 0.78 * e)
-      const osc = Math.sin((t + spinSeed) / 65) * (1 - e) * 6.0
-      needle.value = (pos + osc + 1000) % 100
 
-      puckScale.value = 1 + 0.07 * (1 - e)
-      puckGlow.value = 0.78 + 0.22 * (1 - e)
+      const wT = (t + spinSeed) / 1000
+      const decay = Math.exp(-3.4 * p)
+      const osc = Math.sin(wT * Math.PI * 2 * 1.05) * (2.2 * decay)
+
+      needleTarget.value = (pos + osc + 1000) % 100
+      needle.value = smooth(needle.value, needleTarget.value, dt, 0.1)
+
+      puckScale.value = 1 + 0.05 * decay
+      puckGlow.value = 0.72 + 0.18 * decay
 
       tickDynamic(0.55, t)
       raf = requestAnimationFrame(step)
       return
     }
 
-    // phase 3: snap (short overshoot)
     const t2 = t1 - BRAKE_MS
     if (t2 < SNAP_MS) {
       const p = clamp01(t2 / SNAP_MS)
       const e = easeOutCubic(p)
 
-      const overshoot = (1 - e) * Math.sin(p * Math.PI) * 1.6
-      needle.value = target + overshoot
+      const ease = easeInOutCubic(p)
+      const overshoot = Math.sin(ease * Math.PI) * (0.9 * (1 - ease))
+
+      needleTarget.value = (target + overshoot + 1000) % 100
+      needle.value = smooth(needle.value, needleTarget.value, dt, 0.1)
 
       puckScale.value = 1.14 - 0.14 * e
       puckGlow.value = 1.0
@@ -240,7 +264,6 @@ async function play() {
       return
     }
 
-    // final
     stopAnim()
     trailOn.value = false
     lastRoll.value = target
@@ -251,7 +274,6 @@ async function play() {
 
     sfx('dice_stop')
 
-    // haptic-style double bump
     bump.value = false
     requestAnimationFrame(() => {
       bump.value = true
@@ -265,7 +287,6 @@ async function play() {
 
   raf = requestAnimationFrame(step)
 }
-
 onBeforeUnmount(() => stopAnim())
 </script>
 
@@ -317,7 +338,7 @@ onBeforeUnmount(() => stopAnim())
         <div class="bar stake" :class="[flashZone, { shake: barShake }]">
           <div class="track">
             <div class="split red" :style="{ width: rollOver + '%' }" />
-            <div class="split green" :style="{ width: (100 - rollOver) + '%' }" />
+            <div class="split green" :style="{ width: 100 - rollOver + '%' }" />
             <div class="track-shine" aria-hidden="true" />
           </div>
 
@@ -336,11 +357,17 @@ onBeforeUnmount(() => stopAnim())
             aria-label="Roll Over"
           />
 
-          <div class="roll-line" :class="{ pulse: linePulse }" :style="{ left: rollOver + '%' }" aria-hidden="true" />
+          <div
+            class="roll-line"
+            :class="{ pulse: linePulse }"
+            :style="{ left: rollOver + '%' }"
+            aria-hidden="true"
+          />
 
           <div class="roll-thumb" :style="{ left: rollOver + '%' }" aria-hidden="true">
             <div class="thumb-grip">
-              <span class="grip-bar"></span><span class="grip-bar"></span><span class="grip-bar"></span>
+              <span class="grip-bar"></span><span class="grip-bar"></span
+              ><span class="grip-bar"></span>
             </div>
           </div>
 
@@ -358,7 +385,7 @@ onBeforeUnmount(() => stopAnim())
             :style="{
               left: needle + '%',
               transform: `translate(-50%, -50%) scale(${puckScale})`,
-              '--glow': String(puckGlow)
+              '--glow': String(puckGlow),
             }"
             :data-v="resultLabel"
             aria-hidden="true"
@@ -453,7 +480,7 @@ onBeforeUnmount(() => stopAnim())
   gap: 4px;
 }
 .tick::after {
-  content: "";
+  content: '';
   border-left: 7px solid transparent;
   border-right: 7px solid transparent;
   border-top: 10px solid rgba(255, 255, 255, 0.18);
@@ -482,14 +509,28 @@ onBeforeUnmount(() => stopAnim())
 }
 
 /* ✅ мягче и меньше shake */
-.bar.stake.shake { animation: barShakeSoft 180ms ease-in-out; }
+.bar.stake.shake {
+  animation: barShakeSoft 180ms ease-in-out;
+}
 @keyframes barShakeSoft {
-  0%   { transform: translateX(0); }
-  15%  { transform: translateX(-3px); }
-  35%  { transform: translateX(2px); }
-  55%  { transform: translateX(-2px); }
-  75%  { transform: translateX(1px); }
-  100% { transform: translateX(0); }
+  0% {
+    transform: translateX(0);
+  }
+  15% {
+    transform: translateX(-3px);
+  }
+  35% {
+    transform: translateX(2px);
+  }
+  55% {
+    transform: translateX(-2px);
+  }
+  75% {
+    transform: translateX(1px);
+  }
+  100% {
+    transform: translateX(0);
+  }
 }
 
 .track {
@@ -504,7 +545,9 @@ onBeforeUnmount(() => stopAnim())
   display: flex;
 }
 
-.split { height: 100%; }
+.split {
+  height: 100%;
+}
 .split.red {
   background-image:
     linear-gradient(90deg, rgba(255, 64, 87, 0.95), rgba(255, 64, 87, 0.45)),
@@ -524,9 +567,9 @@ onBeforeUnmount(() => stopAnim())
   inset: -40% -60%;
   background: linear-gradient(
     115deg,
-    rgba(255,255,255,0) 38%,
-    rgba(255,255,255,0.12) 50%,
-    rgba(255,255,255,0) 62%
+    rgba(255, 255, 255, 0) 38%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0) 62%
   );
   transform: translateX(-40%);
   animation: shine 3.8s linear infinite;
@@ -535,8 +578,12 @@ onBeforeUnmount(() => stopAnim())
   opacity: 0.55;
 }
 @keyframes shine {
-  0% { transform: translateX(-40%); }
-  100% { transform: translateX(40%); }
+  0% {
+    transform: translateX(-40%);
+  }
+  100% {
+    transform: translateX(40%);
+  }
 }
 
 .bar-slider {
@@ -550,10 +597,26 @@ onBeforeUnmount(() => stopAnim())
   -webkit-appearance: none;
   appearance: none;
 }
-.bar-slider::-webkit-slider-runnable-track { height: 48px; background: transparent; }
-.bar-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 64px; height: 44px; }
-.bar-slider::-moz-range-track { height: 48px; background: transparent; border: none; }
-.bar-slider::-moz-range-thumb { width: 64px; height: 44px; border: none; background: transparent; }
+.bar-slider::-webkit-slider-runnable-track {
+  height: 48px;
+  background: transparent;
+}
+.bar-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 64px;
+  height: 44px;
+}
+.bar-slider::-moz-range-track {
+  height: 48px;
+  background: transparent;
+  border: none;
+}
+.bar-slider::-moz-range-thumb {
+  width: 64px;
+  height: 44px;
+  border: none;
+  background: transparent;
+}
 
 .roll-line {
   position: absolute;
@@ -569,11 +632,28 @@ onBeforeUnmount(() => stopAnim())
   pointer-events: none;
   border-radius: 2px;
 }
-.roll-line.pulse { animation: linePulse 420ms ease-out; }
+.roll-line.pulse {
+  animation: linePulse 420ms ease-out;
+}
 @keyframes linePulse {
-  0% { box-shadow: 0 0 0 1px rgba(0,0,0,.35), 0 0 10px rgba(255,255,255,.14); opacity: .9; }
-  50% { box-shadow: 0 0 0 1px rgba(0,0,0,.35), 0 0 26px rgba(255,255,255,.22); opacity: 1; }
-  100% { box-shadow: 0 0 0 1px rgba(0,0,0,.35), 0 0 14px rgba(255,255,255,.12); opacity: .95; }
+  0% {
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.35),
+      0 0 10px rgba(255, 255, 255, 0.14);
+    opacity: 0.9;
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.35),
+      0 0 26px rgba(255, 255, 255, 0.22);
+    opacity: 1;
+  }
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.35),
+      0 0 14px rgba(255, 255, 255, 0.12);
+    opacity: 0.95;
+  }
 }
 
 .roll-thumb {
@@ -584,10 +664,10 @@ onBeforeUnmount(() => stopAnim())
   height: 40px;
   border-radius: 14px;
   background: linear-gradient(180deg, rgba(120, 205, 255, 0.96), rgba(56, 145, 255, 0.96));
-  border: 1px solid rgba(255, 255, 255, 0.20);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow:
     0 18px 32px rgba(0, 0, 0, 0.48),
-    0 0 0 1px rgba(0, 0, 0, 0.40),
+    0 0 0 1px rgba(0, 0, 0, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.24),
     inset 0 -10px 18px rgba(0, 0, 0, 0.14);
   z-index: 9;
@@ -595,11 +675,11 @@ onBeforeUnmount(() => stopAnim())
   backdrop-filter: blur(6px);
 }
 .roll-thumb::after {
-  content: "";
+  content: '';
   position: absolute;
   inset: 2px;
   border-radius: 13px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.20), rgba(255,255,255,0));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
 }
 
 .thumb-grip {
@@ -615,7 +695,9 @@ onBeforeUnmount(() => stopAnim())
   height: 3px;
   border-radius: 999px;
   background: rgba(10, 26, 40, 0.78);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), 0 8px 18px rgba(0,0,0,0.25);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 8px 18px rgba(0, 0, 0, 0.25);
 }
 
 /* ✅ bubble теперь в отдельном слое */
@@ -636,14 +718,16 @@ onBeforeUnmount(() => stopAnim())
   min-width: 108px;
   padding: 8px 10px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(0, 0, 0, 0.38);
-  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255,255,255,0.08);
+  box-shadow:
+    0 18px 34px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   text-align: center;
   z-index: 9999;
 }
 .thumb-bubble::after {
-  content: "";
+  content: '';
   position: absolute;
   left: 50%;
   bottom: -8px;
@@ -651,7 +735,7 @@ onBeforeUnmount(() => stopAnim())
   border-left: 9px solid transparent;
   border-right: 9px solid transparent;
   border-top: 9px solid rgba(0, 0, 0, 0.38);
-  filter: drop-shadow(0 10px 14px rgba(0,0,0,0.45));
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.45));
 }
 .bubble-top {
   font-size: 10px;
@@ -664,7 +748,7 @@ onBeforeUnmount(() => stopAnim())
   font-size: 14px;
   font-weight: 1000;
   color: rgba(255, 255, 255, 0.95);
-  text-shadow: 0 10px 18px rgba(0,0,0,0.55);
+  text-shadow: 0 10px 18px rgba(0, 0, 0, 0.55);
 }
 
 .result-puck {
@@ -676,15 +760,15 @@ onBeforeUnmount(() => stopAnim())
   background: rgba(255, 255, 255, 0.92);
   border: 2px solid rgba(0, 0, 0, 0.55);
   box-shadow:
-    0 10px 16px rgba(0,0,0,0.45),
-    0 0 calc(18px + 20px * var(--glow)) rgba(255,255,255, calc(0.10 + 0.22 * var(--glow)));
-  filter: drop-shadow(0 0 calc(10px * var(--glow)) rgba(255,255,255,0.18));
+    0 10px 16px rgba(0, 0, 0, 0.45),
+    0 0 calc(18px + 20px * var(--glow)) rgba(255, 255, 255, calc(0.1 + 0.22 * var(--glow)));
+  filter: drop-shadow(0 0 calc(10px * var(--glow)) rgba(255, 255, 255, 0.18));
   z-index: 5;
   pointer-events: none;
 }
 
 .result-puck.trail::before {
-  content: "";
+  content: '';
   position: absolute;
   left: 50%;
   top: 50%;
@@ -692,7 +776,7 @@ onBeforeUnmount(() => stopAnim())
   height: 14px;
   transform: translate(-10px, -50%);
   border-radius: 999px;
-  background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.38), rgba(255,255,255,0));
+  background: radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0));
   filter: blur(1px);
   opacity: 0.85;
 }
@@ -731,23 +815,66 @@ onBeforeUnmount(() => stopAnim())
   opacity: 0;
   animation: particle 520ms ease-out forwards;
 }
-.burst.win .p { background: rgba(0, 231, 1, 0.92); box-shadow: 0 0 18px rgba(0,231,1,0.28); }
-.burst.lose .p { background: rgba(255, 64, 87, 0.92); box-shadow: 0 0 18px rgba(255,64,87,0.28); }
-.burst .p1 { animation-delay: 0ms;  --dx: -22px; --dy: -14px; }
-.burst .p2 { animation-delay: 18ms; --dx: 18px;  --dy: -18px; }
-.burst .p3 { animation-delay: 28ms; --dx: -14px; --dy: 20px; }
-.burst .p4 { animation-delay: 10ms; --dx: 24px;  --dy: 10px; }
-.burst .p5 { animation-delay: 36ms; --dx: 0px;   --dy: -26px; }
-.burst .p6 { animation-delay: 44ms; --dx: 0px;   --dy: 26px; }
-
-@keyframes particle {
-  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
-  10% { opacity: 1; }
-  100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.0); }
+.burst.win .p {
+  background: rgba(0, 231, 1, 0.92);
+  box-shadow: 0 0 18px rgba(0, 231, 1, 0.28);
+}
+.burst.lose .p {
+  background: rgba(255, 64, 87, 0.92);
+  box-shadow: 0 0 18px rgba(255, 64, 87, 0.28);
+}
+.burst .p1 {
+  animation-delay: 0ms;
+  --dx: -22px;
+  --dy: -14px;
+}
+.burst .p2 {
+  animation-delay: 18ms;
+  --dx: 18px;
+  --dy: -18px;
+}
+.burst .p3 {
+  animation-delay: 28ms;
+  --dx: -14px;
+  --dy: 20px;
+}
+.burst .p4 {
+  animation-delay: 10ms;
+  --dx: 24px;
+  --dy: 10px;
+}
+.burst .p5 {
+  animation-delay: 36ms;
+  --dx: 0px;
+  --dy: -26px;
+}
+.burst .p6 {
+  animation-delay: 44ms;
+  --dx: 0px;
+  --dy: 26px;
 }
 
-.controls { margin-top: 16px; }
-.last { margin-top: 14px; color: rgba(255, 255, 255, 0.85); }
+@keyframes particle {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0);
+  }
+}
+
+.controls {
+  margin-top: 16px;
+}
+.last {
+  margin-top: 14px;
+  color: rgba(255, 255, 255, 0.85);
+}
 
 .legend {
   margin-top: 10px;
@@ -761,14 +888,20 @@ onBeforeUnmount(() => stopAnim())
   font-weight: 900;
   padding: 4px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.08);
-  background: rgba(0,0,0,.22);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.22);
 }
-.pill.red { color: rgba(255, 160, 171, 0.95); }
-.pill.green { color: rgba(160, 255, 160, 0.95); }
+.pill.red {
+  color: rgba(255, 160, 171, 0.95);
+}
+.pill.green {
+  color: rgba(160, 255, 160, 0.95);
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .track-shine { animation: none; opacity: 0.25; }
+  .track-shine {
+    animation: none;
+    opacity: 0.25;
+  }
 }
-
 </style>
