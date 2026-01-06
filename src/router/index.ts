@@ -1,6 +1,7 @@
 import type { Router } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
+import { checkAdminAccess } from '../utils/adminGuard'
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
@@ -22,8 +23,9 @@ export const routes = [
     meta: {
       public: true,
       title: 'Casino Simulator — Plinko, Roulette, Mines, Dice, Cases',
-      description: 'A lightweight casino simulator (demo) with Plinko, Roulette, Mines, Dice and Cases. Try your luck and test strategies.'
-    }
+      description:
+        'A lightweight casino simulator (demo) with Plinko, Roulette, Mines, Dice and Cases. Try your luck and test strategies.',
+    },
   },
   {
     path: '/login',
@@ -32,8 +34,8 @@ export const routes = [
     meta: {
       public: true,
       title: 'Login — Casino Simulator',
-      description: 'Log in to your Casino Simulator profile.'
-    }
+      description: 'Log in to your Casino Simulator profile.',
+    },
   },
   {
     path: '/register',
@@ -42,8 +44,8 @@ export const routes = [
     meta: {
       public: true,
       title: 'Register — Casino Simulator',
-      description: 'Create an account for Casino Simulator.'
-    }
+      description: 'Create an account for Casino Simulator.',
+    },
   },
 
   {
@@ -53,8 +55,8 @@ export const routes = [
     meta: {
       public: true,
       title: 'Roulette — Casino Simulator',
-      description: 'European roulette demo: bet on red/black, even/odd, ranges or a number.'
-    }
+      description: 'European roulette demo: bet on red/black, even/odd, ranges or a number.',
+    },
   },
   {
     path: '/mines',
@@ -63,8 +65,8 @@ export const routes = [
     meta: {
       public: true,
       title: 'Mines — Casino Simulator',
-      description: 'Mines game demo: pick tiles, avoid mines, cash out multipliers.'
-    }
+      description: 'Mines game demo: pick tiles, avoid mines, cash out multipliers.',
+    },
   },
   {
     path: '/plinko',
@@ -73,8 +75,8 @@ export const routes = [
     meta: {
       public: true,
       title: 'Plinko — Casino Simulator',
-      description: 'Plinko demo with multipliers and smooth ball animations.'
-    }
+      description: 'Plinko demo with multipliers and smooth ball animations.',
+    },
   },
   {
     path: '/dice',
@@ -83,8 +85,8 @@ export const routes = [
     meta: {
       public: true,
       title: 'Dice — Casino Simulator',
-      description: 'Dice game demo: choose chance and profit, roll under or over.'
-    }
+      description: 'Dice game demo: choose chance and profit, roll under or over.',
+    },
   },
 
   {
@@ -94,8 +96,8 @@ export const routes = [
     meta: {
       public: true,
       title: 'Cases — Casino Simulator',
-      description: 'Open cases and get rewards. See drop chances and expected value.'
-    }
+      description: 'Open cases and get rewards. See drop chances and expected value.',
+    },
   },
   {
     path: '/cases/:id',
@@ -104,8 +106,8 @@ export const routes = [
     meta: {
       public: true,
       title: 'Case — Casino Simulator',
-      description: 'Case details: prizes, chances and expected value.'
-    }
+      description: 'Case details: prizes, chances and expected value.',
+    },
   },
 
   {
@@ -115,18 +117,24 @@ export const routes = [
     meta: {
       requiresAuth: true,
       title: 'Profile — Casino Simulator',
-      description: 'Your profile and balance.'
-    }
+      description: 'Your profile and balance.',
+    },
   },
   {
     path: '/admin',
     name: 'admin',
     component: AdminView,
+    beforeEnter: () => {
+      // во время SSR/SSG
+      if (typeof window === 'undefined') return true
+
+      return checkAdminAccess() ? true : { name: 'home' }
+    },
     meta: {
-            title: 'Admin — Casino Simulator',
-      description: 'Admin panel.'
-    }
-  }
+      title: 'Admin — Casino Simulator',
+      description: 'Admin panel.',
+    },
+  },
 ] as const
 
 
