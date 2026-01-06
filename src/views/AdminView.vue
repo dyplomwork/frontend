@@ -52,10 +52,10 @@ const filteredUsers = computed(() => {
   const q = qUsers.value.trim().toLowerCase()
   if (!q) return users.value
   return users.value.filter(u =>
-    u.nickname.toLowerCase().includes(q) ||
-    u.discord.toLowerCase().includes(q) ||
+    (u.nickname || "").toLowerCase().includes(q) ||
+    (u.discord || "").toLowerCase().includes(q) ||
     String(u.id).toLowerCase().includes(q) ||
-    u.role.toLowerCase().includes(q)
+    (u.role || "").toLowerCase().includes(q)
   )
 })
 
@@ -71,6 +71,62 @@ const filteredTickets = computed(() => {
     t.status.toLowerCase().includes(q)
   )
 })
+
+
+// ==== Sorting ====
+type SortDir = 'asc' | 'desc'
+
+const sortUsersKey = ref<keyof AdminUser | ''>('')
+const sortUsersDir = ref<SortDir>('asc')
+
+const sortTicketsKey = ref<keyof Ticket | ''>('')
+const sortTicketsDir = ref<SortDir>('asc')
+
+function toggleSort<T extends object>(keyRef: { value: keyof T | '' }, dirRef: { value: SortDir }, key: keyof T) {
+  if (keyRef.value === key) dirRef.value = dirRef.value === 'asc' ? 'desc' : 'asc'
+  else {
+    keyRef.value = key
+    dirRef.value = 'asc'
+  }
+}
+
+function cmp(a: any, b: any) {
+  // nulls/undefined last
+  const an = a === null || a === undefined
+  const bn = b === null || b === undefined
+  if (an && bn) return 0
+  if (an) return 1
+  if (bn) return -1
+
+  // numbers
+  const na = typeof a === 'number' ? a : Number(a)
+  const nb = typeof b === 'number' ? b : Number(b)
+  const bothNumeric = Number.isFinite(na) && Number.isFinite(nb) && (typeof a === 'number' || typeof b === 'number' || /^[0-9.]+$/.test(String(a)) && /^[0-9.]+$/.test(String(b)))
+  if (bothNumeric) return na - nb
+
+  // strings
+  const sa = String(a).toLowerCase()
+  const sb = String(b).toLowerCase()
+  return sa.localeCompare(sb)
+}
+
+function sortedBy<T extends object>(rows: T[], key: keyof T | '', dir: SortDir) {
+  if (!key) return rows
+  const sorted = [...rows].sort((ra: any, rb: any) => cmp(ra?.[key as any], rb?.[key as any]))
+  return dir === 'asc' ? sorted : sorted.reverse()
+}
+
+const sortedUsers = computed(() => sortedBy(filteredUsers.value, sortUsersKey.value, sortUsersDir.value))
+const sortedTickets = computed(() => sortedBy(filteredTickets.value, sortTicketsKey.value, sortTicketsDir.value))
+
+function sortCaret(active: boolean, dir: SortDir) {
+  if (!active) return '↕'
+  return dir === 'asc' ? '↑' : '↓'
+}
+
+function thClass(active: boolean) {
+  return ['th-sort', active ? 'is-active' : '']
+}
 
 const editingId = ref<string | null>(null)
 const editNickname = ref('')
@@ -273,16 +329,24 @@ onMounted(async () => {
           <table class="table">
             <thead>
             <tr>
-              <th style="width: 220px;">User</th>
-              <th>Discord</th>
-              <th style="width: 120px;">Role</th>
-              <th style="width: 160px; text-align:right;">Balance</th>
+              <th style="width: 220px;" :class="thClass(sortUsersKey==='nickname')" @click="toggleSort(sortUsersKey, sortUsersDir, 'nickname')">
+                User <span class="caret">{{ sortCaret(sortUsersKey==='nickname', sortUsersDir) }}</span>
+              </th>
+              <th :class="thClass(sortUsersKey==='discord')" @click="toggleSort(sortUsersKey, sortUsersDir, 'discord')">
+                Discord <span class="caret">{{ sortCaret(sortUsersKey==='discord', sortUsersDir) }}</span>
+              </th>
+              <th style="width: 120px;" :class="thClass(sortUsersKey==='role')" @click="toggleSort(sortUsersKey, sortUsersDir, 'role')">
+                Role <span class="caret">{{ sortCaret(sortUsersKey==='role', sortUsersDir) }}</span>
+              </th>
+              <th style="width: 160px; text-align:right;" :class="thClass(sortUsersKey==='balance')" @click="toggleSort(sortUsersKey, sortUsersDir, 'balance')">
+                Balance <span class="caret">{{ sortCaret(sortUsersKey==='balance', sortUsersDir) }}</span>
+              </th>
               <th style="width: 260px; text-align:right;">Actions</th>
             </tr>
             </thead>
 
             <tbody>
-            <tr v-for="u in filteredUsers" :key="u.id">
+            <tr v-for="u in sortedUsers" :key="u.id">
               <td>
                 <div class="u-meta">
                   <div class="u-name">
@@ -365,17 +429,27 @@ onMounted(async () => {
           <table class="table">
             <thead>
             <tr>
-              <th style="width: 220px;">Ticket</th>
-              <th style="width: 200px;">User</th>
-              <th style="width: 120px;">Type</th>
-              <th style="width: 140px; text-align:right;">Amount</th>
-              <th style="width: 140px;">Status</th>
+              <th style="width: 220px;" :class="thClass(sortTicketsKey==='id')" @click="toggleSort(sortTicketsKey, sortTicketsDir, 'id')">
+                Ticket <span class="caret">{{ sortCaret(sortTicketsKey==='id', sortTicketsDir) }}</span>
+              </th>
+              <th style="width: 200px;" :class="thClass(sortTicketsKey==='nickname')" @click="toggleSort(sortTicketsKey, sortTicketsDir, 'nickname')">
+                User <span class="caret">{{ sortCaret(sortTicketsKey==='nickname', sortTicketsDir) }}</span>
+              </th>
+              <th style="width: 120px;" :class="thClass(sortTicketsKey==='type')" @click="toggleSort(sortTicketsKey, sortTicketsDir, 'type')">
+                Type <span class="caret">{{ sortCaret(sortTicketsKey==='type', sortTicketsDir) }}</span>
+              </th>
+              <th style="width: 140px; text-align:right;" :class="thClass(sortTicketsKey==='amount')" @click="toggleSort(sortTicketsKey, sortTicketsDir, 'amount')">
+                Amount <span class="caret">{{ sortCaret(sortTicketsKey==='amount', sortTicketsDir) }}</span>
+              </th>
+              <th style="width: 140px;" :class="thClass(sortTicketsKey==='status')" @click="toggleSort(sortTicketsKey, sortTicketsDir, 'status')">
+                Status <span class="caret">{{ sortCaret(sortTicketsKey==='status', sortTicketsDir) }}</span>
+              </th>
               <th style="width: 260px; text-align:right;">Actions</th>
             </tr>
             </thead>
 
             <tbody>
-            <tr v-for="t in filteredTickets" :key="t.id">
+            <tr v-for="t in sortedTickets" :key="t.id">
               <td>
                 <div class="u-meta">
                   <div class="u-name"><b>#{{ String(t.id).slice(0, 8) }}</b></div>
@@ -564,6 +638,23 @@ onMounted(async () => {
 .st-pending{ border-color: rgba(250,204,21,.45); background: rgba(250,204,21,.10); }
 .st-approved{ border-color: rgba(34,197,94,.45); background: rgba(34,197,94,.10); }
 .st-rejected{ border-color: rgba(248,81,73,.45); background: rgba(248,81,73,.10); }
+
+
+/* sortable headers */
+.th-sort{
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.th-sort .caret{
+  display: inline-block;
+  margin-left: 6px;
+  font-weight: 900;
+  opacity: .45;
+  transform: translateY(-1px);
+}
+.th-sort.is-active .caret{ opacity: .95; }
+.th-sort:hover .caret{ opacity: .85; }
 
 @media (max-width: 900px){
   .table{ min-width: 760px; }

@@ -55,7 +55,7 @@ onMounted(async () => {
   // Important: after reload auth may not be hydrated yet. Without token the session call fails -> UI thinks game is idle,
   // but backend keeps the running session ("game started"), and player can't resume.
   try {
-    if (!auth.user) await auth.fetchMe()
+    if (!auth.user) await auth.fetchBalance()
   } catch {
     // ignore, session restore below will fail without auth
   }
@@ -175,7 +175,7 @@ async function start() {
 
     // balance decreased on backend
     // balance decreased on backend
-    await auth.fetchMe()
+    await auth.fetchBalance()
 
     // try to sync session (opened cells etc.)
     try {
@@ -237,7 +237,7 @@ async function reveal(cell: Cell) {
         explodingId.value = null
       }, 680)
 
-      await auth.fetchMe()
+      await auth.fetchBalance()
       return
     }
 
@@ -263,7 +263,7 @@ async function reveal(cell: Cell) {
       revealWholeField(fin.field)
       inGame.value = false
       lost.value = true
-      await auth.fetchMe()
+      await auth.fetchBalance()
     } catch {}
   }
 }
@@ -293,7 +293,7 @@ async function cashOut() {
 
     inGame.value = false
     lost.value = false
-    await auth.fetchMe()
+    await auth.fetchBalance()
   } catch (e: any) {
     message.value = e?.message ? String(e.message) : 'Ошибка вывода'
   }
@@ -314,7 +314,7 @@ async function reset() {
   if (inGame.value && !lost.value) {
     try {
       await minesFinish()
-      await auth.fetchMe()
+      await auth.fetchBalance()
     } catch {
       // ignore network/backend errors here - still reset UI
     }

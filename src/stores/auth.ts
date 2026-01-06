@@ -114,7 +114,13 @@ export const useAuthStore = defineStore('auth', {
     async refreshMe(){
       if(!isBrowser()) return
       try{
-        const res = await api<{ ok:boolean; user: User }>('/api/me')
+        let res: any
+        try{
+          // Prefer the accounts service endpoint if available
+          res = await api<{ ok:boolean; user: User }>('/api/v1/accounts/users/me', { method: 'GET' })
+        }catch{
+          res = await api<{ ok:boolean; user: User }>('/api/me')
+        }
         this.user = res.user
         localStorage.setItem(LS_USER, JSON.stringify(res.user))
       }catch{
@@ -124,7 +130,8 @@ export const useAuthStore = defineStore('auth', {
 
     // Some views still call `fetchMe()`; keep it as an alias.
     async fetchMe(){
-      return this.refreshMe()
+      // Deprecated: keep for backwards compatibility. Balance is refreshed via the correct endpoint.
+      return this.fetchBalance()
     },
     async fetchBalance(){
       if(!isBrowser()) return { ok: false as const }

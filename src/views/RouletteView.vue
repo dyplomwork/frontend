@@ -438,7 +438,7 @@ async function spin() {
 
     if (shouldRefreshBalance) {
       try {
-        await auth.fetchMe()
+        await auth.fetchBalance()
       } catch {}
     }
   } catch (e: any) {
