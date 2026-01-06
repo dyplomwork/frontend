@@ -11,6 +11,7 @@ import MinesView from '../views/MinesView.vue'
 import CasesView from '../views/CasesView.vue'
 import CaseDetailView from '../views/CaseDetailView.vue'
 import DiceView from '../views/DiceView.vue'
+import CoinFlipView from '../views/CoinFlipView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import AdminView from '../views/AdminView.vue'
 
@@ -86,6 +87,17 @@ export const routes = [
       public: true,
       title: 'Dice — Casino Simulator',
       description: 'Dice game demo: choose chance and profit, roll under or over.',
+    },
+  },
+
+  {
+    path: '/coinflip',
+    name: 'coinflip',
+    component: CoinFlipView,
+    meta: {
+      public: true,
+      title: 'Coin Flip — Casino Simulator',
+      description: 'Coin flip battles: create, join and approve the result.',
     },
   },
 

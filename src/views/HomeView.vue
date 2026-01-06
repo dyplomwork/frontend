@@ -75,6 +75,14 @@ const fmt = (v: number | string, d = 2) => formatNumber(v, d)
           <div class="muted">Roll over • slider odds • needle</div>
         </div>
       </RouterLink>
+
+      <RouterLink class="game card" to="/coinflip">
+        <div class="icon">🪙</div>
+        <div class="meta">
+          <div class="title">Coin Flip</div>
+          <div class="muted">Create battle • join • approve</div>
+        </div>
+      </RouterLink>
     </div>
   </div>
 </template>

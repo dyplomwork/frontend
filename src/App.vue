@@ -105,6 +105,10 @@ function logout(){ sfx('click'); auth.logout(); router.push('/') }
           <span class="side-ic">🎲</span>
           <span class="side-txt" v-if="sidebarOpen">Dice</span>
         </RouterLink>
+        <RouterLink to="/coinflip" class="side-link" :class="{ active: route.path.startsWith('/coinflip') }" title="Coin Flip">
+          <span class="side-ic">🪙</span>
+          <span class="side-txt" v-if="sidebarOpen">Coin Flip</span>
+        </RouterLink>
         <RouterLink to="/plinko" class="side-link" :class="{ active: route.path.startsWith('/plinko') }" title="Plinko">
           <span class="side-ic">🔻</span>
           <span class="side-txt" v-if="sidebarOpen">Plinko</span>
