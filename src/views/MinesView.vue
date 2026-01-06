@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
 import BaseSelect from '../components/BaseSelect.vue'
@@ -33,22 +33,10 @@ const multiplier = ref(1)
 const nextMultiplier = ref<number | null>(null)
 const message = ref('')
 
-// UX effects
-const explodedId = ref<number | null>(null)
-const cashoutPulse = ref(false)
-let tRevealAll: number | null = null
-let tPulseOff: number | null = null
-
-function clearTimers() {
-  if (tRevealAll != null) window.clearTimeout(tRevealAll)
-  if (tPulseOff != null) window.clearTimeout(tPulseOff)
-  tRevealAll = null
-  tPulseOff = null
-}
-
-onBeforeUnmount(() => {
-  clearTimers()
-})
+// VFX
+const explodingId = ref<number | null>(null)
+const boardShake = ref(false)
+const cashPulse = ref(false)
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 
@@ -63,6 +51,35 @@ const canStart = computed(
 )
 const canClick = computed(() => inGame.value && !lost.value)
 
+onMounted(async () => {
+  // Important: after reload auth may not be hydrated yet. Without token the session call fails -> UI thinks game is idle,
+  // but backend keeps the running session ("game started"), and player can't resume.
+  try {
+    if (!auth.user) await auth.fetchMe()
+  } catch {
+    // ignore, session restore below will fail without auth
+  }
+
+  // If there's an active session on backend, restore it (opened cells, bet, mines)
+  try {
+    const s = await minesGetSession()
+    bet.value = Number(s.bet)
+    mines.value = Number(s.minesCount)
+    buildGrid()
+    applyOpenedCells(s.opened ?? [])
+    safePicks.value = (s.opened?.length ?? 0)
+    inGame.value = true
+    lost.value = false
+    message.value = ''
+    nextMultiplier.value = null
+    await refreshMultiplierFromServer()
+    await refreshNextMultiplierFromServer()
+  } catch {
+    // no active session -> ignore
+  }
+})
+
+
 const payoutAmount = computed(() => {
   if (!inGame.value || safePicks.value <= 0) return 0
   return Math.round(Number(bet.value) * Number(multiplier.value) * 100) / 100
@@ -73,10 +90,15 @@ const totalNetGain = computed(() => {
   return Math.max(0, payoutAmount.value - Number(bet.value))
 })
 
+const nextPayoutAmount = computed(() => {
+  if (!inGame.value || safePicks.value < 0) return 0
+  if (nextMultiplier.value == null) return 0
+  return Math.round(Number(bet.value) * Number(nextMultiplier.value) * 100) / 100
+})
+
 const nextNetGain = computed(() => {
   if (!inGame.value || nextMultiplier.value == null) return 0
-  const nextPayout = Math.round(Number(bet.value) * Number(nextMultiplier.value) * 100) / 100
-  return Math.max(0, nextPayout - Number(bet.value))
+  return Math.max(0, nextPayoutAmount.value - Number(bet.value))
 })
 
 function buildGrid() {
@@ -88,11 +110,32 @@ function cellToRC(id: number) {
   return { row: Math.floor(id / 5), col: id % 5 }
 }
 
+function rcToId(row: number, col: number) {
+  return row * 5 + col
+}
+
+function applyOpenedCells(opened: { row: number; col: number }[]) {
+  for (const c of grid.value) c.revealed = false
+  for (const cell of opened ?? []) {
+    const id = rcToId(cell.row, cell.col)
+    const ui = grid.value[id]
+    if (ui) ui.revealed = true
+  }
+}
+
 function applyField(field: { field: boolean[][]; opened: boolean[][] }) {
   for (const c of grid.value) {
     const { row, col } = cellToRC(c.id)
     c.hasMine = !!field.field?.[row]?.[col]
     c.revealed = !!field.opened?.[row]?.[col]
+  }
+}
+
+function revealWholeField(field: { field: boolean[][] }) {
+  for (const c of grid.value) {
+    const { row, col } = cellToRC(c.id)
+    c.hasMine = !!field.field?.[row]?.[col]
+    c.revealed = true
   }
 }
 
@@ -103,21 +146,12 @@ async function refreshMultiplierFromServer() {
   } catch {
     // keep previous
   }
+}
 
-  // next multiplier preview (for the next safe pick)
+async function refreshNextMultiplierFromServer() {
   try {
-    if (!inGame.value) {
-      nextMultiplier.value = null
-      return
-    }
-    const nextSafe = Number(safePicks.value) + 1
-    const maxSafe = SIZE - Number(mines.value)
-    if (nextSafe > maxSafe) {
-      nextMultiplier.value = null
-      return
-    }
-    const nm = await minesMultiplier(nextSafe, Number(mines.value))
-    nextMultiplier.value = Number(nm)
+    const next = await minesMultiplier(Number(safePicks.value) + 1, Number(mines.value))
+    nextMultiplier.value = Number(next)
   } catch {
     nextMultiplier.value = null
   }
@@ -127,9 +161,6 @@ async function start() {
   if (!canStart.value) return
   message.value = ''
   sfx('click')
-  clearTimers()
-  explodedId.value = null
-  cashoutPulse.value = false
 
   try {
     await minesStart({ bet: Number(bet.value), mines: Number(mines.value) })
@@ -140,7 +171,9 @@ async function start() {
     lost.value = false
     safePicks.value = 0
     multiplier.value = 1
+    nextMultiplier.value = null
 
+    // balance decreased on backend
     // balance decreased on backend
     await auth.fetchMe()
 
@@ -149,9 +182,27 @@ async function start() {
       const s = await minesGetSession()
       safePicks.value = (s.opened?.length ?? 0)
       await refreshMultiplierFromServer()
+      await refreshNextMultiplierFromServer()
     } catch {}
   } catch (e: any) {
     message.value = e?.message ? String(e.message) : 'Ошибка старта'
+    // If backend says the game is already started, try to restore the existing session
+    try {
+      const s = await minesGetSession()
+      bet.value = Number(s.bet)
+      mines.value = Number(s.minesCount)
+      buildGrid()
+      applyOpenedCells(s.opened ?? [])
+      safePicks.value = (s.opened?.length ?? 0)
+      inGame.value = true
+      lost.value = false
+      nextMultiplier.value = null
+      await refreshMultiplierFromServer()
+      await refreshNextMultiplierFromServer()
+      message.value = ''
+      return
+    } catch {}
+
     inGame.value = false
   }
 }
@@ -166,46 +217,50 @@ async function reveal(cell: Cell) {
   try {
     const res = await minesStep({ row, col })
 
-    // finish=true -> hit a mine; backend returns full field
+    // If finish=true => we hit a mine. Backend returns full field.
     if (res.finish) {
+      // mark clicked cell as mine immediately for correct animation
       cell.revealed = true
       cell.hasMine = true
-      explodedId.value = cell.id
+      explodingId.value = cell.id
+      boardShake.value = true
+      setTimeout(() => (boardShake.value = false), 180)
 
       lost.value = true
       inGame.value = false
       message.value = 'Бомба! Проигрыш'
       sfx('lose')
 
-      const field = res.field
-      if (field) {
-        clearTimers()
-        tRevealAll = window.setTimeout(() => {
-          applyField(field)
-          explodedId.value = null
-        }, 650)
-      }
+      // After the explosion, reveal whole field (not only "opened")
+      setTimeout(() => {
+        if (res.field) revealWholeField(res.field)
+        explodingId.value = null
+      }, 680)
 
       await auth.fetchMe()
       return
     }
 
-    // safe pick
+    // Safe pick
     cell.revealed = true
     cell.hasMine = false
     safePicks.value += 1
 
     if (res.nextMultiplier != null) {
+      // Some backends return the next multiplier after this pick
       multiplier.value = Number(res.nextMultiplier)
+      await refreshNextMultiplierFromServer()
+    } else {
+      await refreshMultiplierFromServer()
+      await refreshNextMultiplierFromServer()
     }
-
-    await refreshMultiplierFromServer()
   } catch (e: any) {
+    // backend might throw on invalid state / mine hit
     message.value = e?.message ? String(e.message) : 'Ошибка'
     // try to fetch full field to reveal (if game already ended)
     try {
       const fin = await minesFinish()
-      applyField(fin.field)
+      revealWholeField(fin.field)
       inGame.value = false
       lost.value = true
       await auth.fetchMe()
@@ -221,27 +276,23 @@ async function cashOut() {
     const res = await minesFinish()
     sfx('cashout')
 
+    // green pulse on win
+    cashPulse.value = true
+    setTimeout(() => (cashPulse.value = false), 520)
+
     const win = Number(res.win)
     const profit = Math.max(0, win - Number(bet.value))
     message.value = `Кэш-аут: +${fmt(profit, 2)} (x${formatNumber(multiplier.value, 4)})`
-    // BIG/MEGA/SUPER overlay (global)
-    bigwinStore.maybeShow(win, bet.value)
+	    // BIG/MEGA/SUPER overlay (global)
+	    bigwinStore.maybeShow(win, bet.value)
 
-    // stop the game immediately, but reveal the whole field after a short "win" effect
+    // Wait a bit so user sees the win pulse, then reveal the whole field for inspection
+    setTimeout(() => {
+      revealWholeField(res.field)
+    }, 1000)
+
     inGame.value = false
     lost.value = false
-
-    cashoutPulse.value = true
-    clearTimers()
-    tPulseOff = window.setTimeout(() => (cashoutPulse.value = false), 650)
-
-    const field = res.field
-    if (field) {
-      tRevealAll = window.setTimeout(() => {
-        applyField(field)
-      }, 1000)
-    }
-
     await auth.fetchMe()
   } catch (e: any) {
     message.value = e?.message ? String(e.message) : 'Ошибка вывода'
@@ -317,29 +368,22 @@ buildGrid()
 
         <template #summary>
           <div class="summary">
-            <div class="row">
-              <div class="label">Текущий профит:</div>
-              <div class="net">
-                <span class="num">{{ fmt(totalNetGain, 2) }}</span>
-                <span class="coin" aria-label="Currency K">K</span>
-                <span class="x">x{{ fmt(multiplier, 4) }}</span>
-              </div>
-            </div>
-
-            <div class="row">
-              <div class="label">Следующий множитель:</div>
-              <div class="net">
-                <span class="num">x{{ nextMultiplier != null ? fmt(nextMultiplier, 4) : '—' }}</span>
-                <template v-if="nextMultiplier != null">
-                  <span class="sep">•</span>
-                  <span class="num">{{ fmt(nextNetGain, 2) }}</span>
-                  <span class="coin" aria-label="Currency K">K</span>
-                </template>
-              </div>
+            <div class="label">Текущий профит: x{{ fmt(multiplier, 4) }}</div>
+            <div class="net">
+              <span class="num">{{ fmt(totalNetGain, 2) }}</span>
+              <span class="coin">K</span>
             </div>
           </div>
 
-          <button class="btn btn-primary" :class="{ 'cashout-pulse': cashoutPulse }" @click="cashOut" :disabled="!(inGame && safePicks > 0)">
+          <div class="summary" style="margin-top: 10px">
+            <div class="label">Следующий множитель: x{{ nextMultiplier == null ? '—' : fmt(nextMultiplier, 4) }}</div>
+            <div class="net">
+              <span class="num">{{ nextMultiplier == null ? '—' : fmt(nextNetGain, 2) }}</span>
+              <span class="coin">K</span>
+            </div>
+          </div>
+
+          <button class="btn btn-primary" :class="{ 'cash-pulse': cashPulse }" @click="cashOut" :disabled="!(inGame && safePicks > 0)">
             Cashout ({{ fmt(payoutAmount, 2) }}K)
           </button>
 
@@ -351,15 +395,25 @@ buildGrid()
     </template>
 
     <div class="board">
-      <div class="grid5">
+      <div class="grid5" :class="{ shake: boardShake }">
         <button
           v-for="cell in grid"
           :key="cell.id"
           class="tile"
-          :class="{ revealed: cell.revealed, mine: cell.revealed && cell.hasMine, gem: cell.revealed && !cell.hasMine, exploding: explodedId === cell.id }"
+          :class="{ revealed: cell.revealed, mine: cell.revealed && cell.hasMine, gem: cell.revealed && !cell.hasMine, boom: explodingId === cell.id }"
           @click="reveal(cell)"
           :disabled="!canClick"
         >
+          <div class="tile-fx" aria-hidden="true">
+            <span class="flash"></span>
+            <span class="ring"></span>
+            <span class="spark s1"></span>
+            <span class="spark s2"></span>
+            <span class="spark s3"></span>
+            <span class="spark s4"></span>
+            <span class="spark s5"></span>
+            <span class="spark s6"></span>
+          </div>
           <div class="tile-inner">
             <div class="face front"></div>
             <div class="face back">
@@ -389,6 +443,18 @@ buildGrid()
   justify-content: center;
   padding: 8px 0;
 }
+
+.grid5.shake {
+  animation: gridShake 180ms ease-in-out;
+}
+
+@keyframes gridShake {
+  0% { transform: translate(0,0); }
+  25% { transform: translate(2px,-1px); }
+  50% { transform: translate(-2px,1px); }
+  75% { transform: translate(1px,2px); }
+  100% { transform: translate(0,0); }
+}
 .tile {
   width: 92px;
   height: 92px;
@@ -407,8 +473,13 @@ buildGrid()
 .tile:hover {
   transform: translateY(-1px);
 }
+
+/* Subtle green hover outline (only if not revealed) */
 .tile:not(.revealed):hover {
-  box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.75), inset 0 0 0 1px rgba(255,255,255,0.06);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 231, 1, 0.55),
+    inset 0 0 0 2px rgba(0, 231, 1, 0.10),
+    0 10px 24px rgba(0, 0, 0, 0.28);
 }
 .tile.revealed {
   background: rgba(255, 255, 255, 0.05);
@@ -446,24 +517,69 @@ buildGrid()
   transform: rotateY(180deg);
 }
 
-.tile.exploding .tile-inner {
-  animation: mineBoom 620ms ease-out;
+/* --- Explosion VFX (only when clicked mine) --- */
+.tile-fx{ position:absolute; inset:0; pointer-events:none; opacity:0; }
+.tile.boom .tile-fx{ opacity:1; }
+
+.tile-fx .flash{
+  position:absolute; inset:-6px;
+  border-radius: 16px;
+  background: radial-gradient(120px 90px at 50% 45%, rgba(255,255,255,.55), rgba(255,255,255,0) 70%);
+  filter: blur(0.2px);
+  opacity:0;
 }
 
-.tile.exploding::after {
-  content: '';
-  position: absolute;
-  inset: -6px;
-  border-radius: 14px;
-  background: radial-gradient(circle at 50% 50%, rgba(248, 81, 73, 0.55), rgba(248, 81, 73, 0) 60%);
-  animation: boomFlash 620ms ease-out;
-  pointer-events: none;
+.tile.boom .tile-fx .flash{ animation: boomFlash 520ms ease-out; }
+
+@keyframes boomFlash{
+  0%{ opacity:0; transform: scale(.92); }
+  12%{ opacity:1; transform: scale(1.02); }
+  45%{ opacity:.55; transform: scale(1.08); }
+  100%{ opacity:0; transform: scale(1.18); }
 }
 
-@keyframes boomFlash {
-  0% { opacity: 0; transform: scale(0.9); }
-  15% { opacity: 1; transform: scale(1.05); }
-  100% { opacity: 0; transform: scale(1.15); }
+.tile-fx .ring{
+  position:absolute; inset: 50%;
+  width: 8px; height: 8px;
+  margin-left:-4px; margin-top:-4px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.22);
+  opacity:0;
+}
+.tile.boom .tile-fx .ring{ animation: boomRing 620ms ease-out; }
+@keyframes boomRing{
+  0%{ opacity:0; transform: scale(0.6); }
+  10%{ opacity:.8; }
+  100%{ opacity:0; transform: scale(12); }
+}
+
+.tile-fx .spark{
+  position:absolute;
+  left:50%; top:50%;
+  width:6px; height:6px;
+  margin-left:-3px; margin-top:-3px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.95), rgba(255,210,120,.75) 45%, rgba(255,120,60,0) 70%);
+  opacity:0;
+}
+.tile.boom .tile-fx .spark{ opacity:1; }
+
+.tile.boom .tile-fx .spark.s1{ animation: spark1 650ms ease-out; }
+.tile.boom .tile-fx .spark.s2{ animation: spark2 650ms ease-out; }
+.tile.boom .tile-fx .spark.s3{ animation: spark3 650ms ease-out; }
+.tile.boom .tile-fx .spark.s4{ animation: spark4 650ms ease-out; }
+.tile.boom .tile-fx .spark.s5{ animation: spark5 650ms ease-out; }
+.tile.boom .tile-fx .spark.s6{ animation: spark6 650ms ease-out; }
+
+@keyframes spark1{ 0%{ transform: translate(0,0) scale(.9); filter: brightness(1.2); } 100%{ transform: translate(38px,-26px) scale(0); opacity:0; } }
+@keyframes spark2{ 0%{ transform: translate(0,0) scale(.9); filter: brightness(1.2); } 100%{ transform: translate(-34px,-30px) scale(0); opacity:0; } }
+@keyframes spark3{ 0%{ transform: translate(0,0) scale(.9); filter: brightness(1.2); } 100%{ transform: translate(42px,18px) scale(0); opacity:0; } }
+@keyframes spark4{ 0%{ transform: translate(0,0) scale(.9); filter: brightness(1.2); } 100%{ transform: translate(-44px,20px) scale(0); opacity:0; } }
+@keyframes spark5{ 0%{ transform: translate(0,0) scale(.9); filter: brightness(1.2); } 100%{ transform: translate(6px,-48px) scale(0); opacity:0; } }
+@keyframes spark6{ 0%{ transform: translate(0,0) scale(.9); filter: brightness(1.2); } 100%{ transform: translate(-10px,50px) scale(0); opacity:0; } }
+
+.tile.boom .tile-inner {
+  animation: mineBoom 560ms ease-out;
 }
 
 @keyframes mineBoom {
@@ -484,14 +600,14 @@ buildGrid()
   }
 }
 
-/* Cashout win pulse */
-.cashout-pulse{
-  animation: cashoutPulse 650ms ease-out;
+/* Win pulse on cashout button */
+.cash-pulse{
+  animation: cashPulse 520ms ease-out;
 }
-@keyframes cashoutPulse{
-  0%{ filter: brightness(1); transform: translateY(0); box-shadow: 0 0 0 0 rgba(34,197,94,0.0); }
-  35%{ filter: brightness(1.15); transform: translateY(-1px); box-shadow: 0 0 0 4px rgba(34,197,94,0.18); }
-  100%{ filter: brightness(1); transform: translateY(0); box-shadow: 0 0 0 0 rgba(34,197,94,0.0); }
+@keyframes cashPulse{
+  0%{ transform: translateY(0) scale(1); box-shadow: 0 0 0 0 rgba(0,231,1,.0); }
+  35%{ transform: translateY(-1px) scale(1.02); box-shadow: 0 0 0 4px rgba(0,231,1,.14), 0 0 18px rgba(0,231,1,.10); }
+  100%{ transform: translateY(0) scale(1); box-shadow: 0 0 0 0 rgba(0,231,1,.0); }
 }
 
 @media (max-width: 980px) {
@@ -512,10 +628,5 @@ buildGrid()
 /* Keep amounts + coin inline */
 .amount, .value, .bal, .net, .summary .value { display:inline-flex; align-items:center; gap:6px; }
 .summary .value{ white-space: nowrap; }
-.summary .row{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
-.summary .label{ opacity:0.85; }
-.summary .net{ display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
-.summary .x{ opacity:0.75; font-size: 12px; }
-.summary .sep{ opacity:0.55; margin: 0 2px; }
 
 </style>
