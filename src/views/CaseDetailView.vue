@@ -315,6 +315,7 @@ async function openOne(){
 
 // init
 onMounted(() => {
+  game.loadCases().catch(() => {})
   try{
     quickOpen.value = localStorage.getItem(QUICK_KEY) === '1'
   }catch{}
@@ -331,7 +332,9 @@ watch(quickOpen, (v) => {
 
 <template>
   <div class="stake-page">
-    <div v-if="!c" class="game-card pad">Кейс не найден</div>
+    <div v-if="!c && game.casesLoading" class="game-card pad">Загрузка кейса...</div>
+
+    <div v-else-if="!c" class="game-card pad">Кейс не найден</div>
 
     <div v-else class="game-card case-layout">
       <div class="left-panel">

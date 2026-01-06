@@ -1,8 +1,14 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import { useGameStore } from '../stores/game'
 import { sfx } from '../utils/sfx'
 import { formatNumber } from '../utils/format'
 const game = useGameStore()
+
+onMounted(() => {
+  // hydrate cases from backend (keeps local fallback if service is unavailable)
+  game.loadCases().catch(() => {})
+})
 
 const fmt = (v: number | string, d = 0) => formatNumber(v, d)
 

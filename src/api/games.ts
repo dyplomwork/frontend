@@ -101,7 +101,6 @@ export async function minesMultiplier(opened: number, mines: number) {
   return api<number>(`/api/v1/games/mines/game/multiplier?${q.toString()}`)
 }
 
-export type CasesPlayRequest = { type: string }
 export type CasesPlayResponse = { item: string; payout: number }
 
 export async function casesPlay(type: string) {
@@ -116,17 +115,6 @@ export async function casesPlay(type: string) {
 // NOTE: list endpoint does not include the registry key (id), only name/price/items.
 export type CaseItemDTO = { name: string; chance: number; prize: number }
 export type CaseDTO = { id?: string; name: string; price: number; items: CaseItemDTO[] }
-
-/**
- * Optional endpoints (if exposed via gateway):
- *  - GET /api/v1/games/cases/            (list)
- *  - GET /api/v1/games/cases/{id}        (single)
- * They exist in the cases service, but your gateway may or may not expose them.
- */
-export async function casesList(): Promise<CaseDTO[]> {
-  // gateway routes: /api/v1/games/cases  (no trailing slash required)
-  return api<CaseDTO[]>('/api/v1/games/cases')
-}
 
 export async function casesGet(id: string): Promise<CaseDTO> {
   return api<CaseDTO>(`/api/v1/games/cases/${encodeURIComponent(id)}`)
