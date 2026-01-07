@@ -13,26 +13,25 @@ const fmt = (v: number | string, d = 2) => formatNumber(v, d)
   <div class="home">
     <div class="hero card">
       <div class="hero-left">
-        <div class="pill">SCXDROP • demo credits</div>
-        <h1>Play casino-style games</h1>
+        <div class="pill">{{ $t('ui.s_d1ef90f3c0') }}</div>
+        <h1>{{ $t('ui.s_e152e62605') }}</h1>
         <p class="muted">
-          Roulette, Plinko, Mines and Cases — in a clean Stake-like UI. Balance is stored locally
-          for dev.
+          {{ $t('ui.s_eda9fd1f8b') }}
         </p>
         <div class="cta">
-          <RouterLink class="btn primary" to="/roulette">Play now</RouterLink>
-          <RouterLink class="btn" to="/cases">Open cases</RouterLink>
+          <RouterLink class="btn primary" to="/roulette">{{ $t('ui.s_1b70a40f4f') }}</RouterLink>
+          <RouterLink class="btn" to="/cases">{{ $t('ui.s_e9f82b6536') }}</RouterLink>
         </div>
       </div>
       <div class="hero-right">
         <div class="stat">
-          <div class="label">Balance</div>
+          <div class="label">{{ $t('ui.s_99a808d8d1') }}</div>
           <div class="value">
-            {{ fmt(balance, 2) }} <span class="coin" aria-label="Currency K">K</span>
+            {{ fmt(balance, 2) }} <span class="coin" :aria-label="$t('ui.s_d940a38dce')">K</span>
           </div>
         </div>
         <div class="stat">
-          <div class="label">Account</div>
+          <div class="label">{{ $t('ui.s_08bd40c754') }}</div>
           <div class="value">{{ auth.user ? auth.user.nickname : 'Guest' }}</div>
         </div>
       </div>
@@ -42,40 +41,40 @@ const fmt = (v: number | string, d = 2) => formatNumber(v, d)
       <RouterLink class="game card" to="/roulette">
         <div class="icon">🎡</div>
         <div class="meta">
-          <div class="title">Roulette</div>
-          <div class="muted">Classic bets • history • repeat</div>
+          <div class="title">{{ $t('ui.s_3cf6443ea2') }}</div>
+          <div class="muted">{{ $t('ui.s_17e45c77d3') }}</div>
         </div>
       </RouterLink>
 
       <RouterLink class="game card" to="/plinko">
         <div class="icon">🔻</div>
         <div class="meta">
-          <div class="title">Plinko</div>
-          <div class="muted">Multi balls • bin glow • smooth drop</div>
+          <div class="title">{{ $t('ui.s_6643fdd61a') }}</div>
+          <div class="muted">{{ $t('ui.s_e09fbe469f') }}</div>
         </div>
       </RouterLink>
 
       <RouterLink class="game card" to="/mines">
         <div class="icon">💣</div>
         <div class="meta">
-          <div class="title">Mines</div>
-          <div class="muted">Quick picks • cashout</div>
+          <div class="title">{{ $t('ui.s_c3fc302af4') }}</div>
+          <div class="muted">{{ $t('ui.s_d212d1ac25') }}</div>
         </div>
       </RouterLink>
 
       <RouterLink class="game card" to="/cases">
         <div class="icon">🎁</div>
         <div class="meta">
-          <div class="title">Cases</div>
-          <div class="muted">Stake-minimal • odds table</div>
+          <div class="title">{{ $t('ui.s_b1f0b866ff') }}</div>
+          <div class="muted">{{ $t('ui.s_03480973d3') }}</div>
         </div>
       </RouterLink>
 
       <RouterLink class="game card" to="/dice">
         <div class="icon">🎲</div>
         <div class="meta">
-          <div class="title">Dice</div>
-          <div class="muted">Roll over • slider odds • needle</div>
+          <div class="title">{{ $t('ui.s_a5b6cdb9de') }}</div>
+          <div class="muted">{{ $t('ui.s_35079404ba') }}</div>
         </div>
       </RouterLink>
 
@@ -85,8 +84,8 @@ const fmt = (v: number | string, d = 2) => formatNumber(v, d)
         </span>
 
         <div class="meta">
-          <div class="title">Coin Flip</div>
-          <div class="muted">Create battle • join • approve</div>
+          <div class="title">{{ $t('ui.s_24397a9d6f') }}</div>
+          <div class="muted">{{ $t('ui.s_0c54815c09') }}</div>
         </div>
       </RouterLink>
     </div>

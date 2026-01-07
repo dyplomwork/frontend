@@ -298,8 +298,8 @@ onMounted(async () => {
       <div class="admin-head card">
         <div class="row-between" style="gap:12px;">
           <div class="grid" style="gap:4px;">
-            <h2 style="margin:0;">Admin Panel</h2>
-            <div class="muted">Users & Tickets </div>
+            <h2 style="margin:0;">{{ $t('ui.s_a0e0d3f0c6') }}</h2>
+            <div class="muted">{{ $t('ui.s_796e48762a') }} </div>
           </div>
 
           <div class="row" style="gap:10px; flex-wrap:wrap;">
@@ -325,12 +325,12 @@ onMounted(async () => {
       <div v-if="tab === 'users'" class="card admin-card">
         <div class="row-between" style="gap:12px; flex-wrap:wrap;">
           <div class="row" style="gap:10px; align-items:center;">
-            <b>All users</b>
-            <span v-if="loadingUsers" class="muted">loading…</span>
+            <b>{{ $t('ui.s_0d603cecbd') }}</b>
+            <span v-if="loadingUsers" class="muted">{{ $t('ui.s_d8e058e700') }}</span>
           </div>
 
           <div class="row" style="gap:10px; flex-wrap:wrap;">
-            <input class="input" v-model="qUsers" placeholder="Search: id / nickname / discord / role" />
+            <input class="input" v-model="qUsers" :placeholder="$t('ui.s_9db5fc32e4')" />
             <button class="btn" @click="loadUsers" :disabled="loadingUsers">Reload</button>
           </div>
         </div>
@@ -340,18 +340,18 @@ onMounted(async () => {
             <thead>
             <tr>
               <th style="width: 220px;" :class="thClass(sortUsersKey==='nickname')" @click="toggleSortUsers('nickname')">
-                User <span class="caret">{{ sortCaret(sortUsersKey==='nickname', sortUsersDir) }}</span>
+                {{ $t('ui.s_8f9bfe9d13') }} <span class="caret">{{ sortCaret(sortUsersKey==='nickname', sortUsersDir) }}</span>
               </th>
               <th :class="thClass(sortUsersKey==='discord')" @click="toggleSortUsers('discord')">
-                Discord <span class="caret">{{ sortCaret(sortUsersKey==='discord', sortUsersDir) }}</span>
+                {{ $t('ui.s_8f5cc64306') }} <span class="caret">{{ sortCaret(sortUsersKey==='discord', sortUsersDir) }}</span>
               </th>
               <th style="width: 120px;" :class="thClass(sortUsersKey==='role')" @click="toggleSortUsers('role')">
-                Role <span class="caret">{{ sortCaret(sortUsersKey==='role', sortUsersDir) }}</span>
+                {{ $t('ui.s_bbbabdbe1b') }} <span class="caret">{{ sortCaret(sortUsersKey==='role', sortUsersDir) }}</span>
               </th>
               <th style="width: 160px; text-align:right;" :class="thClass(sortUsersKey==='balance')" @click="toggleSortUsers('balance')">
-                Balance <span class="caret">{{ sortCaret(sortUsersKey==='balance', sortUsersDir) }}</span>
+                {{ $t('ui.s_99a808d8d1') }} <span class="caret">{{ sortCaret(sortUsersKey==='balance', sortUsersDir) }}</span>
               </th>
-              <th style="width: 260px; text-align:right;">Actions</th>
+              <th style="width: 260px; text-align:right;">{{ $t('ui.s_06df33001c') }}</th>
             </tr>
             </thead>
 

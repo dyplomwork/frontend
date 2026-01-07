@@ -365,18 +365,17 @@ buildGrid()
         @play="start"
       >
         <div class="field">
-          <div class="label">Mines</div>
+          <div class="label">{{ $t('ui.s_c3fc302af4') }}</div>
           <BaseSelect
             v-model="mines"
             :options="minesOptions"
-            :disabled="inGame"
-            aria-label="Mines"
+            :disabled="inGame" :aria-label="$t('ui.s_c3fc302af4')"
             @update:model-value="sfx('click')"
           />
         </div>
 
         <div class="field">
-          <div class="label">Gems</div>
+          <div class="label">{{ $t('ui.s_a0910e2226') }}</div>
           <div class="input" style="display: flex; align-items: center; justify-content: space-between; height: var(--control-h)">
             <span class="num">{{ gems }}</span>
           </div>

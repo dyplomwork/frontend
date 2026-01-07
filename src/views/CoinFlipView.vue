@@ -266,16 +266,16 @@ onBeforeUnmount(() => {
         <template #summary>
           <div class="summary">
             <div class="row-between">
-              <span class="muted">Mode</span>
-              <span class="num">Coin Flip Battles</span>
+              <span class="muted">{{ $t('ui.s_650be61892') }}</span>
+              <span class="num">{{ $t('ui.s_f664b8e28e') }}</span>
             </div>
             <div class="row-between">
-              <span class="muted">Endpoint</span>
+              <span class="muted">{{ $t('ui.s_2a6ba72e93') }}</span>
               <span class="num">/api/v1/battles</span>
             </div>
             <div class="row-between">
-              <span class="muted">Tip</span>
-              <span class="num">Create → Join → Approve</span>
+              <span class="muted">{{ $t('ui.s_12ae2a1258') }}</span>
+              <span class="num">{{ $t('ui.s_b3dc970af2') }}</span>
             </div>
           </div>
         </template>

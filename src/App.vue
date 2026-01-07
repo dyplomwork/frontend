@@ -5,6 +5,7 @@ import { useAuthStore } from './stores/auth'
 import { isSfxOn, setSfxOn, sfx } from './utils/sfx'
 import { getBgmVolume, initBgm, isBgmOn, setBgmVolume } from './utils/bgm'
 import { formatNumber } from './utils/format'
+import { useI18n } from 'vue-i18n'
 import AppFooter from './components/AppFooter.vue'
 import SeoHead from './components/SeoHead.vue'
 import BigWinOverlay from './components/BigWinOverlay.vue'
@@ -12,6 +13,13 @@ import BigWinOverlay from './components/BigWinOverlay.vue'
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+
+const { locale } = useI18n()
+const LS_LOCALE = 'app_locale_v1'
+const toggleLang = () => {
+  locale.value = locale.value === 'ru' ? 'en' : 'ru'
+  localStorage.setItem('app_locale_v1', locale.value)
+}
 
 const LS_SIDEBAR = 'sopov_sidebar_open_v1'
 const sidebarOpen = ref(false)
@@ -22,6 +30,9 @@ const bgmVol = ref(0.15)
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 
 onMounted(() => {
+  const savedLocale = localStorage.getItem(LS_LOCALE)
+  if (savedLocale === 'ru' || savedLocale === 'en') locale.value = savedLocale
+
   sidebarOpen.value = localStorage.getItem(LS_SIDEBAR) === '1'
 
   bgmOn.value = isBgmOn()
@@ -95,74 +106,79 @@ function logout() {
       </div>
 
       <nav class="side-nav">
-        <RouterLink to="/" class="side-link" :class="{ active: route.path === '/' }" title="Home">
+        <RouterLink
+          to="/"
+          class="side-link"
+          :class="{ active: route.path === '/' }"
+          :title="$t('ui.s_8cf04a9734')"
+        >
           <span class="side-ic">🏠</span>
-          <span class="side-txt" v-if="sidebarOpen">Home</span>
+          <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_8cf04a9734') }}</span>
         </RouterLink>
         <RouterLink
           to="/roulette"
           class="side-link"
           :class="{ active: route.path.startsWith('/roulette') }"
-          title="Roulette"
+          :title="$t('ui.s_3cf6443ea2')"
         >
           <span class="side-ic">🎡</span>
-          <span class="side-txt" v-if="sidebarOpen">Roulette</span>
+          <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_3cf6443ea2') }}</span>
         </RouterLink>
         <RouterLink
           to="/dice"
           class="side-link"
           :class="{ active: route.path.startsWith('/dice') }"
-          title="Dice"
+          :title="$t('ui.s_a5b6cdb9de')"
         >
           <span class="side-ic">🎲</span>
-          <span class="side-txt" v-if="sidebarOpen">Dice</span>
+          <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_a5b6cdb9de') }}</span>
         </RouterLink>
         <RouterLink
           to="/coinflip"
           class="side-link"
           :class="{ active: route.path.startsWith('/coinflip') }"
-          title="Coin Flip"
+          :title="$t('ui.s_24397a9d6f')"
         >
           <span class="side-ic">
             <img src="/icon/coinflip.svg" alt="Coin Flip" />
           </span>
-          <span class="side-txt" v-if="sidebarOpen">Coin Flip</span>
+          <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_24397a9d6f') }}</span>
         </RouterLink>
         <RouterLink
           to="/plinko"
           class="side-link"
           :class="{ active: route.path.startsWith('/plinko') }"
-          title="Plinko"
+          :title="$t('ui.s_6643fdd61a')"
         >
           <span class="side-ic">🔻</span>
-          <span class="side-txt" v-if="sidebarOpen">Plinko</span>
+          <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_6643fdd61a') }}</span>
         </RouterLink>
         <RouterLink
           to="/mines"
           class="side-link"
           :class="{ active: route.path.startsWith('/mines') }"
-          title="Mines"
+          :title="$t('ui.s_c3fc302af4')"
         >
           <span class="side-ic">💣</span>
-          <span class="side-txt" v-if="sidebarOpen">Mines</span>
+          <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_c3fc302af4') }}</span>
         </RouterLink>
         <RouterLink
           to="/cases"
           class="side-link"
           :class="{ active: route.path.startsWith('/cases') }"
-          title="Cases"
+          :title="$t('ui.s_b1f0b866ff')"
         >
           <span class="side-ic">🎁</span>
-          <span class="side-txt" v-if="sidebarOpen">Cases</span>
+          <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_b1f0b866ff') }}</span>
         </RouterLink>
         <RouterLink
           to="/profile"
           class="side-link"
           :class="{ active: route.path.startsWith('/profile') }"
-          title="Profile"
+          :title="$t('ui.s_cce99c598c')"
         >
           <span class="side-ic">👤</span>
-          <span class="side-txt" v-if="sidebarOpen">Profile</span>
+          <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_cce99c598c') }}</span>
         </RouterLink>
       </nav>
 
@@ -171,7 +187,7 @@ function logout() {
           <button
             class="icon-btn audio-btn"
             @click.stop="toggleMusicIcon"
-            :title="bgmOn ? 'Mute music' : 'Unmute music'"
+            :title="bgmOn ? $t('ui.s_b0389cd7a0') : $t('ui.s_6d100a9054')"
           >
             <span class="ic">{{ bgmOn ? '🎵' : '🔕' }}</span>
           </button>
@@ -184,7 +200,7 @@ function logout() {
             step="0.01"
             :value="bgmVol"
             @input="onBgmVolInput"
-            aria-label="Background music volume"
+            :aria-label="$t('ui.s_6215fda1c3')"
           />
         </div>
 
@@ -192,10 +208,16 @@ function logout() {
           class="icon-btn audio-btn"
           @click="toggleSfx"
           :class="{ off: !sfxOn }"
-          :title="sfxOn ? 'SFX on' : 'SFX off'"
+          :title="sfxOn ? $t('ui.s_45d958c08c') : $t('ui.s_bb70d8d3f5')"
         >
           <span class="ic">{{ sfxOn ? '🔊' : '🔇' }}</span>
         </button>
+
+        <div class="lang-row" >
+          <button class="icon-btn audio-btn" @click="toggleLang" title="Switch language">
+            <span class="ic">{{ locale.toUpperCase() }}</span>
+          </button>
+        </div>
       </div>
     </aside>
 
@@ -215,9 +237,9 @@ function logout() {
         <div class="top-right">
           <template v-if="auth.user">
             <div class="balance-pill">
-              <span class="muted">Balance</span>
+              <span class="muted">{{ $t('ui.s_99a808d8d1') }}</span>
               <span class="bal">{{ fmt(auth.user.balance, 2) }}</span>
-              <span class="coin" aria-label="Currency K">K</span>
+              <span class="coin" :aria-label="$t('ui.s_d940a38dce')">K</span>
             </div>
             <button class="btn" @click="logout">Logout</button>
           </template>

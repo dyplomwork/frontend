@@ -41,24 +41,24 @@ async function submit() {
   <div class="auth">
     <div class="card">
       <div class="head">
-        <h1>Регистрация</h1>
-        <p class="muted">Создай аккаунт — никнейм, Discord и пароль.</p>
+        <h1>{{ $t('ui.s_0b93f81293') }}</h1>
+        <p class="muted">{{ $t('ui.s_b4c974186e') }}</p>
       </div>
 
       <form class="form" @submit.prevent="submit">
         <label class="field">
-          <span class="label">Никнейм</span>
-          <input v-model="nickname" type="text" autocomplete="nickname" placeholder="shadowghost31" required />
+          <span class="label">{{ $t('ui.s_3fea2b66f7') }}</span>
+          <input v-model="nickname" type="text" autocomplete="nickname" :placeholder="$t('ui.s_4b49f253c1')" required />
         </label>
 
         <label class="field">
-          <span class="label">Discord</span>
-          <input v-model="discord" type="text" autocomplete="username" placeholder="@user или user#1234" required />
+          <span class="label">{{ $t('ui.s_8f5cc64306') }}</span>
+          <input v-model="discord" type="text" autocomplete="username" :placeholder="$t('ui.s_d46406af91')" required />
         </label>
 
         <label class="field">
-          <span class="label">Пароль</span>
-          <input v-model="password" type="password" autocomplete="new-password" placeholder="минимум 8 символов" required />
+          <span class="label">{{ $t('ui.s_5ebe553e01') }}</span>
+          <input v-model="password" type="password" autocomplete="new-password" :placeholder="$t('ui.s_c7665a90a1')" required />
           <span class="tiny" :class="{ bad: password.length > 0 && !passwordOk }">
             {{ password.length === 0 ? 'Минимум 8 символов' : (passwordOk ? 'Ок' : 'Слишком короткий пароль') }}
           </span>
@@ -71,8 +71,8 @@ async function submit() {
         </button>
 
         <p class="hint">
-          Уже есть аккаунт?
-          <RouterLink class="link" :to="{ name: 'login' }">Войти</RouterLink>
+          {{ $t('ui.s_1411042379') }}
+          <RouterLink class="link" :to="{ name: 'login' }">{{ $t('ui.s_63a753751e') }}</RouterLink>
         </p>
       </form>
     </div>

@@ -464,7 +464,7 @@ function betOf(key: BetKey) {
     <template #panel>
       <div class="panel-stack">
         <div class="field">
-          <div class="label">Chip Value</div>
+          <div class="label">{{ $t('ui.s_c65930bb15') }}</div>
           <div class="chip-row">
             <button
               v-for="c in chips"
@@ -482,10 +482,10 @@ function betOf(key: BetKey) {
         </div>
 
         <div class="field">
-          <div class="label">Total Amount</div>
+          <div class="label">{{ $t('ui.s_a876fbe73a') }}</div>
           <div class="amount-total">
             <div class="num">{{ fmt(totalBet, 2) }}</div>
-            <span class="coin" aria-label="Currency K">K</span>
+            <span class="coin" :aria-label="$t('ui.s_d940a38dce')">K</span>
           </div>
           <div class="btn-row">
             <button class="btn btn-ghost" :disabled="spinning" @click="undo">Undo</button>

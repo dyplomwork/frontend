@@ -332,9 +332,9 @@ watch(quickOpen, (v) => {
 
 <template>
   <div class="stake-page">
-    <div v-if="!c && game.casesLoading" class="game-card pad">Загрузка кейса...</div>
+    <div v-if="!c && game.casesLoading" class="game-card pad">{{ $t('ui.s_e0760be2bf') }}</div>
 
-    <div v-else-if="!c" class="game-card pad">Кейс не найден</div>
+    <div v-else-if="!c" class="game-card pad">{{ $t('ui.s_6dcc0e58a7') }}</div>
 
     <div v-else class="game-card case-layout">
       <div class="left-panel">
@@ -346,13 +346,13 @@ watch(quickOpen, (v) => {
 
         <div class="model">
           <div class="emoji">{{ c.modelEmoji }}</div>
-          <div class="muted">Модель кейса</div>
+          <div class="muted">{{ $t('ui.s_9390802b18') }}</div>
         </div>
 
         <label class="toggle">
           <input type="checkbox" v-model="quickOpen" :disabled="opening" />
           <span class="tbox" aria-hidden="true"></span>
-          <span class="ttext">Quick open (без анимации)</span>
+          <span class="ttext">{{ $t('ui.s_179b3c4123') }}</span>
         </label>
 
         <div class="btn-row">
@@ -364,16 +364,16 @@ watch(quickOpen, (v) => {
         <div class="status">
           <span v-if="result" class="pill ok">Выпало: {{ result }} (+{{ resultAmount }})</span>
           <span v-else-if="message" class="pill err">{{ message }}</span>
-          <span v-else class="pill muted">Баланс начисляется сразу</span>
+          <span v-else class="pill muted">{{ $t('ui.s_bc3db5d2b8') }}</span>
         </div>
 
         <div class="hist">
           <div class="hist-head">
-            <div class="muted"><b>History</b> <span class="small">({{ history.length }}/20)</span></div>
+            <div class="muted"><b>{{ $t('ui.s_16d2b386b2') }}</b> <span class="small">({{ history.length }}/20)</span></div>
             <button class="tiny" :disabled="opening || !history.length" @click="clearHistory">Clear</button>
           </div>
 
-          <div v-if="!history.length" class="hist-empty muted">Пока пусто</div>
+          <div v-if="!history.length" class="hist-empty muted">{{ $t('ui.s_90a2dedaa8') }}</div>
 
           <div v-else class="hist-list">
             <div class="hist-row" v-for="h in history" :key="h.ts + '-' + h.amount">
@@ -401,7 +401,7 @@ watch(quickOpen, (v) => {
                   </div>
                   <div class="face back">
                     <div class="amt">+{{ it.amount }}</div>
-                    <div class="lab">credits</div>
+                    <div class="lab">{{ $t('ui.s_928735d6f2') }}</div>
                   </div>
                 </div>
               </div>
@@ -412,7 +412,7 @@ watch(quickOpen, (v) => {
 
         <div class="loot">
           <div class="loot-head">
-            <div class="muted"><b>Лут кейса</b></div>
+            <div class="muted"><b>{{ $t('ui.s_544eb8623d') }}</b></div>
           </div>
           <div class="loot-grid">
             <div class="loot-row" v-for="l in c.loot" :key="l.id" :class="rarity(l.amount)">

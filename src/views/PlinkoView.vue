@@ -481,34 +481,32 @@ if (typeof window !== 'undefined') {
         @play="start"
       >
         <div class="field">
-          <div class="label">Difficulty</div>
+          <div class="label">{{ $t('ui.s_7b29ca96ad') }}</div>
           <BaseSelect
             v-model="difficulty"
             :options="difficultyOptions"
             :disabled="spinning"
-            aria-label="Difficulty"
-            @update:model-value="() => sfx('click')"
+            :aria-label="$t('ui.s_7b29ca96ad')"
           />
         </div>
 
         <div class="field">
-          <div class="label">Rows</div>
+          <div class="label">{{ $t('ui.s_530f488f7a') }}</div>
           <BaseSelect
             v-model="rows"
             :options="rowsOptions"
             :disabled="spinning"
-            aria-label="Rows"
-            @update:model-value="() => sfx('click')"
+            :aria-label="$t('ui.s_530f488f7a')"
           />
         </div>
 
         <div class="field">
-          <div class="label">Balls</div>
+          <div class="label">{{ $t('ui.s_3136a9f696') }}</div>
           <div class="balls-row">
             <input class="input" v-model.number="ballCount" type="number" min="1" max="50" step="1" />
             <div class="pill">×</div>
           </div>
-          <div class="mini">Total bet: <b class="num">{{ fmt(totalBet, 2) }}</b></div>
+          <div class="mini">{{ $t('ui.s_66d3a865e2') }} <b class="num">{{ fmt(totalBet, 2) }}</b></div>
         </div>
       </GamePanel>
     </template>

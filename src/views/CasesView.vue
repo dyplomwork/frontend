@@ -32,8 +32,8 @@ function lootIcon(amount: number){
     <div class="game-card">
       <div class="header">
         <div>
-          <h2>Cases</h2>
-          <p class="muted">Открывай кейсы и получай кредиты на баланс. Все кейсы в одном месте.</p>
+          <h2>{{ $t('ui.s_b1f0b866ff') }}</h2>
+          <p class="muted">{{ $t('ui.s_72fecc72fc') }}</p>
         </div>
       </div>
 
@@ -65,7 +65,7 @@ function lootIcon(amount: number){
           </div>
 
           <div class="tile-bottom">
-            <span class="pill">View</span>
+            <span class="pill">{{ $t('ui.s_4351cfebe4') }}</span>
           </div>
         </RouterLink>
       </div>

@@ -43,7 +43,7 @@ function onPlay(){ emit('play') }
     <slot name="header" />
 
     <div class="field">
-      <div class="label">Amount</div>
+      <div class="label">{{ $t('ui.s_b2f4069085') }}</div>
       <div class="amount-row">
         <input
           class="input"

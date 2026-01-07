@@ -12,7 +12,7 @@ const flat = computed(() => props.grid.flat())
 </script>
 
 <template>
-  <div class="roulette" :class="{ spinning }" aria-label="Roulette 5x5">
+  <div class="roulette" :class="{ spinning }" :aria-label="$t('ui.s_14cdf9f0a4')">
     <div v-for="cell in flat" :key="cell.id" class="slot">
       <span class="sym">{{ cell.sym }}</span>
     </div>

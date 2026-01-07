@@ -80,17 +80,17 @@ async function refreshAll(){
   <div class="profile-grid">
     <div class="card">
       <div class="row-between">
-        <h2 class="profile-title">Профиль</h2>
-        <span v-if="auth.user" class="badge balance-badge">Balance: <span class="bal">{{ fmt(auth.user.balance, 2) }}</span><span class="coin" aria-label="Currency K">K</span></span>
+        <h2 class="profile-title">{{ $t('ui.s_a46c372347') }}</h2>
+        <span v-if="auth.user" class="badge balance-badge">{{ $t('ui.s_b5397350cb') }} <span class="bal">{{ fmt(auth.user.balance, 2) }}</span><span class="coin" :aria-label="$t('ui.s_d940a38dce')">K</span></span>
       </div>
 
       <p class="muted profile-hint">
-        Пополнение/вывод работают через <b>тикеты</b>: пользователь создаёт заявку, админ подтверждает или отклоняет.
+        {{ $t('ui.s_457727a7c0') }} <b>{{ $t('ui.s_30b0348a35') }}</b>{{ $t('ui.s_5e0aae9c74') }}
       </p>
 
       <div class="grid grid-2 profile-panels">
         <div class="card2">
-          <b>Пополнение</b>
+          <b>{{ $t('ui.s_9edfcfc6ba') }}</b>
           <div class="row" style="gap:10px; margin-top:10px; flex-wrap:wrap;">
             <input class="input" type="number" v-model.number="amount" min="1" />
             <button class="btn btn-primary" @click="requestDeposit" :disabled="loading">Создать тикет</button>
@@ -98,7 +98,7 @@ async function refreshAll(){
         </div>
 
         <div class="card2">
-          <b>Вывод</b>
+          <b>{{ $t('ui.s_79cabd47b2') }}</b>
           <div class="row" style="gap:10px; margin-top:10px; flex-wrap:wrap;">
             <input class="input" type="number" v-model.number="amount2" min="1" />
             <button class="btn btn-primary" @click="requestWithdraw" :disabled="loading">Создать тикет</button>
@@ -111,12 +111,12 @@ async function refreshAll(){
 
     <div class="card">
       <div class="row-between">
-        <h3 style="margin:0;">Мои тикеты</h3>
+        <h3 style="margin:0;">{{ $t('ui.s_3f0a73cab1') }}</h3>
         <button class="btn" @click="refreshAll" :disabled="loading">Refresh</button>
       </div>
 
-      <div v-if="loading" class="muted" style="margin-top:12px;">Загрузка...</div>
-      <div v-else-if="mineSafe.length === 0" class="muted" style="margin-top:12px;">Тикетов пока нет.</div>
+      <div v-if="loading" class="muted" style="margin-top:12px;">{{ $t('ui.s_43e40d49fd') }}</div>
+      <div v-else-if="mineSafe.length === 0" class="muted" style="margin-top:12px;">{{ $t('ui.s_c7a9d14173') }}</div>
 
       <div v-else class="grid" style="gap:10px; margin-top:12px;">
         <div v-for="t in mineSafe" :key="String(t.id)" class="card2 row-between" style="gap:12px;">

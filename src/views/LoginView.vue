@@ -33,18 +33,18 @@ async function submit() {
   <div class="auth">
     <div class="card">
       <div class="head">
-        <h1>Вход</h1>
-        <p class="muted">Введи никнейм или Discord и пароль.</p>
+        <h1>{{ $t('ui.s_4c3fdc5cab') }}</h1>
+        <p class="muted">{{ $t('ui.s_efe1b73267') }}</p>
       </div>
 
       <form class="form" @submit.prevent="submit">
         <label class="field">
-          <span class="label">Никнейм или Discord</span>
-          <input v-model="login" type="text" autocomplete="username" placeholder="nickname / discord" required />
+          <span class="label">{{ $t('ui.s_634e4413b8') }}</span>
+          <input v-model="login" type="text" autocomplete="username" :placeholder="$t('ui.s_873362e50a')" required />
         </label>
 
         <label class="field">
-          <span class="label">Пароль</span>
+          <span class="label">{{ $t('ui.s_5ebe553e01') }}</span>
           <input v-model="password" type="password" autocomplete="current-password" placeholder="••••••••" required />
         </label>
 
@@ -55,8 +55,8 @@ async function submit() {
         </button>
 
         <p class="hint">
-          Нет аккаунта?
-          <RouterLink class="link" :to="{ name: 'register' }">Регистрация</RouterLink>
+          {{ $t('ui.s_6b3744217d') }}
+          <RouterLink class="link" :to="{ name: 'register' }">{{ $t('ui.s_0b93f81293') }}</RouterLink>
         </p>
       </form>
     </div>

@@ -305,19 +305,19 @@ onBeforeUnmount(() => stopAnim())
         <template #summary>
           <div class="summary">
             <div class="row-between">
-              <span class="muted">Payout</span>
+              <span class="muted">{{ $t('ui.s_ea1c527187') }}</span>
               <span class="num">x{{ fmt(multiplier, 4) }}</span>
             </div>
             <div class="row-between">
-              <span class="muted">Profit on win</span>
+              <span class="muted">{{ $t('ui.s_047de663a9') }}</span>
               <span class="num">{{ fmt(profitOnWin, 4) }}</span>
             </div>
             <div class="row-between">
-              <span class="muted">Win Chance</span>
+              <span class="muted">{{ $t('ui.s_ebeefd375d') }}</span>
               <span class="num">{{ fmt(winChance, 2) }}%</span>
             </div>
             <div class="row-between">
-              <span class="muted">Roll Over</span>
+              <span class="muted">{{ $t('ui.s_3245db459e') }}</span>
               <span class="num">{{ fmt(rollOver, 2) }}</span>
             </div>
           </div>

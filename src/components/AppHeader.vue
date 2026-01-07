@@ -30,12 +30,12 @@ async function logout(){
       </div>
 
       <nav class="row">
-        <RouterLink class="badge" to="/roulette">Games</RouterLink>
-        <RouterLink class="badge" to="/cases">Cases</RouterLink>
-        <RouterLink v-if="auth.user" class="badge" to="/profile">Profile</RouterLink>
-        <RouterLink v-if="auth.isAdmin" class="badge" to="/admin">Admin</RouterLink>
+        <RouterLink class="badge" to="/roulette">{{ $t('ui.s_251bd81438') }}</RouterLink>
+        <RouterLink class="badge" to="/cases">{{ $t('ui.s_b1f0b866ff') }}</RouterLink>
+        <RouterLink v-if="auth.user" class="badge" to="/profile">{{ $t('ui.s_cce99c598c') }}</RouterLink>
+        <RouterLink v-if="auth.isAdmin" class="badge" to="/admin">{{ $t('ui.s_e3afed0047') }}</RouterLink>
 
-        <RouterLink v-if="!auth.user" class="btn btn-primary" to="/login">Login</RouterLink>
+        <RouterLink v-if="!auth.user" class="btn btn-primary" to="/login">{{ $t('ui.s_99dea78007') }}</RouterLink>
         <button v-else class="btn" @click="logout">Logout</button>
         <button class="btn sfx" @click="toggleSfx" title="Sound">
           <span class="ic" aria-hidden="true">{{ sfxOn ? '🔊' : '🔇' }}</span>
