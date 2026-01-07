@@ -136,12 +136,6 @@ export const routes = [
     path: '/admin',
     name: 'admin',
     component: AdminView,
-    beforeEnter: () => {
-      // во время SSR/SSG
-      if (typeof window === 'undefined') return true
-
-      return checkAdminAccess() ? true : { name: 'home' }
-    },
     meta: {
       title: 'Admin — Casino Simulator',
       description: 'Admin panel.',
