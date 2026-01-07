@@ -1,7 +1,6 @@
 import type { Router } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
-import { checkAdminAccess } from '../utils/adminGuard'
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
