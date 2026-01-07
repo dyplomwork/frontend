@@ -109,7 +109,7 @@ export default {
 
     "s_4b49f253c1": "Nickname",
     // NOTE: vue-i18n uses "@" for linked messages. Use "@@" to render a literal "@".
-    "s_d46406af91": "@@user or user#1234",
+    "s_d46406af91": "user or user#1234",
     "s_c7665a90a1": "minimum 8 characters",
     "s_b4c974186e": "Create an account — nickname, Discord and password.",
     "s_3fea2b66f7": "Nickname",
