@@ -4,21 +4,10 @@ import { useBigWinOverlay } from '../composables/useBigWinOverlay'
 import { formatNumber } from '../utils/format'
 import { isSfxOn, sfx } from '../utils/sfx'
 
-/**
- * Global BIG/MEGA/SUPER win overlay.
- *
- * Trigger rule (consistent across games): show when totalWin >= totalBet * 20.
- * Tier is resolved from the round multiplier (totalWin / totalBet):
- *  - 20x..49.99x  -> BIG WIN
- *  - 50x..99.99x  -> MEGA WIN
- *  - 100x+        -> SUPER WIN
- */
 export const useBigWinStore = defineStore('bigwin', () => {
   const soundOn = computed(() => isSfxOn())
   const volume = computed(() => 0.35)
 
-  // IMPORTANT: in this project currency is displayed in "K-units" by default.
-  // 1000 K = 1 M, 1_000_000 K = 1 B, 1_000_000_000 K = 1 T
   const shortMoney = (v: number) => {
     const n = Number(v) || 0
     const abs = Math.abs(n)
@@ -30,7 +19,6 @@ export const useBigWinStore = defineStore('bigwin', () => {
 
   const { bigWin, showBigWin, dispose } = useBigWinOverlay({
     formatNumber: (v, digits = 2) => {
-      // keep 2 decimals visually stable; project formatter already trims trailing zeros
       return formatNumber(v, digits)
     },
     sfx,
@@ -54,7 +42,6 @@ export const useBigWinStore = defineStore('bigwin', () => {
     }
   }
 
-  // Backward-compatible alias (some views used bigwinStore.show(mult, amount))
   const show = (mult: number, amount: number) => showBigWin(mult, amount)
 
   return { bigWin, showBigWin, show, maybeShow, dispose }

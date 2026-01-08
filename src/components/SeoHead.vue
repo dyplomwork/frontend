@@ -13,7 +13,6 @@ const fallbackDescription =
 const title = computed(() => (route.meta?.title as string) || fallbackTitle)
 const description = computed(() => (route.meta?.description as string) || fallbackDescription)
 
-// Optional: set VITE_SITE_URL in Vercel env (e.g. https://your-domain.com)
 const siteUrl = (import.meta.env.VITE_SITE_URL as string | undefined)?.replace(/\/$/, '')
 const canonical = computed(() => (siteUrl ? `${siteUrl}${route.fullPath}` : undefined))
 

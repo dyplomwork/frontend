@@ -34,7 +34,6 @@ const CHIP_W = 120
 const GAP = 10
 const PAD = 40
 
-// ✅ +15% дольше
 const animDurationSingle = Math.round(7800 * 1.15) // 8970ms
 const animEasing = 'cubic-bezier(.15,.9,.2,1)'
 
@@ -42,7 +41,6 @@ const animEasing = 'cubic-bezier(.15,.9,.2,1)'
 const quickOpen = ref(false)
 const QUICK_KEY = 'cases_quick_open'
 
-// ---------- history (localStorage) ----------
 const HISTORY_LIMIT = 20
 const history = ref<HistoryItem[]>([])
 
@@ -75,10 +73,8 @@ function clearHistory(){
   localStorage.removeItem(historyKey(id))
 }
 
-// при смене caseId — перезагрузить историю
 watch(() => c.value?.id, () => loadHistory())
 
-// ---------- utils ----------
 function waitFrame(){
   return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
 }
@@ -116,7 +112,6 @@ function pickLootWeighted(): ReelItem {
   return { label: last.label, amount: last.amount, icon: lootIcon(last.amount) }
 }
 
-// обычная длинная лента для анимации
 function buildStrip(winItem: ReelItem){
   const total = 70
   const winIndex = 52
@@ -170,7 +165,6 @@ function clearCleanup(){
 }
 onBeforeUnmount(() => clearCleanup())
 
-// ✅ главный фикс: каждый запуск спина начинается с нуля
 function hardResetStrip(){
   const el = stripEl.value
   if(!el) return
@@ -186,7 +180,6 @@ function hardResetStrip(){
   el.style.willChange = 'transform'
 }
 
-// ✅ делаем transform сразу (без анимации) — для Quick Open “как будто уже прокрутилось”
 function snapToX(x: number){
   const el = stripEl.value
   if(!el) return
@@ -198,7 +191,6 @@ function snapToX(x: number){
   el.style.willChange = ''
 }
 
-// ✅ надёжная анимация: transitionend + fallback-таймер
 function animateToX(x: number, durationMs: number, easing: string){
   return new Promise<void>((resolve) => {
     const el = stripEl.value
@@ -219,7 +211,6 @@ function animateToX(x: number, durationMs: number, easing: string){
     }
 
     const onEnd = (e: Event) => {
-      // иногда прилетает transitionend от вложенных — фильтруем
       if(e.target !== el) return
       finish()
     }
@@ -231,14 +222,12 @@ function animateToX(x: number, durationMs: number, easing: string){
       el.style.transform = `translate3d(${x}px,0,0)`
     })
 
-    // fallback: если transitionend не пришел
     transitionFallback = window.setTimeout(() => {
       finish()
     }, durationMs + 120)
   })
 }
 
-// ---------- main ----------
 async function openOne(){
   message.value = ''
   result.value = null
@@ -271,7 +260,6 @@ async function openOne(){
 
   const winItem: ReelItem = { label: wLabel, amount: wAmount, icon: lootIcon(wAmount) }
 
-  // ✅ Quick Open: показать “готовую прокрутку” (5 карточек)
   if(quickOpen.value){
     const { winIndex } = buildQuickStrip(winItem)
     await nextTick()
@@ -280,7 +268,6 @@ async function openOne(){
     snapToX(x)
 
 
-    // маленький приятный флип (без прокрутки)
     sfx('case_stop')
     sfx('win')
     result.value = wLabel
@@ -289,7 +276,6 @@ async function openOne(){
     return
   }
 
-  // обычная анимация (длиннее на 15%)
   const { winIndex } = buildStrip(winItem)
   await nextTick()
 

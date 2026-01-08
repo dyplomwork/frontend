@@ -1,9 +1,5 @@
 import type { CaseDef } from '../types'
 
-/**
- * Must match cases-game registry keys on backend (CaseRegistry.register(key, ...)).
- * Current backend keys: "starter" and "premium".
- */
 export const CASES: CaseDef[] = [
   {
     id: 'starter',

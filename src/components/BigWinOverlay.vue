@@ -33,5 +33,3 @@ const fmt = (v: number | string, d = 2) => formatNumber(v, d)
     </div>
   </transition>
 </template>
-
-

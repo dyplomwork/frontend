@@ -1,7 +1,3 @@
-/**
- * Lightweight SFX using WebAudio (no assets needed).
- * Works in modern browsers. Intended for demo/simulator only.
- */
 const KEY = 'casino_sfx_on_v1'
 
 let ctx: AudioContext | null = null
@@ -85,15 +81,9 @@ export type SfxKey =
   | 'ui_tick'
   | 'big_win'
 
-/**
- * Accepts both known keys (typed) and any string (to avoid TS friction when integrating).
- * Unknown keys are ignored at runtime.
- */
 export function sfx(kind: SfxKey | string) {
   if(!isSfxOn()) return
 
-  // Quality: throttle repetitive sounds and limit "polyphony" per kind.
-  // This keeps tick sounds from spamming on slower devices.
   const now = performance.now()
   const minInterval: Partial<Record<SfxKey, number>> = {
     dice_tick: 180,
@@ -111,8 +101,6 @@ export function sfx(kind: SfxKey | string) {
     last.set(kind, now)
   }
 
-  // IMPORTANT: keep this demo sfx lightweight (no assets). We just vary pitch + noise.
-  // alias some UI keys to keep older code working
   const k = kind === 'ui_tick' ? 'click' : kind === 'plinko_hit' ? 'plinko_tick' : kind
 
   switch(k){

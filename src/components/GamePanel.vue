@@ -70,5 +70,3 @@ function onPlay(){ emit('play') }
     <slot name="summary" />
   </div>
 </template>
-
-

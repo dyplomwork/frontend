@@ -117,10 +117,8 @@ async function refreshSelected() {
       list.value = list.value.map((x) => (x.id === selected.value!.id ? selected.value! : x))
     }
 
-    // reset local approval pick if now locked
     if (yourLockedSide.value) mySide.value = ''
 
-    // if finished — play coin reveal
     if (selected.value.status === 'FINISHED' && selected.value.resultSide) {
       showCoinResult(selected.value.resultSide)
     }
@@ -151,7 +149,6 @@ async function createBattle() {
     createOpen.value = false
     selectedId.value = b.id
     await refreshList()
-    // backend later will change balance; for now keep consistent
     await auth.fetchBalance().catch(() => {})
   } catch (e: any) {
     error.value = e?.message || 'Ошибка'
@@ -188,13 +185,11 @@ async function cancelBattle() {
 }
 
 function showCoinResult(side: CoinSide) {
-  // if already showing same result — skip
   if (coinState.value === 'result' && coinResult.value === side) return
 
   coinState.value = 'flipping'
   coinResult.value = ''
   coinTick.value += 1
-  // end after animation, then show result
   if (coinTimer) window.clearTimeout(coinTimer)
   coinTimer = window.setTimeout(() => {
     coinState.value = 'result'
@@ -209,7 +204,6 @@ async function approve() {
   if (!auth.user) return (error.value = 'Нужен вход')
   if (!canApprove.value) return
 
-  // choose side if not locked
   const locked = yourLockedSide.value
   const sideToSend = locked || (mySide.value ? (mySide.value as CoinSide) : null)
   if (!sideToSend) return (error.value = 'Выбери сторону (Heads/Tails)')
@@ -231,7 +225,6 @@ async function approve() {
 }
 
 const visibleList = computed(() => {
-  // emphasize open / approving, newest first
   const arr = [...list.value]
   const pr = (s: string) => (s === 'OPEN' ? 0 : s === 'APPROVING' ? 1 : s === 'FULL' ? 2 : s === 'FINISHED' ? 3 : 4)
   return arr.sort((a, b) => {

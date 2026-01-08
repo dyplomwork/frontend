@@ -41,7 +41,6 @@ const flashZone = ref<'win' | 'lose' | ''>('')
 const trailOn = ref(false)
 const linePulse = ref(false)
 
-// Smooth but NO up/down wobble
 const puckScale = ref(1)
 const puckGlow = ref(0)
 
@@ -52,13 +51,10 @@ const barShake = ref(false)
 
 const resultLabel = computed(() => needle.value.toFixed(2))
 
-// ===== Ultra-smooth needle (low-pass) =====
 const needleTarget = ref(needle.value)
 
-// dt in seconds + low-pass smoothing
 let prevFrameTs = 0
 const smooth = (cur: number, target: number, dt: number, tau = 0.09) => {
-  // tau: больше = более "масляно"
   const a = 1 - Math.exp(-dt / tau)
   return cur + (target - cur) * a
 }
@@ -98,7 +94,6 @@ function triggerBarShake() {
 // ==== Slider behavior ====
 function recalcLocalPayout() {
   const wc = Math.max(0.01, winChance.value)
-  // classic 1% edge: multiplier = 99 / winChance
   payoutMul.value = round2(99 / wc)
 }
 
@@ -144,7 +139,6 @@ async function play() {
   const resultIsWin = !!res.isWin
   const resultPayout = Number(res.payout)
 
-  // animation: spin → brake → snap
   const SPIN_MS = 1100
   const BRAKE_MS = 950
   const SNAP_MS = 360
@@ -372,7 +366,6 @@ onBeforeUnmount(() => stopAnim())
             </div>
           </div>
 
-          <!-- ✅ bubble вынесена в отдельный слой -->
           <div class="thumb-bubble-layer" :style="{ left: rollOver + '%' }" aria-hidden="true">
             <div class="thumb-bubble">
               <div class="bubble-top">ROLL OVER</div>
@@ -508,11 +501,10 @@ onBeforeUnmount(() => stopAnim())
   overflow: hidden;
   z-index: 1;
 }
-
-/* ✅ мягче и меньше shake */
 .bar.stake.shake {
   animation: barShakeSoft 180ms ease-in-out;
 }
+
 @keyframes barShakeSoft {
   0% {
     transform: translateX(0);
@@ -701,7 +693,6 @@ onBeforeUnmount(() => stopAnim())
     0 8px 18px rgba(0, 0, 0, 0.25);
 }
 
-/* ✅ bubble теперь в отдельном слое */
 .thumb-bubble-layer {
   position: absolute;
   top: 50%;

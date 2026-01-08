@@ -25,14 +25,12 @@ type BetKey =
 const auth = useAuthStore()
 const bigwinStore = useBigWinStore()
 
-// ✅ Chip denominations (K-currency) — removed 2 and 25
 const chips = [1, 5, 10, 50, 100, 500, 1000, 5000]
 const chip = ref(10)
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100
 
-// ✅ Bet state is ONLY amount (no color stored)
 type BetState = { amount: number }
 const bets = ref<Record<string, BetState>>({})
 const history = ref<{ key: BetKey; amount: number }[]>([])
@@ -76,7 +74,6 @@ function colorOf(n: number) {
   return redSet.has(n) ? 'red' : 'black'
 }
 
-// --- Hover helpers: highlight covered numbers when hovering outside-bet buttons ---
 const hoverBet = ref<BetKey | ''>('')
 function setHover(key: BetKey | '') {
   hoverBet.value = key
@@ -110,7 +107,6 @@ const hoverNums = computed(() => {
 
 const totalBet = computed(() => Object.values(bets.value).reduce((a, b) => a + (b?.amount ?? 0), 0))
 
-// --- Tier logic (depends on SUM; aligned with your chip nominals) ---
 type Tier = 't1' | 't2' | 't3' | 't4' | 't5' | 't6' | 't7' | 't8'
 function tierForValue(v: number): Tier {
   if (v >= 5000) return 't8'
@@ -126,7 +122,6 @@ function betBadgeClass(v: number) {
   return `bet-${tierForValue(v)}`
 }
 
-// ✅ Chip palette (single source of truth; no 2 and no 25)
 const CHIP_COLORS: Record<number, string> = {
   1: '#ec4899', // pink
   5: '#06b6d4', // cyan
@@ -145,7 +140,6 @@ function chipStyle(v: number) {
   return { '--chip': CHIP_COLORS[v] ?? '#60a5fa' } as Record<string, string>
 }
 
-// ✅ Color derived from TOTAL bet amount (sum) -> nearest chip nominal color
 function nearestChipDenom(sum: number): number {
   const v = Math.max(0, Number(sum) || 0)
   let best = CHIP_DENOMS[0]
@@ -185,7 +179,6 @@ function addBet(key: BetKey) {
   sfx('click')
 }
 
-// ПКМ: минус текущий chip, Shift+ПКМ: убрать всю ставку поля
 function removeBetOnce(key: BetKey) {
   if (spinning.value) return
   message.value = ''
@@ -257,12 +250,11 @@ function payoutFor(key: BetKey, win: number) {
   if (key === 'Ряд3') return win !== 0 && (win - 1) % 3 === 0 ? 3 : 0
   return 0
 }
-
-/** ✅ IMPORTANT: European wheel (0 только один раз) */
-const wheelNumbers: number[] = [
+const wheelNumbers = [
   0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31,
   9, 22, 18, 29, 7, 28, 12, 35, 3, 26,
 ]
+
 const SLICE_COUNT = computed(() => wheelNumbers.length)
 const SLICE_ANGLE = computed(() => 360 / SLICE_COUNT.value)
 
@@ -362,8 +354,6 @@ onBeforeUnmount(() => {
   if (highlightTimer !== null) window.clearTimeout(highlightTimer)
 })
 
-/** ✅ TEMP: allow spin regardless of auth/bets/balance */
-const TEMP_ALLOW_FREE_SPIN = false
 
 async function spin() {
   if (spinning.value) return

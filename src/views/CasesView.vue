@@ -6,7 +6,6 @@ import { formatNumber } from '../utils/format'
 const game = useGameStore()
 
 onMounted(() => {
-  // hydrate cases from backend (keeps local fallback if service is unavailable)
   game.loadCases().catch(() => {})
 })
 

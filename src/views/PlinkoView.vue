@@ -62,7 +62,6 @@ const multipliers = ref<number[]>(fallbackTable())
 const loadingMult = ref(false)
 
 async function loadMultipliers() {
-  // During prerender (vite-ssg) there is no API / no browser.
   if (typeof window === 'undefined') return
   loadingMult.value = true
   try {
@@ -105,10 +104,8 @@ const table = computed(() =>
 )
 
 const bet = computed(() => Math.max(0, Number(amount.value) || 0))
-// User-requested hard limit: you shouldn't be able to input >50 balls.
 const ballsN = computed(() => Math.max(1, Math.min(50, Number(ballCount.value) || 1)))
 
-// Keep the input itself clamped (HTML max can be bypassed by typing).
 watch(ballCount, (v) => {
   const n = Math.max(1, Math.min(50, Number(v) || 1))
   if (n !== Number(v)) ballCount.value = n
@@ -220,7 +217,6 @@ function setGlow(i: number){
 
 function easeInOutCubic(t: number){ return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3)/2 }
 
-// deterministic tiny jitter (so same path isn't a clone, but landing stays correct)
 function jitter01(seed: number){
   const x = Math.sin(seed) * 10000
   return x - Math.floor(x) // 0..1
@@ -238,7 +234,6 @@ async function tweenTo(ball: Ball, toX: number, toY: number, ms: number, arc = 0
       const p = Math.min(1, (now - start) / Math.max(1, ms))
       const k = easeInOutCubic(p)
       const x = fromX + (toX - fromX) * k
-      // arc > 0 => lift up in middle (negative y)
       const lift = arc > 0 ? Math.sin(Math.PI * k) * arc : 0
       const y = fromY + (toY - fromY) * k - lift
       ball.x = x
@@ -251,7 +246,6 @@ async function tweenTo(ball: Ball, toX: number, toY: number, ms: number, arc = 0
 }
 
 async function bump(ball: Ball, strength = 6){
-  // tiny "thud": quick up then settle + a bit of scale
   const baseScale = ball.scale || 1
   ball.scale = baseScale * 1.12
   await tweenTo(ball, ball.x, ball.y - strength, 50, 0)
@@ -286,11 +280,6 @@ function popcount32(x: number) {
   return c
 }
 
-/**
- * mask -> rights
- * бит r = решение на уровне r: 1 = вправо, 0 = влево
- * landing = кол-во единиц (сколько раз пошёл вправо)
- */
 function traceToBallResult(trace: ApiTrace): BallResult {
   const mask = (Number(trace.mask) >>> 0)
   const rights = Array.from({ length: rows.value }, (_, r) => ((mask >>> r) & 1) === 1)
@@ -314,7 +303,6 @@ async function dropBall(ball: Ball, result: BallResult) {
   for (let r = 0; r < rows.value; r++) {
     const hit = pegPos(r, idx)
 
-    // small deterministic variation per row/ball
     const sx = jitterSigned(ball.id * 0.001 + r * 1.31, 1.6)
     const sy = jitterSigned(ball.id * 0.002 + r * 2.17, 0.8)
 
@@ -326,10 +314,8 @@ async function dropBall(ball: Ball, result: BallResult) {
     try { sfx('plinko_hit') } catch { try { sfx('plinko_tick') } catch {} }
     await bump(ball, 5)
 
-    // choose direction from trace mask
     if (result.rights[r]) idx += 1
 
-    // glide to next row (slightly different arc)
     if (r < rows.value - 1) {
       const next = pegPos(r + 1, idx)
       const nx = jitterSigned(ball.id * 0.003 + r * 3.11, 1.3)
@@ -343,7 +329,6 @@ async function dropBall(ball: Ball, result: BallResult) {
   // approach bin
   await tweenTo(ball, b.x, b.y - 18, 150, 12)
 
-  // settle: small bounce (never below bin)
   await bump(ball, 6)
 
   ball.landing = idx
@@ -356,7 +341,6 @@ async function dropBall(ball: Ball, result: BallResult) {
     try { sfx('win') } catch {}
     ball.msg = `x${mult} → +${fmt(win, 2)}`
 
-    // per-ball big win (same as before)
     // big/mega/super overlay (global)
     bigwinStore.maybeShow(win, bet.value)
   } else {
@@ -465,7 +449,6 @@ if (typeof window !== 'undefined') {
 }
 
 </script>
-
 
 
 <template>

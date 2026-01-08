@@ -39,7 +39,6 @@ async function toggle() {
   if (props.disabled) return
   open.value = !open.value
   if (open.value) {
-    // set active to selected option or first enabled
     const selIdx = props.options.findIndex((o) => Object.is(o.value, props.modelValue))
     activeIndex.value = selIdx >= 0 ? selIdx : props.options.findIndex((o) => !o.disabled)
     await nextTick()

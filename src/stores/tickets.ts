@@ -52,7 +52,6 @@ export const useTicketsStore = defineStore('tickets', {
     },
     async approve(id: string){
       if(!isBrowser()) return
-      // Backend expects an explicit status transition.
       await api(`/api/v1/admin/tickets/${id}`, {
         method:'PATCH',
         body: { status: 'APPROVED' },
@@ -62,7 +61,6 @@ export const useTicketsStore = defineStore('tickets', {
     },
     async reject(id: string, note?: string){
       if(!isBrowser()) return
-      // Reject must also explicitly set status; note is optional.
       await api(`/api/v1/admin/tickets/${id}`, {
         method:'PATCH',
         body: { status: 'REJECTED', note },

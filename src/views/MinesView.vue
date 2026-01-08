@@ -58,15 +58,11 @@ const canStart = computed(
 const canClick = computed(() => inGame.value && !lost.value)
 
 onMounted(async () => {
-  // Important: after reload auth may not be hydrated yet. Without token the session call fails -> UI thinks game is idle,
-  // but backend keeps the running session ("game started"), and player can't resume.
   try {
     if (!auth.user) await auth.fetchBalance()
   } catch {
-    // ignore, session restore below will fail without auth
   }
 
-  // If there's an active session on backend, restore it (opened cells, bet, mines)
   try {
     const s = await minesGetSession()
     bet.value = Number(s.bet)
@@ -81,7 +77,6 @@ onMounted(async () => {
     await refreshMultiplierFromServer()
     await refreshNextMultiplierFromServer()
   } catch {
-    // no active session -> ignore
   }
 })
 
@@ -108,7 +103,6 @@ const nextNetGain = computed(() => {
 })
 
 function buildGrid() {
-  // backend owns mine placement; frontend keeps only UI state
   grid.value = Array.from({ length: SIZE }, (_, i) => ({ id: i, hasMine: false, revealed: false }))
 }
 
@@ -161,7 +155,6 @@ async function start() {
   sfx('click')
 
 
-  // New round: cancel any delayed reveals from previous game
   bumpRound()
   clearAllTimeouts()
   explodingId.value = null
@@ -171,7 +164,6 @@ async function start() {
   try {
     await minesStart({ bet: Number(bet.value), mines: Number(mines.value) })
 
-    // game started: reset UI state
     buildGrid()
     inGame.value = true
     lost.value = false
@@ -183,7 +175,6 @@ async function start() {
     // balance decreased on backend
     await auth.fetchBalance()
 
-    // try to sync session (opened cells etc.)
     try {
       const s = await minesGetSession()
       safePicks.value = (s.opened?.length ?? 0)
@@ -192,7 +183,6 @@ async function start() {
     } catch {}
   } catch (e: any) {
     message.value = e?.message ? String(e.message) : 'Ошибка старта'
-    // If backend says the game is already started, try to restore the existing session
     try {
       const s = await minesGetSession()
       bet.value = Number(s.bet)
@@ -223,9 +213,7 @@ async function reveal(cell: Cell) {
   try {
     const res = await minesStep({ row, col })
 
-    // If finish=true => we hit a mine. Backend returns full field.
     if (res.finish) {
-      // mark clicked cell as mine immediately for correct animation
       cell.revealed = true
       cell.hasMine = true
       explodingId.value = cell.id
@@ -241,10 +229,8 @@ async function reveal(cell: Cell) {
       message.value = 'Бомба! Проигрыш'
       sfx('lose')
 
-      // After the explosion, reveal whole field (not only "opened")
       const rid = roundId.value
       setSafeTimeout(() => {
-        // If a new round has started, ignore late reveal
         if (rid !== roundId.value) return
         if (res.field) revealWholeField(res.field)
         explodingId.value = null
@@ -259,8 +245,6 @@ async function reveal(cell: Cell) {
     cell.hasMine = false
     safePicks.value += 1
 
-    // Always compute the *current* multiplier from opened cells.
-    // `res.nextMultiplier` (if provided) is the multiplier for the *next* pick.
     await refreshMultiplierFromServer()
     if (res.nextMultiplier != null) {
       nextMultiplier.value = Number(res.nextMultiplier)
@@ -268,14 +252,11 @@ async function reveal(cell: Cell) {
       await refreshNextMultiplierFromServer()
     }
 
-    // If all safe cells are opened, there is no next move — auto cashout.
     if (safePicks.value >= gems.value) {
       await cashOut()
     }
   } catch (e: any) {
-    // backend might throw on invalid state / mine hit
     message.value = e?.message ? String(e.message) : 'Ошибка'
-    // try to fetch full field to reveal (if game already ended)
     try {
       const fin = await minesFinish()
       revealWholeField(fin.field)
@@ -304,7 +285,6 @@ async function cashOut() {
 	    // BIG/MEGA/SUPER overlay (global)
 	    bigwinStore.maybeShow(win, bet.value)
 
-    // Wait a bit so user sees the win pulse, then reveal the whole field for inspection
     const rid = roundId.value
     setSafeTimeout(() => {
       if (rid !== roundId.value) return
@@ -330,13 +310,11 @@ async function randomPick() {
 async function reset() {
   sfx('click')
 
-  // If a game is currently running, finish it to clear backend session
   if (inGame.value && !lost.value) {
     try {
       await minesFinish()
       await auth.fetchBalance()
     } catch {
-      // ignore network/backend errors here - still reset UI
     }
   }
 

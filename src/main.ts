@@ -9,10 +9,6 @@ import { routes, addAuthGuards } from './router'
 import { useAuthStore } from './stores/auth'
 
 import './styles/index.css'
-/**
- * ViteSSG gives us prerendering (static HTML per route) which helps Google index a SPA.
- * Vercel can deploy it as a static site from /dist.
- */
 
 const i18n = createI18n({
   legacy: false,
@@ -35,15 +31,12 @@ export const createApp = ViteSSG(
         i18n.global.locale.value = savedLocale
       }
     }
-    // Head manager is installed by vite-ssg via clientOptions { useHead: true }
 
-    // In client only, init auth (uses localStorage).
     if (isClient) {
       const auth = useAuthStore(pinia)
       await auth.init()
     }
 
-    // Install auth guards on the router created by ViteSSG.
     addAuthGuards(router)
   },
   { useHead: true }

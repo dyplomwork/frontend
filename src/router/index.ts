@@ -14,7 +14,6 @@ import CoinFlipView from '../views/CoinFlipView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import AdminView from '../views/AdminView.vue'
 
-// NOTE: exporting routes helps SSG/prerendering.
 export const routes = [
   {
     path: '/',
@@ -152,13 +151,9 @@ export function addAuthGuards(r: Router) {
   })
 
 
-  // Refresh balance on every page load (route change).
   r.afterEach(() => {
-    // During SSG/prerender there is no window/localStorage.
     if (typeof window === 'undefined') return
     const auth = useAuthStore()
     if (auth.isAuthed) auth.fetchBalance().catch(() => {})
   })
 }
-
-

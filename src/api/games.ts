@@ -1,14 +1,5 @@
 import { api } from '../utils/api'
 
-/**
- * Game microservices are exposed through the API Gateway with the following prefixes:
- *  - /api/v1/games/dice
- *  - /api/v1/games/roulette
- *  - /api/v1/games/mines
- *  - /api/v1/games/cases
- *
- * Each microservice internally uses /game/* routes.
- */
 
 export type DicePlayRequest = { bet: number; rollOver: number }
 export type DicePlayResponse = { roll: number; isWin: boolean; payout: number }
@@ -33,7 +24,6 @@ export type RoulettePlayResponse = { number: number; amount: number } // backend
 
 export function normalizeRouletteKey(key: string): string {
   const k = key.trim()
-  // Frontend uses RU labels for dozens/rows in some UIs.
   if (k === 'Диапазон1') return 'range:1'
   if (k === 'Диапазон2') return 'range:2'
   if (k === 'Диапазон3') return 'range:3'
@@ -41,7 +31,6 @@ export function normalizeRouletteKey(key: string): string {
   if (k === 'Ряд2') return 'row:2'
   if (k === 'Ряд3') return 'row:3'
 
-  // Some older UI variants used doz/col.
   if (k === 'doz1') return 'range:1'
   if (k === 'doz2') return 'range:2'
   if (k === 'doz3') return 'range:3'
@@ -73,7 +62,6 @@ export async function minesGetSession() {
 }
 
 export async function minesStart(req: MinesStartRequest) {
-  // backend returns 200 with no body
   return api<void>('/api/v1/games/mines/game/start', {
     method: 'POST',
     json: true,
@@ -97,7 +85,6 @@ export async function minesFinish() {
 
 export async function minesMultiplier(opened: number, mines: number) {
   const q = new URLSearchParams({ opened: String(opened), mines: String(mines) })
-  // backend returns BigDecimal as number-like
   return api<number>(`/api/v1/games/mines/game/multiplier?${q.toString()}`)
 }
 
@@ -112,7 +99,6 @@ export async function casesPlay(type: string) {
 }
 
 // cases-service public DTOs
-// NOTE: list endpoint does not include the registry key (id), only name/price/items.
 export type CaseItemDTO = { name: string; chance: number; prize: number }
 export type CaseDTO = { id?: string; name: string; price: number; items: CaseItemDTO[] }
 

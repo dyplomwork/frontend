@@ -24,7 +24,6 @@ export type BattleDTO = {
 export type CreateBattleRequest = { amount: number; side?: CoinSide | null }
 export type ApproveBattleRequest = { id: string; side?: CoinSide | null }
 
-// --- MOCK storage (for frontend development while backend is not ready) ---
 const LS_KEY = 'casino_mock_battles_v1'
 
 function envBool(key: string, def = true): boolean {
@@ -87,7 +86,6 @@ async function tryApi<T>(path: string, opts: any): Promise<T> {
 
 function shouldFallback(err: any): boolean {
   const st = Number(err?.status || 0)
-  // 0 = network/SSR, 404/405 = route not ready yet
   return MOCK_ENABLED && (st === 0 || st === 404 || st === 405)
 }
 
@@ -152,7 +150,6 @@ export async function battlesJoin(id: string): Promise<BattleDTO> {
     b.joinerId = String(u.id)
     b.joinerNick = u.nickname
     b.status = 'APPROVING'
-    // assign joiner side if creator locked a side
     if (b.creatorSide) b.joinerSide = b.creatorSide === 'heads' ? 'tails' : 'heads'
     b.approvals = { ...(b.approvals || {}), [String(u.id)]: false }
     list[idx] = { ...b }
@@ -194,11 +191,9 @@ export async function battlesApprove(req: ApproveBattleRequest): Promise<BattleD
     const isJoiner = b.joinerId === String(u.id)
     if (!isCreator && !isJoiner) throw new ApiError(403, 'Not a participant')
 
-    // set side if not yet set
     if (req.side) {
       if (isCreator) b.creatorSide = req.side
       if (isJoiner) b.joinerSide = req.side
-      // if creator chose, auto assign other side if missing
       if (b.creatorSide && !b.joinerSide && b.joinerId) b.joinerSide = b.creatorSide === 'heads' ? 'tails' : 'heads'
       if (b.joinerSide && !b.creatorSide) b.creatorSide = b.joinerSide === 'heads' ? 'tails' : 'heads'
     }

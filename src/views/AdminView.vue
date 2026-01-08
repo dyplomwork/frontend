@@ -30,7 +30,6 @@ type Ticket = {
 }
 
 
-
 const tab = ref<'users' | 'tickets'>('users')
 
 const users = ref<AdminUser[]>([])
@@ -82,8 +81,6 @@ const sortUsersDir = ref<SortDir>('asc')
 const sortTicketsKey = ref<keyof Ticket | ''>('')
 const sortTicketsDir = ref<SortDir>('asc')
 
-// NOTE: In Vue templates refs are auto-unwrapped, so don't pass refs as arguments.
-// Keep tiny wrappers for type-safety and to avoid TS errors.
 function toggleSortUsers(key: keyof AdminUser) {
   if (sortUsersKey.value === key) sortUsersDir.value = sortUsersDir.value === 'asc' ? 'desc' : 'asc'
   else {

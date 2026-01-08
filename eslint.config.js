@@ -6,13 +6,7 @@ import vueParser from 'vue-eslint-parser'
 export default [
   // Ignore
   {
-    ignores: ['dist/**', 'server/**', 'node_modules/**']
-  },
-  // Vue + TS
-  ...vue.configs['flat/recommended'],
-  // TS files
-  {
-    files: ['**/*.ts'],
+    ignores: ['dist*.ts'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
@@ -46,7 +40,6 @@ export default [
       'vue/multi-word-component-names': 'off',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'no-unused-vars': 'off',
-      // This repo focuses on correctness over strict template formatting.
       // Keep the ruleset lightweight to avoid hundreds of non-actionable warnings.
       'vue/max-attributes-per-line': 'off',
       'vue/attributes-order': 'off',

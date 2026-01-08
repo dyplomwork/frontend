@@ -18,9 +18,7 @@ const pending = computed(() => mineSafe.value.filter(t => t.status === 'PENDING'
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 
 
-
 async function loadMineSafe(){
-  // грузим только когда есть вход
   if(!auth.isAuthed) return
   try{
     await tickets.fetchMine()
@@ -30,11 +28,9 @@ async function loadMineSafe(){
 }
 
 onMounted(async () => {
-  // если user уже есть — грузим сразу
   await loadMineSafe()
 })
 
-// если auth поднимется позже (init/login), мы догрузим тикеты
 watch(
   () => auth.isAuthed,
   async (v) => {
@@ -71,7 +67,6 @@ async function requestWithdraw(){
 
 async function refreshAll(){
   await loadMineSafe()
-  // если ты добавил fetchBalance в auth store — подтянем баланс тоже
   await (auth as any).fetchBalance?.().catch(() => {})
 }
 </script>

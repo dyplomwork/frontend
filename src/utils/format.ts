@@ -35,11 +35,6 @@ export function formatNumber(value: number | string, optsOrDecimals?: FormatNumb
   return fracPart ? `${formattedInt}.${fracPart}` : formattedInt
 }
 
-/**
- * Удобный хелпер для денег (K-валюта)
- * Пример:
- *  formatMoney(1234.5) -> "1 234.5 K"
- */
 export function formatMoney(
   value: number | string,
   opts?: {

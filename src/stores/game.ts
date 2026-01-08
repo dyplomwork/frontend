@@ -14,7 +14,6 @@ function dtoToCaseDef(id: string, dto: CaseDTO, fallbackEmoji: string): CaseDef 
       id: `${id}:${idx}`,
       label: String(it.name ?? 'Item'),
       amount: Number(it.prize ?? 0),
-      // backend gives chance in percent (0..100)
       chance: Math.max(0, Number(it.chance ?? 0)) / 100,
     })),
   }
@@ -27,10 +26,6 @@ export const useGameStore = defineStore('game', {
     casesLoading: false,
   }),
   actions: {
-    /**
-     * Loads cases meta from cases microservice and merges it with local UI-only fields (emoji, ids).
-     * If the service is unavailable, keeps the local fallback list.
-     */
     async loadCases(force = false) {
       if (this.casesLoading) return
       if (this.casesLoaded && !force) return
@@ -39,7 +34,6 @@ export const useGameStore = defineStore('game', {
       try {
         const base = [...this.cases]
 
-        // Our backend list endpoint does not include ids, so we hydrate by known registry keys.
         const hydrated = await Promise.all(
           base.map(async (c) => {
             try {
@@ -65,8 +59,6 @@ export const useGameStore = defineStore('game', {
       try {
         const res = await casesPlay(caseId)
 
-        // ✅ Correct balance refresh: the balance is owned by accounts service
-        // and is exposed via /api/v1/accounts/users/me/balance
         await auth.fetchBalance().catch(() => {})
 
         return {

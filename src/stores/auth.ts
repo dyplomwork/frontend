@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { api } from '../utils/api'
-
+import { canUseStorage, clearCachedUser, clearToken, getCachedUser, getToken, setCachedUser, setToken } from '../core/auth/storage'
 export type Role = 'guest' | 'user' | 'admin'
 
 export type User = {
@@ -11,10 +11,6 @@ export type User = {
   balance: number
 }
 
-const LS_TOKEN = 'casino_sim_token_v1'
-const LS_USER = 'casino_sim_user_v1'
-
-const isBrowser = () => typeof window !== 'undefined' && typeof localStorage !== 'undefined'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -29,16 +25,13 @@ export const useAuthStore = defineStore('auth', {
   actions: {
 
     async init(){
-      if(!isBrowser()){
+      if(!canUseStorage()){
         this.user = null
         return
       }
-      const token = localStorage.getItem(LS_TOKEN)
-      const cached = localStorage.getItem(LS_USER)
-      if(cached){
-        try{ this.user = JSON.parse(cached) as User }catch{ /* ignore */ }
-      }
-      // If we have a cached user, skip network validation in dev to avoid 401 spam.
+      const token = getToken()
+      const cached = getCachedUser<User>()
+      if(cached) this.user = cached
       if(this.user){ return }
       if(!token){
         this.user = this.user // keep cached if any (offline dev)
@@ -55,12 +48,11 @@ export const useAuthStore = defineStore('auth', {
           ...(this.user ?? { id: '', nickname: '', discord: '', role: 'user' }),
           balance: Number(res.balance)
         }
-        localStorage.setItem(LS_USER, JSON.stringify(this.user))
+        setCachedUser(this.user)
       }catch(err: any){
-        // If token is truly invalid, clear it. Otherwise keep cached user for offline dev.
         if(err?.status === 401){
-          localStorage.removeItem(LS_TOKEN)
-          localStorage.removeItem(LS_USER)
+          clearToken()
+          clearCachedUser()
           this.user = null
         }
       }finally{
@@ -71,33 +63,35 @@ export const useAuthStore = defineStore('auth', {
 
 
     async register(payload: { nickname: string; discord: string; password: string }){
-      if(!isBrowser()) return { ok: false as const }
+      if(!canUseStorage()) return { ok: false as const }
       const res = await api<{ ok:boolean; token: string; user: User }>('/api/v1/accounts/auth/register', {
         method: 'POST',
-        body: JSON.stringify(payload)
+        json: true,
+        body: payload
       })
-      localStorage.setItem(LS_TOKEN, res.token)
+      setToken(res.token)
       this.user = res.user
-      localStorage.setItem(LS_USER, JSON.stringify(res.user))
+      setCachedUser(res.user)
       await this.fetchBalance().catch(() => {})
       return { ok: true as const }
     },
 
     async login(login: string, password: string){
-      if(!isBrowser()) return { ok: false as const }
+      if(!canUseStorage()) return { ok: false as const }
       const res = await api<{ ok:boolean; token: string; user: User }>('/api/v1/accounts/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ login, password })
+        json: true,
+        body: { login, password }
       })
-      localStorage.setItem(LS_TOKEN, res.token)
+      setToken(res.token)
       this.user = res.user
-      localStorage.setItem(LS_USER, JSON.stringify(res.user))
+      setCachedUser(res.user)
       await this.fetchBalance().catch(() => {})
       return { ok: true as const }
     },
 
     async logout(){
-      if(!isBrowser()){
+      if(!canUseStorage()){
         this.user = null
         return
       }
@@ -106,35 +100,32 @@ export const useAuthStore = defineStore('auth', {
       }catch{
         // ignore
       }
-      localStorage.removeItem(LS_TOKEN)
-      localStorage.removeItem(LS_USER)
+      clearToken()
+      clearCachedUser()
       this.user = null
     },
 
     async refreshMe(){
-      if(!isBrowser()) return
+      if(!canUseStorage()) return
       try{
         let res: any
         try{
-          // Prefer the accounts service endpoint if available
           res = await api<{ ok:boolean; user: User }>('/api/v1/accounts/users/me', { method: 'GET' })
         }catch{
           res = await api<{ ok:boolean; user: User }>('/api/me')
         }
         this.user = res.user
-        localStorage.setItem(LS_USER, JSON.stringify(res.user))
+        setCachedUser(res.user)
       }catch{
         // ignore in offline dev
       }
     },
 
-    // Some views still call `fetchMe()`; keep it as an alias.
     async fetchMe(){
-      // Deprecated: keep for backwards compatibility. Balance is refreshed via the correct endpoint.
       return this.fetchBalance()
     },
     async fetchBalance(){
-      if(!isBrowser()) return { ok: false as const }
+      if(!canUseStorage()) return { ok: false as const }
       if(!this.user) return { ok: false as const, message: 'Not logged in' }
 
       const res = await api<{ ok: boolean; balance: number }>(
@@ -143,20 +134,21 @@ export const useAuthStore = defineStore('auth', {
       )
 
       this.user = { ...this.user, balance: Number(res.balance) }
-      localStorage.setItem(LS_USER, JSON.stringify(this.user))
+      setCachedUser(this.user)
 
       return { ok: true as const, balance: res.balance }
     },
 
     async applyBalance(delta: number){
-      if(!isBrowser()) return { ok: false as const }
+      if(!canUseStorage()) return { ok: false as const }
       if(!this.user) return { ok: false as const, message: 'Not logged in' }
       const res = await api<{ ok: boolean; balance: number }>('/api/balance/apply', {
         method: 'POST',
-        body: JSON.stringify({ delta })
+        json: true,
+        body: { delta }
       })
       this.user = { ...this.user, balance: res.balance }
-      localStorage.setItem(LS_USER, JSON.stringify(this.user))
+      setCachedUser(this.user)
       return { ok: true as const }
     }
   }
