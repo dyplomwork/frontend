@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
+import GameHowTo from '../components/GameHowTo.vue'
 import { useAuthStore } from '../stores/auth'
 import { useBigWinStore } from '../stores/bigwin'
 import { sfx } from '../utils/sfx'
@@ -329,7 +330,7 @@ onBeforeUnmount(() => stopAnim())
       </div>
 
       <div class="bar-wrap">
-        <div class="bar stake" :class="[flashZone, { shake: barShake }]">
+        <div class="bar casino" :class="[flashZone, { shake: barShake }]">
           <div class="track">
             <div class="split red" :style="{ width: rollOver + '%' }" />
             <div class="split green" :style="{ width: 100 - rollOver + '%' }" />
@@ -417,6 +418,16 @@ onBeforeUnmount(() => stopAnim())
         <span class="pill green">Win</span>
       </div>
     </div>
+    <template #below>
+      <GameHowTo>
+        <ul class="muted" style="margin: 0; padding-left: 18px">
+          <li>Задайте Roll Over и сумму ставки.</li>
+          <li>Нажмите Play: выпадет число от 0 до 100.</li>
+          <li>Выигрыш, если результат оказался справа от линии Roll Over (больше значения).</li>
+        </ul>
+      </GameHowTo>
+    </template>
+
   </GameLayout>
 </template>
 
@@ -487,7 +498,7 @@ onBeforeUnmount(() => stopAnim())
   text-shadow: 0 10px 18px rgba(0, 0, 0, 0.55);
 }
 
-.bar.stake {
+.bar.casino {
   position: relative;
   height: 48px;
   border-radius: 999px;
@@ -501,7 +512,7 @@ onBeforeUnmount(() => stopAnim())
   overflow: hidden;
   z-index: 1;
 }
-.bar.stake.shake {
+.bar.casino.shake {
   animation: barShakeSoft 180ms ease-in-out;
 }
 

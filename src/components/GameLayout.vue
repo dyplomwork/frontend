@@ -20,5 +20,8 @@ function toCssPx(v: number | string){
     <section class="game-main">
       <slot />
     </section>
+    <section class="game-below">
+      <slot name="below" />
+    </section>
   </div>
 </template>

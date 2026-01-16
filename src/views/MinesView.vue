@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
+import GameHowTo from '../components/GameHowTo.vue'
 import BaseSelect from '../components/BaseSelect.vue'
 import { useAuthStore } from '../stores/auth'
 import { useBigWinStore } from '../stores/bigwin'
@@ -59,9 +60,11 @@ const canClick = computed(() => inGame.value && !lost.value)
 
 onMounted(async () => {
   try {
-    if (!auth.user) await auth.fetchBalance()
+    if (auth.user) await auth.fetchBalance()
   } catch {
   }
+
+  if (!auth.user) return
 
   try {
     const s = await minesGetSession()
@@ -299,32 +302,6 @@ async function cashOut() {
   }
 }
 
-async function randomPick() {
-  if (!canClick.value) return
-  const candidates = grid.value.filter((c) => !c.revealed)
-  if (!candidates.length) return
-  const pick = candidates[Math.floor(Math.random() * candidates.length)]
-  await reveal(pick)
-}
-
-async function reset() {
-  sfx('click')
-
-  if (inGame.value && !lost.value) {
-    try {
-      await minesFinish()
-      await auth.fetchBalance()
-    } catch {
-    }
-  }
-
-  inGame.value = false
-  lost.value = false
-  safePicks.value = 0
-  multiplier.value = 1
-  message.value = ''
-  buildGrid()
-}
 
 // initial
 buildGrid()
@@ -359,9 +336,6 @@ buildGrid()
           </div>
         </div>
 
-        <button class="btn btn-ghost" @click="randomPick" :disabled="!canClick">
-          Random Pick
-        </button>
 
         <template #summary>
           <div class="summary">
@@ -384,9 +358,6 @@ buildGrid()
             Cashout ({{ fmt(payoutAmount, 2) }}K)
           </button>
 
-          <button class="btn btn-ghost" @click="reset" :disabled="inGame">
-            Reset
-          </button>
         </template>
       </GamePanel>
     </template>
@@ -425,6 +396,16 @@ buildGrid()
         Множитель растёт за каждую открытую “безопасную” клетку. Можно забрать выигрыш в любой момент через Cashout.
       </div>
     </div>
+    <template #below>
+      <GameHowTo>
+        <ul class="muted" style="margin: 0; padding-left: 18px">
+          <li>Выберите сумму ставки и количество мин.</li>
+          <li>Нажимайте на клетки: безопасные дают множитель, мина заканчивает раунд.</li>
+          <li>В любой момент используйте Cashout, чтобы забрать текущий выигрыш.</li>
+        </ul>
+      </GameHowTo>
+    </template>
+
   </GameLayout>
 </template>
 
@@ -608,7 +589,7 @@ buildGrid()
 }
 
 @media (max-width: 980px) {
-  .stake-layout {
+  .game-shell {
     grid-template-columns: 1fr;
   }
   .grid5 {

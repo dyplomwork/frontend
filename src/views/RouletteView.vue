@@ -784,6 +784,16 @@ function betOf(key: BetKey) {
         </div>
       </div>
     </div>
+    <template #below>
+      <GameHowTo>
+        <ul class="muted" style="margin: 0; padding-left: 18px">
+          <li>Выберите фишку и кликните по полям стола, чтобы сделать ставки.</li>
+          <li>Можно ставить на число, цвет, чёт/нечёт, диапазоны и ряды.</li>
+          <li>Нажмите Spin — выпадет число, а выплаты начислятся по выигрышным ставкам.</li>
+        </ul>
+      </GameHowTo>
+    </template>
+
   </GameLayout>
 </template>
 

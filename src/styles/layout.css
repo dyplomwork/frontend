@@ -1,13 +1,13 @@
-/* ========= App layout (Stake-ish shell) ========= */
-.stake-app{
+/* ========= App layout (casino-like shell) ========= */
+.casino-app{
   --sidebar-current: var(--sidebar-w-collapsed);
   min-height: 100vh;
   display:grid;
   grid-template-columns: var(--sidebar-current) 1fr;
 }
-.stake-app.open{ --sidebar-current: var(--sidebar-w); }
+.casino-app.open{ --sidebar-current: var(--sidebar-w); }
 
-.stake-sidebar{
+.casino-sidebar{
   width: var(--sidebar-current);
   position: sticky;
   top: 0;
@@ -22,12 +22,12 @@
   gap: 10px;
   transition: width .18s ease, transform .18s ease;
 }
-.stake-sidebar.open{ align-items:stretch; }
+.casino-sidebar.open{ align-items:stretch; }
 
-.stake-content{ min-width:0; display:flex; flex-direction:column; flex:1; }
+.casino-content{ min-width:0; display:flex; flex-direction:column; flex:1; }
 
 
-.stake-topbar{
+.casino-topbar{
   position: sticky;
   top:0;
   z-index: 10;
@@ -66,13 +66,13 @@
 }
 .topbar-menu{ display:flex; align-items:center; gap: 10px; }
 
-.stake-main{
+.casino-main{
   min-height: 100vh;
   display:flex;
   flex-direction: column;
   padding: 18px 18px 24px;
 }
-.stake-footer{
+.casino-footer{
   margin-top:auto;
   padding: 18px;
   border-top: 1px solid var(--c-border);
@@ -113,9 +113,9 @@
 
 @media (max-width: 980px){
   /* Mobile: sidebar becomes off-canvas and is opened via the topbar menu button */
-  .stake-app{ grid-template-columns: 1fr; }
+  .casino-app{ grid-template-columns: 1fr; }
 
-  .stake-sidebar{
+  .casino-sidebar{
     position: fixed;
     top: 0;
     left: 0;
@@ -126,12 +126,12 @@
     box-shadow: 0 22px 70px rgba(0,0,0,.55);
     border-right: 1px solid var(--c-border);
   }
-  .stake-sidebar.open{ transform: translateX(0); }
+  .casino-sidebar.open{ transform: translateX(0); }
 
-  .stake-topbar{ z-index: 30; }
+  .casino-topbar{ z-index: 30; }
   .topbar-menu{ display:inline-flex; }
 
-  .stake-main{ padding: 14px; }
+  .casino-main{ padding: 14px; }
   .search{ max-width: 420px; }
 }
 @media (max-width: 780px){
@@ -143,8 +143,8 @@
 
 
 /* Sidebar: no underline on hover (global anchors may underline) */
-.stake-sidebar a:hover,
-.stake-sidebar a:focus{ text-decoration: none; }
+.casino-sidebar a:hover,
+.casino-sidebar a:focus{ text-decoration: none; }
 
 /* Audio controls in sidebar */
 .side-bottom{ display:flex; flex-direction:column; gap:10px; padding-top: 10px; }

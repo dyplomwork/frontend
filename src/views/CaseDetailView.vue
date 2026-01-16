@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/auth'
 import { useBigWinStore } from '../stores/bigwin'
 import { sfx } from '../utils/sfx'
 import { formatNumber } from '../utils/format'
+import GameHowTo from '../components/GameHowTo.vue'
 
 type ReelItem = { label: string; amount: number; icon: string }
 type HistoryItem = { ts: number; label: string; amount: number }
@@ -317,7 +318,7 @@ watch(quickOpen, (v) => {
 </script>
 
 <template>
-  <div class="stake-page">
+  <div class="casino-page">
     <div v-if="!c && game.casesLoading" class="game-card pad">{{ $t('ui.s_e0760be2bf') }}</div>
 
     <div v-else-if="!c" class="game-card pad">{{ $t('ui.s_6dcc0e58a7') }}</div>
@@ -416,11 +417,19 @@ watch(quickOpen, (v) => {
 
       </div>
     </div>
+    <GameHowTo v-if="c">
+      <ul class="muted" style="margin: 0; padding-left: 18px">
+        <li>Нажмите Open case — стоимость спишется с баланса.</li>
+        <li>Результат выбирается случайно по шансам, указанным в списке лута.</li>
+        <li>Quick open отключает анимацию и сразу показывает выпадение.</li>
+      </ul>
+    </GameHowTo>
+
   </div>
 </template>
 
 <style scoped>
-.stake-page{ padding: 18px 8px 34px; }
+.casino-page{ padding: 18px 8px 34px; }
 .game-card{
   background: rgba(14,26,36,.72);
   border: 1px solid rgba(255,255,255,.06);

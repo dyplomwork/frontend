@@ -68,7 +68,7 @@ export default {
 
     "s_e152e62605": "Play casino games",
     "s_eda9fd1f8b":
-      "Roulette, Plinko, Mines and Cases — clean Stake-style UI. Balance is stored locally for development.",
+      "Roulette, Plinko, Mines and Cases — clean casino-style UI. Balance is stored locally for development.",
 
     "s_1b70a40f4f": "Play now",
     "s_e9f82b6536": "Open cases",
@@ -77,7 +77,7 @@ export default {
     "s_17e45c77d3": "Classic bets • history • repeat",
     "s_e09fbe469f": "Multiple balls • highlights • smooth fall",
     "s_d212d1ac25": "Quick select • cashout",
-    "s_03480973d3": "Minimal Stake • odds table",
+    "s_03480973d3": "Minimal UI • odds table",
     "s_35079404ba": "Roll over • odds • indicator",
     "s_0c54815c09": "Create battle • join • confirm",
 

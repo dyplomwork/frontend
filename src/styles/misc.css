@@ -170,14 +170,14 @@
 }
 
 /* Sidebar inline music control when expanded */
-.stake-app.open .bgm-vol{
+.casino-app.open .bgm-vol{
   display:flex;
   align-items:center;
   gap: 10px;
   flex-direction: row-reverse; /* slider on the left, icon on the right */
   justify-content: flex-start;
 }
-.stake-app.open .bgm-vol__content{
+.casino-app.open .bgm-vol__content{
   position: static;
   width: 150px;
   padding: 0;
@@ -185,5 +185,5 @@
   background: transparent;
   box-shadow: none;
 }
-.stake-app.open .bgm-vol__top{ display:none; }
-.stake-app.open .bgm-vol__range{ height: 18px; }
+.casino-app.open .bgm-vol__top{ display:none; }
+.casino-app.open .bgm-vol__range{ height: 18px; }

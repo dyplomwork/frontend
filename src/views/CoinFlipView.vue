@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
+import GameHowTo from '../components/GameHowTo.vue'
 import GamePanel from '../components/GamePanel.vue'
 import Modal from '../components/Modal.vue'
 import { useAuthStore } from '../stores/auth'
@@ -456,6 +457,16 @@ onBeforeUnmount(() => {
         <button class="btn btn-primary" @click="createBattle">Create</button>
       </div>
     </Modal>
+    <template #below>
+      <GameHowTo>
+        <ul class="muted" style="margin: 0; padding-left: 18px">
+          <li>Создайте дуэль: выберите сторону и сумму.</li>
+          <li>Другой игрок присоединяется, внося такую же сумму.</li>
+          <li>После броска монеты победитель получает банк (с учётом правил сервера).</li>
+        </ul>
+      </GameHowTo>
+    </template>
+
   </GameLayout>
 </template>
 

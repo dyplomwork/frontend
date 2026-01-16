@@ -1,5 +1,5 @@
 import { getApiBaseUrl } from '../config/env'
-import { getToken, canUseStorage } from '../auth/storage'
+import { getToken, canUseStorage, clearToken, clearCachedUser } from '../auth/storage'
 
 export class ApiError extends Error {
   status: number
@@ -76,7 +76,13 @@ export async function api<T>(path: string, opts: ApiCallOptions = {}): Promise<T
   }
 
   if (!res.ok) {
-    const msg = (typeof data === 'object' && data && (data.message || data.error)) || `HTTP ${res.status}`
+    if (res.status === 401 && !opts.noAuth) {
+      clearToken()
+      clearCachedUser()
+    }
+
+    const fromBody = (typeof data === 'object' && data && ((data as any).message || (data as any).error))
+    const msg = fromBody || (res.status === 401 ? 'Нужен вход' : `HTTP ${res.status}`)
     throw new ApiError(res.status, String(msg), data)
   }
 
