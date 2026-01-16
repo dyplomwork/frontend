@@ -2,7 +2,7 @@
   overflow: hidden;
   display:grid;
   grid-template-columns: var(--left-panel-w) 1fr;
-  grid-template-rows: auto auto;
+  grid-template-rows: auto;
 }
 .game-left{
   grid-column: 1;
@@ -18,19 +18,15 @@
   padding: var(--pad-18);
 }
 
-.game-below{
-  grid-column: 1 / -1;
-  grid-row: 2;
+.game-below-shell{
+  margin-top: 14px;
   padding: var(--pad-18);
-  border-top: 1px solid var(--border);
-  background: rgba(10,20,28,.25);
 }
 
-.game-below .howto{ margin-top: 0; }
+.game-below-shell .howto{ margin-top: 0; }
 
 @media (max-width: 980px){
-  .game-shell{ grid-template-columns: 1fr; grid-template-rows: auto auto auto; }
+  .game-shell{ grid-template-columns: 1fr; grid-template-rows: auto auto; }
   .game-left{ grid-column: 1; grid-row: 1; border-right: 0; border-bottom: 1px solid var(--border); }
   .game-main{ grid-column: 1; grid-row: 2; }
-  .game-below{ grid-column: 1; grid-row: 3; }
 }

@@ -537,7 +537,7 @@ if (typeof window !== 'undefined') {
       <GameHowTo>
         <ul class="muted" style="margin: 0; padding-left: 18px">
           <li>Выберите количество рядов и уровень риска.</li>
-          <li>Укажите сумму ставки (или режим Auto, если доступен) и нажмите Play.</li>
+          <li>Укажите сумму ставки и нажмите Play.</li>
           <li>Шар падает по пинам в один из множителей — выплата = ставка × множитель.</li>
         </ul>
       </GameHowTo>

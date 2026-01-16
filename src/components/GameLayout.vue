@@ -13,15 +13,18 @@ function toCssPx(v: number | string){
 </script>
 
 <template>
-  <div class="game-shell panel" :style="{ minHeight: toCssPx(props.minHeight) }">
-    <aside class="game-left">
-      <slot name="panel" />
-    </aside>
-    <section class="game-main">
-      <slot />
-    </section>
-    <section class="game-below">
+  <div class="game-layout">
+    <div class="game-shell panel" :style="{ minHeight: toCssPx(props.minHeight) }">
+      <aside class="game-left">
+        <slot name="panel" />
+      </aside>
+      <section class="game-main">
+        <slot />
+      </section>
+    </div>
+
+    <div v-if="$slots.below" class="game-below-shell panel">
       <slot name="below" />
-    </section>
+    </div>
   </div>
 </template>

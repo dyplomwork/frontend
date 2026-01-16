@@ -420,11 +420,33 @@ onBeforeUnmount(() => stopAnim())
     </div>
     <template #below>
       <GameHowTo>
-        <ul class="muted" style="margin: 0; padding-left: 18px">
-          <li>Задайте Roll Over и сумму ставки.</li>
-          <li>Нажмите Play: выпадет число от 0 до 100.</li>
-          <li>Выигрыш, если результат оказался справа от линии Roll Over (больше значения).</li>
-        </ul>
+        <div class="muted" style="display: grid; gap: 10px">
+          <div>
+            <b class="text">Цель</b> — угадать исход броска: выпадет ли число выше выбранного порога <b class="text">Roll Over</b>.
+          </div>
+
+          <div>
+            <b class="text">Как играть</b>
+            <ul style="margin: 8px 0 0; padding-left: 18px">
+              <li>Укажите сумму ставки <b class="text">Amount</b>.</li>
+              <li>Передвиньте ползунок <b class="text">Roll Over</b> — это порог, который нужно “перебить”.</li>
+              <li>Нажмите <b class="text">Play</b> — выпадет число от 0 до 100.</li>
+              <li>Если результат оказался <b class="text">больше</b> Roll Over, ставка выигрывает.</li>
+            </ul>
+          </div>
+
+          <div>
+            <b class="text">Риск и множитель</b>
+            <ul style="margin: 8px 0 0; padding-left: 18px">
+              <li>Чем выше Roll Over, тем <b class="text">сложнее</b> выиграть (шанс ниже), но тем <b class="text">выше множитель</b> выплаты.</li>
+              <li>Чем ниже Roll Over — тем чаще выигрыши, но меньшая прибыль на победе.</li>
+            </ul>
+          </div>
+
+          <div>
+            <b class="text">Подсказка</b> — ищите баланс между шансом и множителем: комфортный уровень риска даёт стабильную игру.
+          </div>
+        </div>
       </GameHowTo>
     </template>
 
