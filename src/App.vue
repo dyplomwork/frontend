@@ -97,9 +97,9 @@ function logout() {
 
 <template>
   <SeoHead />
-  <div class="stake-app" :class="{ open: sidebarOpen }">
+  <div class="app-shell" :class="{ open: sidebarOpen }">
     <!-- Left Sidebar -->
-    <aside class="stake-sidebar" :class="{ open: sidebarOpen }">
+    <aside class="app-sidebar" :class="{ open: sidebarOpen }">
       <div class="side-top">
         <button class="icon-btn" @click="toggleSidebar" title="Menu">
           <span class="ic">≡</span>
@@ -222,8 +222,8 @@ function logout() {
       </div>
     </aside>
 
-    <div class="stake-main">
-      <header class="stake-topbar">
+    <div class="app-main">
+      <header class="app-topbar">
         <div class="top-left">
           <button class="icon-btn topbar-menu" @click="toggleSidebar" aria-label="Menu">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -251,11 +251,11 @@ function logout() {
         </div>
       </header>
 
-      <main class="stake-content">
+      <main class="app-content">
         <RouterView />
       </main>
 
-      <AppFooter class="stake-footer" />
+      <AppFooter class="app-footer" />
 
       <BigWinOverlay />
       <ToastHost />

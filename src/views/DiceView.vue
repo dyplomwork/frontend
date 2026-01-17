@@ -361,7 +361,7 @@ onBeforeUnmount(() => stopAnim())
       </div>
 
       <div class="bar-wrap">
-        <div class="bar stake" :class="[flashZone, { shake: barShake }]">
+        <div class="bar bet" :class="[flashZone, { shake: barShake }]">
           <div class="track">
             <div class="split red" :style="{ width: rollOver + '%' }" />
             <div class="split green" :style="{ width: 100 - rollOver + '%' }" />
@@ -543,7 +543,7 @@ onBeforeUnmount(() => stopAnim())
   text-shadow: 0 10px 18px rgba(0, 0, 0, 0.55);
 }
 
-.bar.stake {
+.bar.bet {
   position: relative;
   height: 48px;
   border-radius: 999px;
@@ -557,7 +557,7 @@ onBeforeUnmount(() => stopAnim())
   overflow: hidden;
   z-index: 1;
 }
-.bar.stake.shake {
+.bar.bet.shake {
   animation: barShakeSoft 180ms ease-in-out;
 }
 

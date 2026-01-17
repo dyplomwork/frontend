@@ -317,7 +317,7 @@ watch(quickOpen, (v) => {
 </script>
 
 <template>
-  <div class="stake-page">
+  <div class="app-page">
     <div v-if="!c && game.casesLoading" class="game-card pad">{{ $t('ui.s_e0760be2bf') }}</div>
 
     <div v-else-if="!c" class="game-card pad">{{ $t('ui.s_6dcc0e58a7') }}</div>
@@ -420,7 +420,7 @@ watch(quickOpen, (v) => {
 </template>
 
 <style scoped>
-.stake-page{ padding: 18px 8px 34px; }
+.app-page{ padding: 18px 8px 34px; }
 .game-card{
   background: rgba(14,26,36,.72);
   border: 1px solid rgba(255,255,255,.06);

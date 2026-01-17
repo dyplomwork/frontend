@@ -129,24 +129,24 @@ body::after{
 }
 
 
-:root{ --stakeGreen: #00e701; }
+:root{ --brandGreen: #00e701; }
 
-.stake-green{
-  background: var(--stakeGreen) !important;
+.brand-green{
+  background: var(--brandGreen) !important;
   color: rgba(0,0,0,.9) !important;
   border-color: rgba(0,231,1,.35) !important;
   box-shadow: 0 0 0 1px rgba(0,231,1,.18), 0 0 18px rgba(0,231,1,.10);
 }
 
 
-/* Stake-like darker base */
+/* classic-like darker base */
 :root{
-  --stake-bg: #0b141d;
-  --stake-panel: #1b2733;
+  --brand-bg: #0b141d;
+  --brand-panel: #1b2733;
 }
 body{
   background: radial-gradient(900px 520px at 50% -10%, rgba(90,140,255,.10), rgba(0,0,0,0)),
-              linear-gradient(180deg, var(--stake-bg), #091118 55%, #070d12);
+              linear-gradient(180deg, var(--brand-bg), #091118 55%, #070d12);
 }
 .card, .card2{
   border: 1px solid rgba(255,255,255,.06);

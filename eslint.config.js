@@ -4,7 +4,6 @@ import tsPlugin from '@typescript-eslint/eslint-plugin'
 import vueParser from 'vue-eslint-parser'
 
 export default [
-  // Ignore
   {
     ignores: ['dist*.ts'],
     languageOptions: {
@@ -22,7 +21,6 @@ export default [
       'no-unused-vars': 'off'
     }
   },
-  // Vue SFCs (script parser = TS)
   {
     files: ['**/*.vue'],
     languageOptions: {
@@ -34,13 +32,13 @@ export default [
       }
     },
     plugins: {
+      vue: vue,
       '@typescript-eslint': tsPlugin
     },
     rules: {
       'vue/multi-word-component-names': 'off',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'no-unused-vars': 'off',
-      // Keep the ruleset lightweight to avoid hundreds of non-actionable warnings.
       'vue/max-attributes-per-line': 'off',
       'vue/attributes-order': 'off',
       'vue/html-indent': 'off',

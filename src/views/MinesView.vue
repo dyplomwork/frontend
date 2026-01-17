@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
 import BaseSelect from '../components/BaseSelect.vue'
@@ -674,7 +674,7 @@ buildGrid()
 }
 
 @media (max-width: 980px) {
-  .stake-layout {
+  .app-layout {
     grid-template-columns: 1fr;
   }
   .grid5 {

@@ -1,4 +1,4 @@
-/* ========= Subtle grid overlay like Stake ========= */
+/* ========= Subtle grid overlay like classic ========= */
 body::before{
   content:'';
   position: fixed;
