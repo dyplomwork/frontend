@@ -2,18 +2,23 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
-import GameHowTo from '../components/GameHowTo.vue'
 import BaseSelect from '../components/BaseSelect.vue'
+import GameHowTo from '../components/GameHowTo.vue'
 import { useAuthStore } from '../stores/auth'
 import { useBigWinStore } from '../stores/bigwin'
+import { useUiStore } from '../stores/ui'
+import { useRequireAuthAction } from '../composables/useRequireAuthAction'
 import { sfx } from '../utils/sfx'
 import { formatNumber } from '../utils/format'
+import { normalizeError, reportError, userMessageForStatus } from '../utils/errors'
 import { minesFinish, minesGetSession, minesMultiplier, minesStart, minesStep } from '../api/games'
 
 type Cell = { id: number; hasMine: boolean; revealed: boolean }
 
 const auth = useAuthStore()
 const bigwinStore = useBigWinStore()
+const ui = useUiStore()
+const { requireAuth } = useRequireAuthAction()
 
 const bet = ref(20)
 const mines = ref(3) // 1..24
@@ -33,6 +38,17 @@ const safePicks = ref(0)
 const multiplier = ref(1)
 const nextMultiplier = ref<number | null>(null)
 const message = ref('')
+const messageType = ref<'info' | 'success' | 'error'>('info')
+
+function setError(e: unknown, fallback = 'Ошибка') {
+  const n = normalizeError(e)
+  const text = userMessageForStatus(n.status, n.message || fallback)
+  messageType.value = 'error'
+  message.value = text
+  if (n.status === 401) ui.toast(text, 'info')
+  else ui.toast(text, 'error')
+  reportError(e)
+}
 
 // VFX
 const explodingId = ref<number | null>(null)
@@ -60,11 +76,10 @@ const canClick = computed(() => inGame.value && !lost.value)
 
 onMounted(async () => {
   try {
-    if (auth.user) await auth.fetchBalance()
-  } catch {
+    if (!auth.user) await auth.fetchBalance()
+  } catch (e) {
+    reportError(e)
   }
-
-  if (!auth.user) return
 
   try {
     const s = await minesGetSession()
@@ -79,7 +94,8 @@ onMounted(async () => {
     nextMultiplier.value = null
     await refreshMultiplierFromServer()
     await refreshNextMultiplierFromServer()
-  } catch {
+  } catch (e) {
+    reportError(e)
   }
 })
 
@@ -152,9 +168,10 @@ async function refreshNextMultiplierFromServer() {
   }
 }
 
-async function start() {
+async function startInternal() {
   if (!canStart.value) return
   message.value = ''
+  messageType.value = 'info'
   sfx('click')
 
 
@@ -185,7 +202,7 @@ async function start() {
       await refreshNextMultiplierFromServer()
     } catch {}
   } catch (e: any) {
-    message.value = e?.message ? String(e.message) : 'Ошибка старта'
+    setError(e, 'Ошибка старта')
     try {
       const s = await minesGetSession()
       bet.value = Number(s.bet)
@@ -200,16 +217,23 @@ async function start() {
       await refreshNextMultiplierFromServer()
       message.value = ''
       return
-    } catch {}
+    } catch (e2) {
+      reportError(e2)
+    }
 
     inGame.value = false
   }
 }
 
-async function reveal(cell: Cell) {
+function start() {
+  return requireAuth(() => startInternal())
+}
+
+async function revealInternal(cell: Cell) {
   if (!canClick.value) return
   if (cell.revealed) return
   message.value = ''
+  messageType.value = 'info'
   sfx('click')
 
   const { row, col } = cellToRC(cell.id)
@@ -259,20 +283,27 @@ async function reveal(cell: Cell) {
       await cashOut()
     }
   } catch (e: any) {
-    message.value = e?.message ? String(e.message) : 'Ошибка'
+    setError(e, 'Ошибка')
     try {
       const fin = await minesFinish()
       revealWholeField(fin.field)
       inGame.value = false
       lost.value = true
       await auth.fetchBalance()
-    } catch {}
+    } catch (e2) {
+      reportError(e2)
+    }
   }
 }
 
-async function cashOut() {
+function reveal(cell: Cell) {
+  return requireAuth(() => revealInternal(cell))
+}
+
+async function cashOutInternal() {
   if (!inGame.value || safePicks.value <= 0) return
   message.value = ''
+  messageType.value = 'info'
 
   try {
     const res = await minesFinish()
@@ -284,6 +315,7 @@ async function cashOut() {
 
     const win = Number(res.win)
     const profit = Math.max(0, win - Number(bet.value))
+    messageType.value = 'success'
     message.value = `Кэш-аут: +${fmt(profit, 2)} (x${formatNumber(multiplier.value, 4)})`
 	    // BIG/MEGA/SUPER overlay (global)
 	    bigwinStore.maybeShow(win, bet.value)
@@ -298,10 +330,45 @@ async function cashOut() {
     lost.value = false
     await auth.fetchBalance()
   } catch (e: any) {
-    message.value = e?.message ? String(e.message) : 'Ошибка вывода'
+    setError(e, 'Ошибка вывода')
   }
 }
 
+function cashOut() {
+  return requireAuth(() => cashOutInternal())
+}
+
+async function randomPick() {
+  if (!canClick.value) return
+  const candidates = grid.value.filter((c) => !c.revealed)
+  if (!candidates.length) return
+  const pick = candidates[Math.floor(Math.random() * candidates.length)]
+  await reveal(pick)
+}
+
+async function resetInternal() {
+  sfx('click')
+
+  if (inGame.value && !lost.value) {
+    try {
+      await minesFinish()
+      await auth.fetchBalance()
+    } catch (e) {
+      reportError(e)
+    }
+  }
+
+  inGame.value = false
+  lost.value = false
+  safePicks.value = 0
+  multiplier.value = 1
+  message.value = ''
+  buildGrid()
+}
+
+function reset() {
+  return requireAuth(() => resetInternal())
+}
 
 // initial
 buildGrid()
@@ -315,6 +382,7 @@ buildGrid()
         :disabled="inGame"
         play-text="Play"
         :message="message"
+        :message-type="messageType"
         @half="bet = Math.max(1, Math.floor((Number(bet) || 0) / 2))"
         @double="bet = Math.floor((Number(bet) || 0) * 2)"
         @play="start"
@@ -336,6 +404,9 @@ buildGrid()
           </div>
         </div>
 
+        <button class="btn btn-ghost" @click="randomPick" :disabled="!canClick">
+          Random Pick
+        </button>
 
         <template #summary>
           <div class="summary">
@@ -358,6 +429,9 @@ buildGrid()
             Cashout ({{ fmt(payoutAmount, 2) }}K)
           </button>
 
+          <button class="btn btn-ghost" @click="reset" :disabled="inGame">
+            Reset
+          </button>
         </template>
       </GamePanel>
     </template>
@@ -392,43 +466,31 @@ buildGrid()
         </button>
       </div>
 
-      <div class="muted" style="margin-top: 14px">
-        Множитель растёт за каждую открытую “безопасную” клетку. Можно забрать выигрыш в любой момент через Cashout.
-      </div>
     </div>
+
     <template #below>
-      <GameHowTo>
-        <div class="muted" style="display: grid; gap: 10px">
-          <div>
-            <b class="text">Цель</b> — открывать безопасные клетки с “гемами” и наращивать множитель, избегая мин.
-          </div>
-
-          <div>
-            <b class="text">Как играть</b>
-            <ul style="margin: 8px 0 0; padding-left: 18px">
-              <li>Выберите сумму ставки и количество мин (чем больше мин — тем выше риск и потенциальная награда).</li>
-              <li>Нажмите <b class="text">Play</b>, чтобы начать раунд.</li>
-              <li>Открывайте клетки на поле: 💎 увеличивает множитель, 💣 завершает раунд с проигрышем.</li>
-              <li>В любой момент нажмите <b class="text">Cashout</b>, чтобы зафиксировать текущий выигрыш.</li>
-            </ul>
-          </div>
-
-          <div>
-            <b class="text">Описание механики</b>
-            <ul style="margin: 8px 0 0; padding-left: 18px">
-              <li>Множитель растёт за каждую безопасную клетку.</li>
-              <li>Панель показывает текущий и следующий множитель — можно оценить, стоит ли рисковать дальше.</li>
-              <li>Если открыть все безопасные клетки, раунд автоматически завершится с выплатой.</li>
-            </ul>
-          </div>
-
-          <div>
-            <b class="text">Совет</b> — начните с малого количества мин, чтобы почувствовать динамику, и увеличивайте риск постепенно.
-          </div>
-        </div>
-      </GameHowTo>
+      <GameHowTo
+        heading="Mines — как играть"
+        intro="Открывайте безопасные клетки, увеличивайте множитель и забирайте выигрыш в любой момент. Чем больше мин на поле — тем выше потенциальный множитель, но тем выше риск."
+        :sections="[
+          { title: 'Базовые шаги', items: [
+            'Выберите сумму ставки и количество мин.',
+            'Нажмите Play — ставка списывается, начинается раунд.',
+            'Открывайте клетки: алмаз увеличивает множитель, мина завершает раунд.',
+            'Нажмите Cashout в любой момент после первого удачного открытия, чтобы зафиксировать выигрыш.'
+          ]},
+          { title: 'Режимы и механики', items: [
+            'Количество мин влияет на вероятность и рост множителя: больше мин — выше награда и выше шанс проигрыша.',
+            'Следующий множитель показывает потенциальный результат при успешном следующем открытии.',
+            'Если открыть все безопасные клетки, игра автоматически завершится выигрышем.'
+          ]},
+          { title: 'Подсказки', items: [
+            'Не увеличивайте риск резко: повышайте число мин постепенно, чтобы понять динамику.',
+            'Фиксируйте прибыль раньше, если цель — стабильная игра, а не максимальный множитель.'
+          ]}
+        ]"
+      />
     </template>
-
   </GameLayout>
 </template>
 
@@ -612,7 +674,7 @@ buildGrid()
 }
 
 @media (max-width: 980px) {
-  .game-shell {
+  .stake-layout {
     grid-template-columns: 1fr;
   }
   .grid5 {

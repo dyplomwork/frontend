@@ -1,6 +1,16 @@
 import { defineStore } from 'pinia'
 import { api } from '../utils/api'
-import { canUseStorage, clearCachedUser, clearToken, getCachedUser, getToken, setCachedUser, setToken } from '../core/auth/storage'
+import {
+  canUseStorage,
+  clearCachedUser,
+  clearToken,
+  getCachedUser,
+  getToken,
+  setCachedUser,
+  setToken,
+} from '../core/auth/storage'
+import { reportError } from '../utils/errors'
+
 export type Role = 'guest' | 'user' | 'admin'
 
 export type User = {
@@ -11,127 +21,130 @@ export type User = {
   balance: number
 }
 
-
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null as User | null,
-    loading: false
+    loading: false,
   }),
   getters: {
-    role(state): Role { return state.user?.role || 'guest' },
-    isAuthed(state): boolean { return !!state.user },
-    isAdmin(): boolean { return this.role === 'admin' }
+    role(state): Role {
+      return state.user?.role || 'guest'
+    },
+    isAuthed(state): boolean {
+      return !!state.user
+    },
+    isAdmin(): boolean {
+      return this.role === 'admin'
+    },
   },
   actions: {
-
-    async init(){
-      if(!canUseStorage()){
+    async init() {
+      if (!canUseStorage()) {
         this.user = null
         return
       }
       const token = getToken()
       const cached = getCachedUser<User>()
-      if(cached) this.user = cached
-      if(this.user){ return }
-      if(!token){
-        this.user = this.user // keep cached if any (offline dev)
+      if (cached) this.user = cached
+      if (this.user) return
+      if (!token) {
+        this.user = this.user
         return
       }
-      try{
+      try {
         this.loading = true
-        const res = await api<{ ok:boolean; balance: number }>(
-          '/api/v1/accounts/users/me/balance',
-          { method: 'GET' }
-        )
+        const res = await api<{ ok: boolean; balance: number }>('/api/v1/accounts/users/me/balance', {
+          method: 'GET',
+        })
 
         this.user = {
           ...(this.user ?? { id: '', nickname: '', discord: '', role: 'user' }),
-          balance: Number(res.balance)
+          balance: Number(res.balance),
         }
         setCachedUser(this.user)
-      }catch(err: any){
-        if(err?.status === 401){
+      } catch (err: any) {
+        if (err?.status === 401) {
           clearToken()
           clearCachedUser()
           this.user = null
+        } else {
+          reportError(err)
         }
-      }finally{
+      } finally {
         this.loading = false
       }
-
     },
 
-
-    async register(payload: { nickname: string; discord: string; password: string }){
-      if(!canUseStorage()) return { ok: false as const }
-      const res = await api<{ ok:boolean; token: string; user: User }>('/api/v1/accounts/auth/register', {
+    async register(payload: { nickname: string; discord: string; password: string }) {
+      if (!canUseStorage()) return { ok: false as const }
+      const res = await api<{ ok: boolean; token: string; user: User }>('/api/v1/accounts/auth/register', {
         method: 'POST',
         json: true,
-        body: payload
+        body: payload,
       })
       setToken(res.token)
       this.user = res.user
       setCachedUser(res.user)
-      await this.fetchBalance().catch(() => {})
+      await this.fetchBalance().catch(reportError)
       return { ok: true as const }
     },
 
-    async login(login: string, password: string){
-      if(!canUseStorage()) return { ok: false as const }
-      const res = await api<{ ok:boolean; token: string; user: User }>('/api/v1/accounts/auth/login', {
+    async login(login: string, password: string) {
+      if (!canUseStorage()) return { ok: false as const }
+      const res = await api<{ ok: boolean; token: string; user: User }>('/api/v1/accounts/auth/login', {
         method: 'POST',
         json: true,
-        body: { login, password }
+        body: { login, password },
       })
       setToken(res.token)
       this.user = res.user
       setCachedUser(res.user)
-      await this.fetchBalance().catch(() => {})
+      await this.fetchBalance().catch(reportError)
       return { ok: true as const }
     },
 
-    async logout(){
-      if(!canUseStorage()){
+    async logout() {
+      if (!canUseStorage()) {
         this.user = null
         return
       }
-      try{
+      try {
         await api('/api/v1/accounts/logout', { method: 'POST' })
-      }catch{
-        // ignore
+      } catch (e) {
+        reportError(e)
       }
       clearToken()
       clearCachedUser()
       this.user = null
     },
 
-    async refreshMe(){
-      if(!canUseStorage()) return
-      try{
+    async refreshMe() {
+      if (!canUseStorage()) return
+      try {
         let res: any
-        try{
-          res = await api<{ ok:boolean; user: User }>('/api/v1/accounts/users/me', { method: 'GET' })
-        }catch{
-          res = await api<{ ok:boolean; user: User }>('/api/me')
+        try {
+          res = await api<{ ok: boolean; user: User }>('/api/v1/accounts/users/me', { method: 'GET' })
+        } catch {
+          res = await api<{ ok: boolean; user: User }>('/api/me')
         }
         this.user = res.user
         setCachedUser(res.user)
-      }catch{
-        // ignore in offline dev
+      } catch (e) {
+        reportError(e)
       }
     },
 
-    async fetchMe(){
+    async fetchMe() {
       return this.fetchBalance()
     },
-    async fetchBalance(){
-      if(!canUseStorage()) return { ok: false as const }
-      if(!this.user) return { ok: false as const, message: 'Not logged in' }
 
-      const res = await api<{ ok: boolean; balance: number }>(
-        '/api/v1/accounts/users/me/balance',
-        { method: 'GET' }
-      )
+    async fetchBalance() {
+      if (!canUseStorage()) return { ok: false as const }
+      if (!this.user) return { ok: false as const, message: 'Not logged in' }
+
+      const res = await api<{ ok: boolean; balance: number }>('/api/v1/accounts/users/me/balance', {
+        method: 'GET',
+      })
 
       this.user = { ...this.user, balance: Number(res.balance) }
       setCachedUser(this.user)
@@ -139,17 +152,17 @@ export const useAuthStore = defineStore('auth', {
       return { ok: true as const, balance: res.balance }
     },
 
-    async applyBalance(delta: number){
-      if(!canUseStorage()) return { ok: false as const }
-      if(!this.user) return { ok: false as const, message: 'Not logged in' }
+    async applyBalance(delta: number) {
+      if (!canUseStorage()) return { ok: false as const }
+      if (!this.user) return { ok: false as const, message: 'Not logged in' }
       const res = await api<{ ok: boolean; balance: number }>('/api/balance/apply', {
         method: 'POST',
         json: true,
-        body: { delta }
+        body: { delta },
       })
       this.user = { ...this.user, balance: res.balance }
       setCachedUser(this.user)
       return { ok: true as const }
-    }
-  }
+    },
+  },
 })

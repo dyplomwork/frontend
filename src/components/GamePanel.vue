@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { sfx } from '../utils/sfx'
+import GameStatus, { type GameStatusType } from './GameStatus.vue'
 
 type Props = {
   modelValue: number | string
@@ -8,6 +9,7 @@ type Props = {
   disabled?: boolean
   currency?: string
   message?: string
+  messageType?: GameStatusType
   showMultButtons?: boolean
 }
 
@@ -16,6 +18,7 @@ const props = withDefaults(defineProps<Props>(), {
   disabled: false,
   currency: 'K',
   message: '',
+  messageType: 'info',
   showMultButtons: true,
 })
 
@@ -28,14 +31,22 @@ const emit = defineEmits<{
 
 const amountStr = computed(() => String(props.modelValue ?? ''))
 
-function setAmount(v: string){
+function setAmount(v: string) {
   const n = Number(v)
   emit('update:modelValue', Number.isFinite(n) ? n : 0)
 }
 
-function onHalf(){ sfx('click'); emit('half') }
-function onDouble(){ sfx('click'); emit('double') }
-function onPlay(){ emit('play') }
+function onHalf() {
+  sfx('click')
+  emit('half')
+}
+function onDouble() {
+  sfx('click')
+  emit('double')
+}
+function onPlay() {
+  emit('play')
+}
 </script>
 
 <template>
@@ -66,7 +77,7 @@ function onPlay(){ emit('play') }
 
     <slot />
 
-    <div v-if="message" class="hint">{{ message }}</div>
+    <GameStatus :type="messageType" :text="message" />
     <slot name="summary" />
   </div>
 </template>

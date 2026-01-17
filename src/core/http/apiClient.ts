@@ -1,5 +1,5 @@
 import { getApiBaseUrl } from '../config/env'
-import { getToken, canUseStorage, clearToken, clearCachedUser } from '../auth/storage'
+import { getToken, canUseStorage } from '../auth/storage'
 
 export class ApiError extends Error {
   status: number
@@ -24,13 +24,14 @@ function looksLikeJsonString(s: string): boolean {
   return (t.startsWith('{') && t.endsWith('}')) || (t.startsWith('[') && t.endsWith(']'))
 }
 
-export type ApiCallOptions = Omit<RequestInit, 'body' | 'headers'> & {
+export type ApiCallOptions = Omit<RequestInit, 'body' | 'headers' | 'signal'> & {
   baseUrl?: string
   noAuth?: boolean
   headers?: Record<string, string>
   body?: unknown
-  /** If true — force treating body as JSON (even if it's a string) */
   json?: boolean
+  timeoutMs?: number
+  signal?: AbortSignal
 }
 
 export async function api<T>(path: string, opts: ApiCallOptions = {}): Promise<T> {
@@ -39,13 +40,12 @@ export async function api<T>(path: string, opts: ApiCallOptions = {}): Promise<T
   const headers: Record<string, string> = { ...(opts.headers ?? {}) }
   const hasBody = Object.prototype.hasOwnProperty.call(opts, 'body') && opts.body != null
 
-  let body = opts.body as any
+  let body: any = opts.body
   const wantsJson =
     !!opts.json ||
     (hasBody && typeof body === 'string' && looksLikeJsonString(body)) ||
     (hasBody && typeof body === 'object' && !(body instanceof FormData) && !(body instanceof Blob) && !(body instanceof ArrayBuffer))
 
-  // Serialize JSON bodies
   if (hasBody && wantsJson && typeof body === 'object' && !(body instanceof FormData)) {
     body = JSON.stringify(body)
   }
@@ -62,8 +62,36 @@ export async function api<T>(path: string, opts: ApiCallOptions = {}): Promise<T
   const baseUrl = opts.baseUrl ?? getApiBaseUrl()
   const url = joinUrl(baseUrl, path)
 
-  const { baseUrl: _ignoredBaseUrl, noAuth: _ignoredNoAuth, json: _ignoredJson, ...fetchOpts } = opts
-  const res = await fetch(url, { ...fetchOpts, body, headers })
+  const controller = new AbortController()
+  const signals: AbortSignal[] = []
+  if (opts.signal) signals.push(opts.signal)
+  signals.push(controller.signal)
+
+  const onAbort = () => controller.abort()
+  for (const s of signals) {
+    if (s.aborted) controller.abort()
+    else s.addEventListener('abort', onAbort, { once: true })
+  }
+
+  let timeoutId: number | null = null
+  if (opts.timeoutMs && opts.timeoutMs > 0) {
+    timeoutId = window.setTimeout(() => controller.abort(), opts.timeoutMs)
+  }
+
+  const { baseUrl: _ignoredBaseUrl, noAuth: _ignoredNoAuth, json: _ignoredJson, timeoutMs: _ignoredTimeout, signal: _ignoredSignal, ...fetchOpts } = opts
+
+  let res: Response
+  try {
+    res = await fetch(url, { ...fetchOpts, body, headers, signal: controller.signal })
+  } catch (e: any) {
+    if (e?.name === 'AbortError') throw new ApiError(0, 'Request timeout')
+    throw new ApiError(0, 'Network error')
+  } finally {
+    if (timeoutId != null) clearTimeout(timeoutId)
+    for (const s of signals) {
+      try { s.removeEventListener('abort', onAbort) } catch {}
+    }
+  }
 
   const raw = await res.text().catch(() => '')
   let data: any = {}
@@ -76,13 +104,7 @@ export async function api<T>(path: string, opts: ApiCallOptions = {}): Promise<T
   }
 
   if (!res.ok) {
-    if (res.status === 401 && !opts.noAuth) {
-      clearToken()
-      clearCachedUser()
-    }
-
-    const fromBody = (typeof data === 'object' && data && ((data as any).message || (data as any).error))
-    const msg = fromBody || (res.status === 401 ? 'Нужен вход' : `HTTP ${res.status}`)
+    const msg = (typeof data === 'object' && data && (data.message || data.error)) || `HTTP ${res.status}`
     throw new ApiError(res.status, String(msg), data)
   }
 

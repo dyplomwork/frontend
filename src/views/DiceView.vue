@@ -5,12 +5,17 @@ import GamePanel from '../components/GamePanel.vue'
 import GameHowTo from '../components/GameHowTo.vue'
 import { useAuthStore } from '../stores/auth'
 import { useBigWinStore } from '../stores/bigwin'
+import { useUiStore } from '../stores/ui'
+import { useRequireAuthAction } from '../composables/useRequireAuthAction'
 import { sfx } from '../utils/sfx'
 import { formatNumber } from '../utils/format'
+import { normalizeError, reportError, userMessageForStatus } from '../utils/errors'
 import { dicePlay } from '../api/games'
 
 const auth = useAuthStore()
 const bigwinStore = useBigWinStore()
+const ui = useUiStore()
+const { requireAuth } = useRequireAuthAction()
 
 const amount = ref(0)
 
@@ -20,6 +25,17 @@ const rollOverUi = ref(30) // 1..99
 const running = ref(false)
 const lastRoll = ref<number | null>(null)
 const message = ref('')
+const messageType = ref<'info' | 'success' | 'error'>('info')
+
+function setError(e: unknown, fallback = 'Ошибка') {
+  const n = normalizeError(e)
+  const text = userMessageForStatus(n.status, n.message || fallback)
+  messageType.value = 'error'
+  message.value = text
+  if (n.status === 401) ui.toast(text, 'info')
+  else ui.toast(text, 'error')
+  reportError(e)
+}
 
 // local odds/payout
 const payoutMul = ref<number>(0)
@@ -114,13 +130,19 @@ const clamp01 = (x: number) => Math.max(0, Math.min(1, x))
 const easeOutCubic = (p: number) => 1 - Math.pow(1 - p, 3)
 const easeInOutCubic = (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2)
 
-async function play() {
+async function playInternal() {
   if (running.value) return
   message.value = ''
+  messageType.value = 'info'
 
-  if (!auth.user) return (message.value = 'Нужен вход')
-  if (bet.value <= 0) return (message.value = 'Укажи Amount')
-  if (auth.user.balance < bet.value) return (message.value = 'Недостаточно баланса')
+  if (bet.value <= 0) {
+    messageType.value = 'error'
+    return (message.value = 'Укажи Amount')
+  }
+  if (auth.user?.balance != null && auth.user.balance < bet.value) {
+    messageType.value = 'error'
+    return (message.value = 'Недостаточно баланса')
+  }
 
   running.value = true
   lastRoll.value = null
@@ -132,7 +154,7 @@ async function play() {
     res = await dicePlay({ bet: Number(bet.value), rollOver: ro })
   } catch (e: any) {
     running.value = false
-    message.value = e?.message || 'Ошибка запроса'
+    setError(e, 'Ошибка запроса')
     return
   }
 
@@ -160,6 +182,7 @@ async function play() {
       flash('win')
       triggerBurst('win')
       const profit = Math.max(0, resultPayout - Number(bet.value))
+      messageType.value = 'success'
       message.value = `Победа: +${fmt(profit, 2)} (x${formatNumber(multiplier.value, 4)})`
       bigwinStore.maybeShow(resultPayout, bet.value)
     } else {
@@ -167,12 +190,15 @@ async function play() {
       flash('lose')
       triggerBurst('lose')
       triggerBarShake()
+      messageType.value = 'error'
       message.value = 'Проигрыш'
     }
 
     try {
       await auth.fetchBalance()
-    } catch {}
+    } catch (e) {
+      reportError(e)
+    }
 
     running.value = false
   }
@@ -282,6 +308,10 @@ async function play() {
 
   raf = requestAnimationFrame(step)
 }
+
+function play() {
+  return requireAuth(() => playInternal())
+}
 onBeforeUnmount(() => stopAnim())
 </script>
 
@@ -292,6 +322,7 @@ onBeforeUnmount(() => stopAnim())
         v-model="amount"
         :disabled="running"
         :message="message"
+        :message-type="messageType"
         play-text="Play"
         @half="amount = Math.max(0, (Number(amount) || 0) / 2)"
         @double="amount = (Number(amount) || 0) * 2"
@@ -330,7 +361,7 @@ onBeforeUnmount(() => stopAnim())
       </div>
 
       <div class="bar-wrap">
-        <div class="bar casino" :class="[flashZone, { shake: barShake }]">
+        <div class="bar stake" :class="[flashZone, { shake: barShake }]">
           <div class="track">
             <div class="split red" :style="{ width: rollOver + '%' }" />
             <div class="split green" :style="{ width: 100 - rollOver + '%' }" />
@@ -418,38 +449,30 @@ onBeforeUnmount(() => stopAnim())
         <span class="pill green">Win</span>
       </div>
     </div>
+
     <template #below>
-      <GameHowTo>
-        <div class="muted" style="display: grid; gap: 10px">
-          <div>
-            <b class="text">Цель</b> — угадать исход броска: выпадет ли число выше выбранного порога <b class="text">Roll Over</b>.
-          </div>
-
-          <div>
-            <b class="text">Как играть</b>
-            <ul style="margin: 8px 0 0; padding-left: 18px">
-              <li>Укажите сумму ставки <b class="text">Amount</b>.</li>
-              <li>Передвиньте ползунок <b class="text">Roll Over</b> — это порог, который нужно “перебить”.</li>
-              <li>Нажмите <b class="text">Play</b> — выпадет число от 0 до 100.</li>
-              <li>Если результат оказался <b class="text">больше</b> Roll Over, ставка выигрывает.</li>
-            </ul>
-          </div>
-
-          <div>
-            <b class="text">Риск и множитель</b>
-            <ul style="margin: 8px 0 0; padding-left: 18px">
-              <li>Чем выше Roll Over, тем <b class="text">сложнее</b> выиграть (шанс ниже), но тем <b class="text">выше множитель</b> выплаты.</li>
-              <li>Чем ниже Roll Over — тем чаще выигрыши, но меньшая прибыль на победе.</li>
-            </ul>
-          </div>
-
-          <div>
-            <b class="text">Подсказка</b> — ищите баланс между шансом и множителем: комфортный уровень риска даёт стабильную игру.
-          </div>
-        </div>
-      </GameHowTo>
+      <GameHowTo
+        heading="Dice — как играть"
+        intro="Вы выбираете порог Roll Over и делаете ставку. Система генерирует число от 0 до 100: если результат выше выбранного порога — вы выигрываете по рассчитанному множителю. Чем выше шанс — тем ниже множитель." 
+        :sections="[
+          { title: 'Базовые шаги', items: [
+            'Укажите сумму ставки.',
+            'Выберите значение Roll Over на шкале.',
+            'Нажмите Play и дождитесь результата.',
+            'В случае победы выплата рассчитывается автоматически.'
+          ]},
+          { title: 'Механика и режимы', items: [
+            'Roll Over задаёт порог: шанс победы равен 100 − Roll Over.',
+            'Множитель растёт при уменьшении шанса победы.',
+            'Результат и ставка влияют только на текущий раунд.'
+          ]},
+          { title: 'Советы', items: [
+            'Для более стабильной игры выбирайте более высокий шанс победы.',
+            'Для риск-игры снижайте шанс победы и ловите высокий множитель, но помните, что серия проигрышей возможна.'
+          ]}
+        ]"
+      />
     </template>
-
   </GameLayout>
 </template>
 
@@ -520,7 +543,7 @@ onBeforeUnmount(() => stopAnim())
   text-shadow: 0 10px 18px rgba(0, 0, 0, 0.55);
 }
 
-.bar.casino {
+.bar.stake {
   position: relative;
   height: 48px;
   border-radius: 999px;
@@ -534,7 +557,7 @@ onBeforeUnmount(() => stopAnim())
   overflow: hidden;
   z-index: 1;
 }
-.bar.casino.shake {
+.bar.stake.shake {
   animation: barShakeSoft 180ms ease-in-out;
 }
 

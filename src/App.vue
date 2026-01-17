@@ -9,6 +9,7 @@ import { useI18n } from 'vue-i18n'
 import AppFooter from './components/AppFooter.vue'
 import SeoHead from './components/SeoHead.vue'
 import BigWinOverlay from './components/BigWinOverlay.vue'
+import ToastHost from './components/ToastHost.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -96,9 +97,9 @@ function logout() {
 
 <template>
   <SeoHead />
-  <div class="casino-app" :class="{ open: sidebarOpen }">
+  <div class="stake-app" :class="{ open: sidebarOpen }">
     <!-- Left Sidebar -->
-    <aside class="casino-sidebar" :class="{ open: sidebarOpen }">
+    <aside class="stake-sidebar" :class="{ open: sidebarOpen }">
       <div class="side-top">
         <button class="icon-btn" @click="toggleSidebar" title="Menu">
           <span class="ic">≡</span>
@@ -215,14 +216,14 @@ function logout() {
 
         <div class="lang-row" >
           <button class="icon-btn audio-btn" @click="toggleLang" title="Switch language">
-            <span class="ic">{{ locale === 'ru' ? '🇷🇺' : '🇺🇸' }}</span>
+            <span class="ic">{{ locale.toUpperCase() }}</span>
           </button>
         </div>
       </div>
     </aside>
 
-    <div class="casino-main">
-      <header class="casino-topbar">
+    <div class="stake-main">
+      <header class="stake-topbar">
         <div class="top-left">
           <button class="icon-btn topbar-menu" @click="toggleSidebar" aria-label="Menu">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -250,13 +251,14 @@ function logout() {
         </div>
       </header>
 
-      <main class="casino-content">
+      <main class="stake-content">
         <RouterView />
       </main>
 
-      <AppFooter class="casino-footer" />
+      <AppFooter class="stake-footer" />
 
       <BigWinOverlay />
+      <ToastHost />
     </div>
   </div>
 </template>

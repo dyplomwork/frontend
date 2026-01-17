@@ -1,4 +1,4 @@
-/* ========= Subtle grid overlay like casino ========= */
+/* ========= Subtle grid overlay like Stake ========= */
 body::before{
   content:'';
   position: fixed;

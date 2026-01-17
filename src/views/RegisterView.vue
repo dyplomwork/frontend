@@ -103,7 +103,7 @@ async function submit() {
 .field{ display:flex; flex-direction:column; gap: 6px; }
 .label{ font-size: 13px; color: var(--muted); }
 .tiny{ font-size: 12px; color: var(--muted); }
-.tiny.bad{ color: var(--brandRed); }
+.tiny.bad{ color: var(--stakeRed); }
 input{
   height: 44px;
   border-radius: 12px;

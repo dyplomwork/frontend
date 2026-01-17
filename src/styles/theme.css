@@ -129,24 +129,24 @@ body::after{
 }
 
 
-:root{ --brandGreen: #00e701; }
+:root{ --stakeGreen: #00e701; }
 
-.casino-green{
-  background: var(--brandGreen) !important;
+.stake-green{
+  background: var(--stakeGreen) !important;
   color: rgba(0,0,0,.9) !important;
   border-color: rgba(0,231,1,.35) !important;
   box-shadow: 0 0 0 1px rgba(0,231,1,.18), 0 0 18px rgba(0,231,1,.10);
 }
 
 
-/* casino-like darker base */
+/* Stake-like darker base */
 :root{
-  --app-bg: #0b141d;
-  --app-panel: #1b2733;
+  --stake-bg: #0b141d;
+  --stake-panel: #1b2733;
 }
 body{
   background: radial-gradient(900px 520px at 50% -10%, rgba(90,140,255,.10), rgba(0,0,0,0)),
-              linear-gradient(180deg, var(--app-bg), #091118 55%, #070d12);
+              linear-gradient(180deg, var(--stake-bg), #091118 55%, #070d12);
 }
 .card, .card2{
   border: 1px solid rgba(255,255,255,.06);

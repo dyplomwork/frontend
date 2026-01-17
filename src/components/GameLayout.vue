@@ -7,13 +7,13 @@ const props = withDefaults(defineProps<Props>(), {
   minHeight: 640,
 })
 
-function toCssPx(v: number | string){
+function toCssPx(v: number | string) {
   return typeof v === 'number' ? `${v}px` : v
 }
 </script>
 
 <template>
-  <div class="game-layout">
+  <div class="game-page">
     <div class="game-shell panel" :style="{ minHeight: toCssPx(props.minHeight) }">
       <aside class="game-left">
         <slot name="panel" />
@@ -23,7 +23,7 @@ function toCssPx(v: number | string){
       </section>
     </div>
 
-    <div v-if="$slots.below" class="game-below-shell panel">
+    <div v-if="$slots.below" class="game-below panel">
       <slot name="below" />
     </div>
   </div>

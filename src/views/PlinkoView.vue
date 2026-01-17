@@ -6,11 +6,16 @@ import GameHowTo from '../components/GameHowTo.vue'
 import BaseSelect from '../components/BaseSelect.vue'
 import { useAuthStore } from '../stores/auth'
 import { useBigWinStore } from '../stores/bigwin'
+import { useUiStore } from '../stores/ui'
+import { useRequireAuthAction } from '../composables/useRequireAuthAction'
 import { api } from '../utils/api'
 import { sfx } from '../utils/sfx'
 import { formatNumber } from '../utils/format'
+import { normalizeError, reportError, userMessageForStatus } from '../utils/errors'
 
 const auth = useAuthStore()
+const ui = useUiStore()
+const { requireAuth } = useRequireAuthAction()
 
 const amount = ref(0)
 const ballCount = ref(1)
@@ -18,6 +23,17 @@ const difficulty = ref<'LOW'|'MEDIUM'|'HIGH'>('MEDIUM')
 const rows = ref(16)
 const spinning = ref(false)
 const message = ref('')
+const messageType = ref<'info' | 'success' | 'error'>('info')
+
+function setError(e: unknown, fallback = 'Ошибка') {
+  const n = normalizeError(e)
+  const text = userMessageForStatus(n.status, n.message || fallback)
+  messageType.value = 'error'
+  message.value = text
+  if (n.status === 401) ui.toast(text, 'info')
+  else ui.toast(text, 'error')
+  reportError(e)
+}
 const bigwinStore = useBigWinStore()
 
 
@@ -360,15 +376,16 @@ async function safeFetchBalance() {
   try { await fn.call(auth) } catch {}
 }
 
-async function start() {
+async function startInternal() {
   if (spinning.value) return
-  if (!auth.user) { message.value = 'Нужен вход'; return }
+  message.value = ''
+  messageType.value = 'info'
 
   // баланс перед стартом
   await safeFetchBalance()
 
-  if (bet.value <= 0) { message.value = 'Укажи Amount'; return }
-  if ((auth.user?.balance ?? 0) < totalBet.value) { message.value = 'Недостаточно баланса'; return }
+  if (bet.value <= 0) { messageType.value = 'error'; message.value = 'Укажи Amount'; return }
+  if ((auth.user?.balance ?? 0) < totalBet.value) { messageType.value = 'error'; message.value = 'Недостаточно баланса'; return }
 
   spinning.value = true
   message.value = ''
@@ -390,8 +407,8 @@ async function start() {
         difficulty: difficulty.value,
       }),
     })
-  } catch {
-    message.value = 'Ошибка игры (play)'
+  } catch (e) {
+    setError(e, 'Ошибка игры (play)')
     spinning.value = false
     return
   }
@@ -435,6 +452,10 @@ async function start() {
   spinning.value = false
 }
 
+function start() {
+  return requireAuth(() => startInternal())
+}
+
 function binGradient(mult: number) {
   const min = 0.2
   const max = 110
@@ -460,6 +481,7 @@ if (typeof window !== 'undefined') {
         :disabled="spinning"
         play-text="Start"
         :message="message"
+        :message-type="messageType"
         @half="amount = Math.max(0, (Number(amount)||0)/2)"
         @double="amount = (Number(amount)||0)*2"
         @play="start"
@@ -533,16 +555,29 @@ if (typeof window !== 'undefined') {
             </div>
           </div>
     </div>
-    <template #below>
-      <GameHowTo>
-        <ul class="muted" style="margin: 0; padding-left: 18px">
-          <li>Выберите количество рядов и уровень риска.</li>
-          <li>Укажите сумму ставки и нажмите Play.</li>
-          <li>Шар падает по пинам в один из множителей — выплата = ставка × множитель.</li>
-        </ul>
-      </GameHowTo>
-    </template>
 
+    <template #below>
+      <GameHowTo
+        heading="Plinko — как играть"
+        intro="Запускайте шары сверху и наблюдайте, в какой слот они попадут. Множитель зависит от выбранной сложности и количества рядов: крайние слоты обычно дают выше множитель, но попадают реже." 
+        :sections="[
+          { title: 'Базовые шаги', items: [
+            'Укажите сумму ставки и количество шаров (Balls).',
+            'Выберите Difficulty и количество Rows — это меняет таблицу множителей.',
+            'Нажмите Start и дождитесь падения шаров.',
+            'Итоговая выплата складывается из результатов всех шаров.'
+          ]},
+          { title: 'Режимы и механики', items: [
+            'Higher risk: высокая сложность/больше рядов чаще приводит к крайним слотам с большими множителями, но общий разброс результатов выше.',
+            'Multiple balls: несколько шаров сглаживают дисперсию, но требуют большего общего бет.'
+          ]},
+          { title: 'Советы', items: [
+            'Если играете на стабильность — увеличивайте Balls и выбирайте более мягкую сложность.',
+            'Если цель — поймать большой множитель, снижайте Balls и пробуйте более рискованные настройки.'
+          ]}
+        ]"
+      />
+    </template>
   </GameLayout>
 </template>
 

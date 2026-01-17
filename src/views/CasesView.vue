@@ -27,7 +27,7 @@ function lootIcon(amount: number){
 </script>
 
 <template>
-  <div class="casino-page">
+  <div class="stake-page">
     <div class="game-card">
       <div class="header">
         <div>
@@ -73,7 +73,7 @@ function lootIcon(amount: number){
 </template>
 
 <style scoped>
-.casino-page{ padding: 18px 8px 34px; }
+.stake-page{ padding: 18px 8px 34px; }
 .game-card{
   background: rgba(14,26,36,.72);
   border: 1px solid rgba(255,255,255,.06);

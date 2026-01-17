@@ -1,5 +1,5 @@
 :root{
-  /* ========= Color system (casino-like) ========= */
+  /* ========= Color system (Stake-ish) ========= */
   --c-bg: #0b141d;
   --c-bg-2: #09121a;
   --c-surface: #13202c;
@@ -38,6 +38,7 @@
   --sidebar-w: 260px;
   --sidebar-w-collapsed: 86px;
   --left-panel-w: 320px;
+  --page-max: 1280px;
 
   /* ========= Spacing ========= */
   --pad-10: 10px;
@@ -60,9 +61,9 @@
   --muted: var(--c-muted);
   --blue: var(--c-accent);
 
-  --brandGreen: var(--c-success);
-  --brandRed: var(--c-danger);
-  --brandYellow: var(--c-warning);
+  --stakeGreen: var(--c-success);
+  --stakeRed: var(--c-danger);
+  --stakeYellow: var(--c-warning);
 
   --radius-md: var(--r-md);
   --radius-lg: var(--r-lg);

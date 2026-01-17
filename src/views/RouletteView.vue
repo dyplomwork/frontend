@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
+import GameHowTo from '../components/GameHowTo.vue'
+import GameStatus from '../components/GameStatus.vue'
 import { useAuthStore } from '../stores/auth'
 import { useBigWinStore } from '../stores/bigwin'
+import { useUiStore } from '../stores/ui'
+import { useRequireAuthAction } from '../composables/useRequireAuthAction'
 import { sfx } from '../utils/sfx'
 import { formatNumber } from '../utils/format'
+import { normalizeError, reportError, userMessageForStatus } from '../utils/errors'
 import { normalizeRouletteKey, roulettePlay } from '../api/games'
 
 type BetKey =
@@ -24,6 +29,10 @@ type BetKey =
 
 const auth = useAuthStore()
 const bigwinStore = useBigWinStore()
+const ui = useUiStore()
+const { requireAuth } = useRequireAuthAction()
+
+const TEMP_ALLOW_FREE_SPIN = false
 
 const chips = [1, 5, 10, 50, 100, 500, 1000, 5000]
 const chip = ref(10)
@@ -38,6 +47,17 @@ const spinning = ref(false)
 
 const lastNumber = ref<number | null>(null)
 const message = ref('')
+const messageType = ref<'info' | 'success' | 'error'>('info')
+
+function setError(e: unknown, fallback = 'Ошибка') {
+  const n = normalizeError(e)
+  const text = userMessageForStatus(n.status, n.message || fallback)
+  messageType.value = 'error'
+  message.value = text
+  if (n.status === 401) ui.toast(text, 'info')
+  else ui.toast(text, 'error')
+  reportError(e)
+}
 
 const winKeys = ref<Set<BetKey>>(new Set())
 const tappedKey = ref<string>('')
@@ -355,11 +375,12 @@ onBeforeUnmount(() => {
 })
 
 
-async function spin() {
+async function spinInternal() {
   if (spinning.value) return
 
   spinning.value = true
   message.value = ''
+  messageType.value = 'info'
   lastNumber.value = null
   winKeys.value = new Set()
   pauseIdle(1_000)
@@ -375,14 +396,17 @@ async function spin() {
       win = wheelNumbers[Math.floor(Math.random() * wheelNumbers.length)]
     } else {
       if (!auth.user) {
+        messageType.value = 'error'
         message.value = 'Нужен вход'
         return
       }
       if (totalBet.value <= 0) {
+        messageType.value = 'error'
         message.value = 'Сделай ставку'
         return
       }
       if (auth.user.balance < totalBet.value) {
+        messageType.value = 'error'
         message.value = 'Недостаточно баланса'
         return
       }
@@ -420,22 +444,31 @@ async function spin() {
 
     if (payout > 0) {
       const profit = Math.max(0, payout - Number(totalBet.value))
+      messageType.value = 'success'
       message.value = `Выпало ${win}. Выигрыш: +${fmt(profit, 2)}`
       bigwinStore.maybeShow(payout, totalBet.value)
     } else {
+      messageType.value = 'info'
       message.value = `Выпало ${win}`
     }
 
     if (shouldRefreshBalance) {
       try {
         await auth.fetchBalance()
-      } catch {}
+      } catch (e) {
+        reportError(e)
+      }
     }
   } catch (e: any) {
-    message.value = e?.message ? String(e.message) : 'Ошибка'
+    setError(e, 'Ошибка')
   } finally {
     spinning.value = false
   }
+}
+
+function spin() {
+  if (TEMP_ALLOW_FREE_SPIN) return spinInternal()
+  return requireAuth(() => spinInternal())
 }
 
 const numGrid = [
@@ -487,7 +520,7 @@ function betOf(key: BetKey) {
           {{ spinning ? 'Spinning...' : 'Play' }}
         </button>
 
-        <div class="hint" v-if="message">{{ message }}</div>
+        <GameStatus :type="messageType" :text="message" />
       </div>
     </template>
 
@@ -784,40 +817,30 @@ function betOf(key: BetKey) {
         </div>
       </div>
     </div>
+
     <template #below>
-      <GameHowTo>
-        <div class="muted" style="display: grid; gap: 10px">
-          <div>
-            <b class="text">Цель</b> — сделать ставки на исход вращения и получить выплату, если выпавшее число попало в выбранные варианты.
-          </div>
-
-          <div>
-            <b class="text">Как играть</b>
-            <ul style="margin: 8px 0 0; padding-left: 18px">
-              <li>Выберите номинал фишки.</li>
-              <li>Кликайте по полям стола, чтобы добавить ставки (можно распределять сумму по разным вариантам).</li>
-              <li>Проверьте общую сумму ставок в панели и нажмите <b class="text">Spin</b>.</li>
-              <li>После остановки колеса выигрышные ставки будут рассчитаны автоматически.</li>
-            </ul>
-          </div>
-
-          <div>
-            <b class="text">Варианты ставок</b>
-            <ul style="margin: 8px 0 0; padding-left: 18px">
-              <li><b class="text">Прямое число</b> — ставка на конкретное значение (самая высокая выплата, но низкий шанс).</li>
-              <li><b class="text">Цвет</b> — красное / чёрное (более частые выигрыши, ниже коэффициент).</li>
-              <li><b class="text">Чёт / нечёт</b> и <b class="text">диапазоны</b> (1–18 / 19–36) — умеренный риск.</li>
-              <li><b class="text">Дюжины / колонки</b> — баланс между шансом и выплатой.</li>
-            </ul>
-          </div>
-
-          <div>
-            <b class="text">Совет</b> — комбинируйте “частые” ставки (цвет/чётность) с более рискованными (число/дюжина), чтобы выровнять дисперсию.
-          </div>
-        </div>
-      </GameHowTo>
+      <GameHowTo
+        heading="Roulette — как играть"
+        intro="Классическая европейская рулетка: делайте ставки на число или группы (цвет, чёт/нечёт, диапазоны, ряды). После вращения выплата начисляется автоматически в зависимости от выпавшего номера." 
+        :sections="[
+          { title: 'Базовые шаги', items: [
+            'Выберите фишку (Chip) — это размер ставки за клик.',
+            'Кликайте по полю: можно ставить на число или на внешние ставки (цвет, чёт/нечёт, диапазон и т.д.).',
+            'Используйте Undo, чтобы отменить последний шаг, или Clear, чтобы очистить всё.',
+            'Нажмите Play и дождитесь результата.'
+          ]},
+          { title: 'Режимы ставок', items: [
+            'Number — ставка на конкретное число (обычно самый высокий коэффициент).',
+            'Outside bets — ставки на группы: Red/Black, Even/Odd, Low/High, диапазоны 1–12 / 13–24 / 25–36, ряды.',
+            'Можно комбинировать ставки: общий Amount — это сумма всех выбранных позиций.'
+          ]},
+          { title: 'Советы', items: [
+            'Не разгоняйте общий Amount слишком быстро: несколько кликов по разным позициям быстро увеличивают сумму.',
+            'Для более ровной игры используйте групповые ставки; для максимальной прибыли — ставки на числа, но с большим риском.'
+          ]}
+        ]"
+      />
     </template>
-
   </GameLayout>
 </template>
 

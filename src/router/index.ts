@@ -1,18 +1,19 @@
 import type { Router } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { reportError } from '../utils/errors'
 
-import HomeView from '../views/HomeView.vue'
-import LoginView from '../views/LoginView.vue'
-import RegisterView from '../views/RegisterView.vue'
-import RouletteView from '../views/RouletteView.vue'
-import PlinkoView from '../views/PlinkoView.vue'
-import MinesView from '../views/MinesView.vue'
-import CasesView from '../views/CasesView.vue'
-import CaseDetailView from '../views/CaseDetailView.vue'
-import DiceView from '../views/DiceView.vue'
-import CoinFlipView from '../views/CoinFlipView.vue'
-import ProfileView from '../views/ProfileView.vue'
-import AdminView from '../views/AdminView.vue'
+const HomeView = () => import('../views/HomeView.vue')
+const LoginView = () => import('../views/LoginView.vue')
+const RegisterView = () => import('../views/RegisterView.vue')
+const RouletteView = () => import('../views/RouletteView.vue')
+const PlinkoView = () => import('../views/PlinkoView.vue')
+const MinesView = () => import('../views/MinesView.vue')
+const CasesView = () => import('../views/CasesView.vue')
+const CaseDetailView = () => import('../views/CaseDetailView.vue')
+const DiceView = () => import('../views/DiceView.vue')
+const CoinFlipView = () => import('../views/CoinFlipView.vue')
+const ProfileView = () => import('../views/ProfileView.vue')
+const AdminView = () => import('../views/AdminView.vue')
 
 export const routes = [
   {
@@ -46,7 +47,6 @@ export const routes = [
       description: 'Create an account for Casino Simulator.',
     },
   },
-
   {
     path: '/roulette',
     name: 'roulette',
@@ -87,7 +87,6 @@ export const routes = [
       description: 'Dice game demo: choose chance and profit, roll under or over.',
     },
   },
-
   {
     path: '/coinflip',
     name: 'coinflip',
@@ -98,7 +97,6 @@ export const routes = [
       description: 'Coin flip battles: create, join and approve the result.',
     },
   },
-
   {
     path: '/cases',
     name: 'cases',
@@ -119,7 +117,6 @@ export const routes = [
       description: 'Case details: prizes, chances and expected value.',
     },
   },
-
   {
     path: '/profile',
     name: 'profile',
@@ -135,25 +132,27 @@ export const routes = [
     name: 'admin',
     component: AdminView,
     meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
       title: 'Admin — Casino Simulator',
       description: 'Admin panel.',
     },
   },
 ] as const
 
-
 export function addAuthGuards(r: Router) {
   r.beforeEach((to) => {
     const auth = useAuthStore()
-    if (to.meta.requiresAuth && !auth.isAuthed) return { name: 'login' }
+    if (to.meta.requiresAuth && !auth.isAuthed) {
+      return { name: 'login', query: { next: to.fullPath } }
+    }
     if (to.meta.requiresAdmin && !auth.isAdmin) return { name: 'home' }
     return true
   })
 
-
   r.afterEach(() => {
     if (typeof window === 'undefined') return
     const auth = useAuthStore()
-    if (auth.isAuthed) auth.fetchBalance().catch(() => {})
+    if (auth.isAuthed) auth.fetchBalance().catch(reportError)
   })
 }
