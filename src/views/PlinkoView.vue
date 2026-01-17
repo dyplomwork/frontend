@@ -166,9 +166,11 @@ const pegGapX = computed(() => {
 const pegGapY = computed(() => clamp(20, pegGapX.value * 0.95, 34))
 const BIN_SIZE = computed(() => clamp(34, pegGapX.value * 1.45, 58))
 
+const binsGap = computed(() => clamp(20, pegGapY.value * 0.65, 44))
+const binsCenterY = computed(() => 60 + rows.value * pegGapY.value + binsGap.value)
 const stageHeight = computed(() => {
-  const h = 3 + rows.value * pegGapY.value + 44 + BIN_SIZE.value + 40
-  return clamp(460, h, 860)
+  const h = binsCenterY.value + BIN_SIZE.value / 2 + 70
+  return clamp(420, h, 860)
 })
 
 type Ball = {
@@ -204,7 +206,7 @@ const pegs = computed(() => {
 
 const bins = computed(() => {
   const n = rows.value + 1
-  const y = 60 + rows.value * pegGapY.value + 44
+  const y = binsCenterY.value
   const startX = W.value / 2 - (n - 1) * pegGapX.value / 2
   return Array.from({ length: n }, (_, i) => ({
     i,
@@ -542,7 +544,7 @@ if (typeof window !== 'undefined') {
 
           <div
             class="bins-grid"
-            :style="{ width: binsWidth + 'px', '--bin': BIN_SIZE + 'px' }"
+            :style="{ width: binsWidth + 'px', '--bin': BIN_SIZE + 'px', '--bins-top': (binsCenterY - BIN_SIZE / 2) + 'px' }"
           >
             <div
               v-for="bin in bins"
@@ -652,13 +654,12 @@ if (typeof window !== 'undefined') {
   position:absolute;
   left: 50%;
   transform: translateX(-50%);
-  bottom: 34px;
-  height: calc(var(--bin, 56px) + 16px);
+  top: var(--bins-top, 420px);
+  height: var(--bin, 56px);
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: center;
   gap: 0;
-  padding: 8px 0;
 }
 .bin{
   width: var(--bin, 56px);
