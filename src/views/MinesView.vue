@@ -348,7 +348,7 @@ buildGrid()
       <GamePanel
         v-model="bet"
         :disabled="inGame"
-        play-text="Play"
+        :play-text="$t('ui.s_de3c731be5')"
         :message="message"
         :message-type="messageType"
         @half="bet = Math.max(1, Math.floor((Number(bet) || 0) / 2))"

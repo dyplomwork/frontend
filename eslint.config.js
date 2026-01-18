@@ -5,7 +5,7 @@ import vueParser from 'vue-eslint-parser'
 
 export default [
   {
-    ignores: ['dist*.ts'],
+    ignores: ['dist/**', 'node_modules/**'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {

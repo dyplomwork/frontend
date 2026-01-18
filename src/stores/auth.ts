@@ -25,6 +25,8 @@ export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null as User | null,
     loading: false,
+    _balanceFetchAt: 0,
+    _balanceFetchPromise: null as Promise<any> | null,
   }),
   getters: {
     role(state): Role {
@@ -138,18 +140,35 @@ export const useAuthStore = defineStore('auth', {
       return this.fetchBalance()
     },
 
-    async fetchBalance() {
+    async fetchBalance(opts?: { force?: boolean; ttlMs?: number }) {
       if (!canUseStorage()) return { ok: false as const }
       if (!this.user) return { ok: false as const, message: 'Not logged in' }
 
-      const res = await api<{ ok: boolean; balance: number }>('/api/v1/accounts/users/me/balance', {
-        method: 'GET',
-      })
+      const u = this.user
 
-      this.user = { ...this.user, balance: Number(res.balance) }
-      setCachedUser(this.user)
+      const ttlMs = opts?.ttlMs ?? 10_000
+      const now = Date.now()
+      if (!opts?.force && this._balanceFetchAt && now - this._balanceFetchAt < ttlMs) {
+        return { ok: true as const, balance: this.user.balance }
+      }
 
-      return { ok: true as const, balance: res.balance }
+      if (this._balanceFetchPromise) return this._balanceFetchPromise
+
+      this._balanceFetchPromise = (async () => {
+        const res = await api<{ ok: boolean; balance: number }>('/api/v1/accounts/users/me/balance', {
+          method: 'GET',
+        })
+        this.user = { ...u, balance: Number(res.balance) }
+        setCachedUser(this.user)
+        this._balanceFetchAt = Date.now()
+        return { ok: true as const, balance: res.balance }
+      })()
+
+      try {
+        return await this._balanceFetchPromise
+      } finally {
+        this._balanceFetchPromise = null
+      }
     },
 
     async applyBalance(delta: number) {

@@ -323,7 +323,7 @@ onBeforeUnmount(() => stopAnim())
         :disabled="running"
         :message="message"
         :message-type="messageType"
-        play-text="Play"
+        :play-text="$t('ui.s_de3c731be5')"
         @half="amount = Math.max(0, (Number(amount) || 0) / 2)"
         @double="amount = (Number(amount) || 0) * 2"
         @play="play"

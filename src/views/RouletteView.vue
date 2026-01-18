@@ -519,13 +519,13 @@ function betOf(key: BetKey) {
             <span class="coin" :aria-label="$t('ui.s_d940a38dce')">K</span>
           </div>
           <div class="btn-row">
-            <button class="btn btn-ghost" :disabled="spinning" @click="undo">Undo</button>
-            <button class="btn btn-ghost" :disabled="spinning" @click="clearAll">Clear</button>
+            <button class="btn btn-ghost" :disabled="spinning" @click="undo">{{ $t('ui.s_undo') }}</button>
+            <button class="btn btn-ghost" :disabled="spinning" @click="clearAll">{{ $t('ui.s_clear') }}</button>
           </div>
         </div>
 
         <button class="btn btn-primary" :disabled="spinning" @click="spin">
-          {{ spinning ? 'Spinning...' : 'Play' }}
+          {{ spinning ? $t('ui.s_spinning') : $t('ui.s_de3c731be5') }}
         </button>
 
         <GameStatus :type="messageType" :text="message" />
@@ -703,7 +703,7 @@ function betOf(key: BetKey) {
               @mouseenter="setHover('Диапазон1')"
               @mouseleave="setHover('')"
             >
-              1 to 12
+              {{ $t('ui.s_1_to_12') }}
               <span
                 v-if="betOf('Диапазон1')"
                 class="chip-badge"
@@ -722,7 +722,7 @@ function betOf(key: BetKey) {
               @mouseenter="setHover('Диапазон2')"
               @mouseleave="setHover('')"
             >
-              13 to 24
+              {{ $t('ui.s_13_to_24') }}
               <span
                 v-if="betOf('Диапазон2')"
                 class="chip-badge"
@@ -741,7 +741,7 @@ function betOf(key: BetKey) {
               @mouseenter="setHover('Диапазон3')"
               @mouseleave="setHover('')"
             >
-              25 to 36
+              {{ $t('ui.s_25_to_36') }}
               <span
                 v-if="betOf('Диапазон3')"
                 class="chip-badge"
@@ -762,7 +762,7 @@ function betOf(key: BetKey) {
               @mouseenter="setHover('low')"
               @mouseleave="setHover('')"
             >
-              1 to 18
+              {{ $t('ui.s_1_to_18') }}
               <span
                 v-if="betOf('low')"
                 class="chip-badge"
@@ -781,7 +781,7 @@ function betOf(key: BetKey) {
               @mouseenter="setHover('even')"
               @mouseleave="setHover('')"
             >
-              EVEN
+              {{ $t('ui.s_even') }}
               <span
                 v-if="betOf('even')"
                 class="chip-badge"
@@ -800,7 +800,7 @@ function betOf(key: BetKey) {
               @mouseenter="setHover('red')"
               @mouseleave="setHover('')"
             >
-              RED
+              {{ $t('ui.s_red') }}
               <span
                 v-if="betOf('red')"
                 class="chip-badge"
@@ -819,7 +819,7 @@ function betOf(key: BetKey) {
               @mouseenter="setHover('black')"
               @mouseleave="setHover('')"
             >
-              BLACK
+              {{ $t('ui.s_black') }}
               <span
                 v-if="betOf('black')"
                 class="chip-badge"
@@ -838,7 +838,7 @@ function betOf(key: BetKey) {
               @mouseenter="setHover('odd')"
               @mouseleave="setHover('')"
             >
-              ODD
+              {{ $t('ui.s_odd') }}
               <span
                 v-if="betOf('odd')"
                 class="chip-badge"
@@ -857,7 +857,7 @@ function betOf(key: BetKey) {
               @mouseenter="setHover('high')"
               @mouseleave="setHover('')"
             >
-              19 to 36
+              {{ $t('ui.s_19_to_36') }}
               <span
                 v-if="betOf('high')"
                 class="chip-badge"
@@ -871,7 +871,7 @@ function betOf(key: BetKey) {
         </div>
 
         <div class="bets-mini" v-if="Object.keys(bets).length">
-          <div class="mini-title">Bets</div>
+          <div class="mini-title">{{ $t('ui.s_bets') }}</div>
           <div class="mini-row">
             <div
               v-for="(b, k) in bets"
