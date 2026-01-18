@@ -103,7 +103,7 @@ function logout() {
     <!-- Left Sidebar -->
     <aside class="app-sidebar" :class="{ open: sidebarOpen }">
       <div class="side-top">
-        <button class="icon-btn" @click="toggleSidebar" title="Menu">
+        <button class="icon-btn" @click="toggleSidebar" :title="$t('ui.s_menu')">
           <span class="ic">≡</span>
         </button>
       </div>
@@ -217,7 +217,7 @@ function logout() {
         </button>
 
         <div class="lang-row" >
-          <button class="icon-btn audio-btn" @click="toggleLang" title="Switch language">
+          <button class="icon-btn audio-btn" @click="toggleLang" :title="$t('ui.s_lang')">
             <span class="ic">{{ locale.toUpperCase() }}</span>
           </button>
         </div>
@@ -247,11 +247,11 @@ function logout() {
               <span class="bal">{{ fmt(ui.balanceOverride ?? auth.user.balance, 2) }}</span>
               <span class="coin" :aria-label="$t('ui.s_d940a38dce')">K</span>
             </div>
-            <button class="btn" @click="logout">Logout</button>
+            <button class="btn" @click="logout">{{ $t('ui.s_logout') }}</button>
           </template>
           <template v-else>
-            <button class="btn" @click="goLogin">Login</button>
-            <button class="btn btn-blue" @click="goRegister">Register</button>
+            <button class="btn" @click="goLogin">{{ $t('ui.s_99dea78007') }}</button>
+            <button class="btn btn-blue" @click="goRegister">{{ $t('ui.s_0b93f81293') }}</button>
           </template>
         </div>
       </header>

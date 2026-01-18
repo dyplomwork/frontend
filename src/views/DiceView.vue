@@ -452,7 +452,7 @@ onBeforeUnmount(() => stopAnim())
 
     <template #below>
       <GameHowTo
-        heading="Dice — как играть"
+        :heading="$t('ui.s_howto_dice')"
         intro="Вы выбираете порог Roll Over и делаете ставку. Система генерирует число от 0 до 100: если результат выше выбранного порога — вы выигрываете по рассчитанному множителю. Чем выше шанс — тем ниже множитель." 
         :sections="[
           { title: 'Базовые шаги', items: [

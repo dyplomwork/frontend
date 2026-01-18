@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { sfx } from '../utils/sfx'
 import GameStatus, { type GameStatusType } from './GameStatus.vue'
 
@@ -14,13 +15,16 @@ type Props = {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  playText: 'Play',
+  playText: '',
   disabled: false,
   currency: 'K',
   message: '',
   messageType: 'info',
   showMultButtons: true,
 })
+
+const { t } = useI18n()
+const playLabel = computed(() => props.playText || t('ui.s_de3c731be5'))
 
 const emit = defineEmits<{
   (e: 'update:modelValue', v: number): void
@@ -72,7 +76,7 @@ function onPlay() {
     </div>
 
     <button class="btn btn-primary" :disabled="disabled" @click="onPlay">
-      {{ playText }}
+      {{ playLabel }}
     </button>
 
     <slot />

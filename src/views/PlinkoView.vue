@@ -12,10 +12,12 @@ import { api } from '../utils/api'
 import { sfx } from '../utils/sfx'
 import { formatNumber } from '../utils/format'
 import { normalizeError, reportError, userMessageForStatus } from '../utils/errors'
+import { useI18n } from 'vue-i18n'
 
 const auth = useAuthStore()
 const ui = useUiStore()
 const { requireAuth } = useRequireAuthAction()
+const { t } = useI18n()
 
 const amount = ref(0)
 const difficulty = ref<'LOW'|'MEDIUM'|'HIGH'>('MEDIUM')
@@ -66,11 +68,13 @@ const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 
 const rowsList = [8, 12, 16]
 
-const difficultyOptions = [
-  { value: 'LOW', label: 'Low' },
-  { value: 'MEDIUM', label: 'Medium' },
-  { value: 'HIGH', label: 'High' },
-] as const
+const difficultyOptions = computed(() =>
+  [
+    { value: 'LOW', label: t('ui.s_low') },
+    { value: 'MEDIUM', label: t('ui.s_medium') },
+    { value: 'HIGH', label: t('ui.s_high') },
+  ] as const
+)
 
 const rowsOptions = computed(() => rowsList.map((r) => ({ value: r, label: String(r) })))
 
@@ -570,7 +574,7 @@ if (typeof window !== 'undefined') {
       <GamePanel
         v-model="amount"
         :disabled="controlsDisabled"
-        play-text="Drop"
+        :play-text="$t('ui.s_drop')"
         :message="message"
         :message-type="messageType"
         @half="amount = Math.max(0, (Number(amount)||0)/2)"
@@ -578,9 +582,9 @@ if (typeof window !== 'undefined') {
         @play="start"
       >
         <div class="quick-drop-row">
-          <button class="btn btn-primary" :disabled="controlsDisabled" @click="dropMany(5)">Drop 5</button>
-          <button class="btn btn-primary" :disabled="controlsDisabled" @click="dropMany(10)">Drop 10</button>
-          <button class="btn btn-primary" :disabled="controlsDisabled" @click="dropMany(25)">Drop 25</button>
+          <button class="btn btn-primary" :disabled="controlsDisabled" @click="dropMany(5)">{{ $t('ui.s_drop_n', { n: 5 }) }}</button>
+          <button class="btn btn-primary" :disabled="controlsDisabled" @click="dropMany(10)">{{ $t('ui.s_drop_n', { n: 10 }) }}</button>
+          <button class="btn btn-primary" :disabled="controlsDisabled" @click="dropMany(25)">{{ $t('ui.s_drop_n', { n: 25 }) }}</button>
         </div>
 
         <div class="field">
@@ -651,7 +655,7 @@ if (typeof window !== 'undefined') {
 
     <template #below>
       <GameHowTo
-        heading="Plinko — как играть"
+        :heading="$t('ui.s_howto_plinko')"
         intro="Запускайте шары сверху и наблюдайте, в какой слот они попадут. Множитель зависит от выбранной сложности и количества рядов: крайние слоты обычно дают выше множитель, но попадают реже." 
         :sections="[
           { title: 'Базовые шаги', items: [

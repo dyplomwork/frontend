@@ -356,7 +356,7 @@ watch(quickOpen, (v) => {
         <div class="hist">
           <div class="hist-head">
             <div class="muted"><b>{{ $t('ui.s_16d2b386b2') }}</b> <span class="small">({{ history.length }}/20)</span></div>
-            <button class="tiny" :disabled="opening || !history.length" @click="clearHistory">Clear</button>
+            <button class="tiny" :disabled="opening || !history.length" @click="clearHistory">{{ $t('ui.s_clear') }}</button>
           </div>
 
           <div v-if="!history.length" class="hist-empty muted">{{ $t('ui.s_90a2dedaa8') }}</div>
