@@ -19,8 +19,7 @@ const { requireAuth } = useRequireAuthAction()
 
 const amount = ref(0)
 
-// Slider = Roll Over
-const rollOverUi = ref(30) // 1..99
+const rollOverUi = ref(30)
 
 const running = ref(false)
 const lastRoll = ref<number | null>(null)
@@ -37,7 +36,6 @@ function setError(e: unknown, fallback = 'Ошибка') {
   reportError(e)
 }
 
-// local odds/payout
 const payoutMul = ref<number>(0)
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
@@ -51,7 +49,6 @@ const winChance = computed(() => round2(100 - rollOver.value))
 const multiplier = computed(() => payoutMul.value || 0)
 const profitOnWin = computed(() => Math.round(bet.value * (multiplier.value - 1) * 10000) / 10000)
 
-// UI
 const needle = ref(50)
 const bump = ref(false)
 const flashZone = ref<'win' | 'lose' | ''>('')
@@ -61,12 +58,27 @@ const linePulse = ref(false)
 const puckScale = ref(1)
 const puckGlow = ref(0)
 
-// particles + micro shake
 const burst = ref<'win' | 'lose' | ''>('')
 const burstTick = ref(0)
 const barShake = ref(false)
 
 const resultLabel = computed(() => needle.value.toFixed(2))
+
+type DiceHistoryItem = {
+  roll: number
+  isWin: boolean
+  bet: number
+  payout: number
+  ts: number
+}
+
+const history = ref<DiceHistoryItem[]>([])
+
+const displayRoll = computed(() => {
+  if (running.value) return Number(resultLabel.value)
+  if (lastRoll.value != null) return lastRoll.value
+  return null
+})
 
 const needleTarget = ref(needle.value)
 
@@ -108,7 +120,6 @@ function triggerBarShake() {
   window.setTimeout(() => (barShake.value = false), 180)
 }
 
-// ==== Slider behavior ====
 function recalcLocalPayout() {
   const wc = Math.max(0.01, winChance.value)
   payoutMul.value = round2(99 / wc)
@@ -125,7 +136,6 @@ function onSliderCommit() {
 
 recalcLocalPayout()
 
-// easing
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x))
 const easeOutCubic = (p: number) => 1 - Math.pow(1 - p, 3)
 const easeInOutCubic = (p: number) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2)
@@ -177,6 +187,17 @@ async function playInternal() {
   puckGlow.value = 0.9
 
   const finalize = async () => {
+    history.value = [
+      {
+        roll: target,
+        isWin: resultIsWin,
+        bet: Number(bet.value),
+        payout: resultPayout,
+        ts: Date.now(),
+      },
+      ...history.value,
+    ].slice(0, 12)
+
     if (resultIsWin) {
       sfx('win')
       flash('win')
@@ -351,6 +372,55 @@ onBeforeUnmount(() => stopAnim())
       </GamePanel>
     </template>
 
+    <div class="dice-top">
+      <div class="card result">
+        <div class="card-head">
+          <div class="title">{{ $t('ui.s_dice_result') }}</div>
+          <div class="meta" :class="flashZone">
+            <span>{{ $t('ui.s_3245db459e') }}:</span>
+            <b>{{ fmt(rollOver, 2) }}</b>
+            <span class="dot"></span>
+            <span>{{ $t('ui.s_ebeefd375d') }}:</span>
+            <b>{{ fmt(winChance, 2) }}%</b>
+            <span class="dot"></span>
+            <span>{{ $t('ui.s_ea1c527187') }}:</span>
+            <b>x{{ fmt(multiplier, 4) }}</b>
+          </div>
+        </div>
+
+        <div class="big" :class="flashZone">
+          <span v-if="displayRoll != null">{{ fmt(displayRoll, 2) }}</span>
+          <span v-else class="empty">—</span>
+        </div>
+
+        <div class="sub" :class="flashZone">
+          <span v-if="lastRoll != null">{{ $t('ui.s_dice_last_roll') }}: <b>{{ fmt(lastRoll, 2) }}</b></span>
+          <span v-else class="muted">{{ $t('ui.s_dice_no_rolls') }}</span>
+        </div>
+      </div>
+
+      <div class="card history">
+        <div class="card-head">
+          <div class="title">{{ $t('ui.s_16d2b386b2') }}</div>
+          <div class="muted small">{{ $t('ui.s_dice_last_n', { n: 12 }) }}</div>
+        </div>
+
+        <div v-if="history.length" class="hist-grid">
+          <button
+            v-for="(h, i) in history"
+            :key="h.ts + '-' + i"
+            class="hist-item"
+            :class="h.isWin ? 'win' : 'lose'"
+            type="button"
+            :title="h.isWin ? $t('ui.s_dice_win') : $t('ui.s_dice_lose')"
+          >
+            <span class="v">{{ fmt(h.roll, 2) }}</span>
+          </button>
+        </div>
+        <div v-else class="empty muted">{{ $t('ui.s_dice_no_rolls') }}</div>
+      </div>
+    </div>
+
     <div class="dial">
       <div class="scale-top" aria-hidden="true">
         <div class="tick" style="left: 0%"><span>0</span></div>
@@ -435,18 +505,7 @@ onBeforeUnmount(() => stopAnim())
       </div>
 
       <div class="controls">
-        <div class="hint muted">
-          Выигрыш, если результат <b class="text">справа</b> от линии Roll Over.
-        </div>
-      </div>
-
-      <div v-if="lastRoll !== null" class="last">
-        Last roll: <b>{{ fmt(lastRoll, 2) }}</b>
-      </div>
-
-      <div class="legend" aria-hidden="true">
-        <span class="pill red">Lose</span>
-        <span class="pill green">Win</span>
+        <div class="hint muted">{{ $t('ui.s_dice_hint_over') }}</div>
       </div>
     </div>
 
@@ -477,6 +536,137 @@ onBeforeUnmount(() => stopAnim())
 </template>
 
 <style scoped>
+.dice-top {
+  width: min(920px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 14px;
+}
+
+.card {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 16px;
+  padding: 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(900px 260px at 20% 0%, rgba(255, 255, 255, 0.08), transparent 60%);
+  pointer-events: none;
+}
+
+.card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.title {
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  opacity: 0.9;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.meta b {
+  font-weight: 700;
+}
+
+.dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.35);
+  display: inline-block;
+  margin: 0 2px;
+}
+
+.big {
+  margin-top: 12px;
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  line-height: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.big.win {
+  text-shadow: 0 0 18px rgba(90, 255, 170, 0.25);
+}
+
+.big.lose {
+  text-shadow: 0 0 18px rgba(255, 110, 110, 0.22);
+}
+
+.sub {
+  margin-top: 8px;
+  font-size: 13px;
+  position: relative;
+  z-index: 1;
+  opacity: 0.9;
+}
+
+.small {
+  font-size: 12px;
+}
+
+.hist-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.hist-item {
+  border-radius: 12px;
+  padding: 10px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.24);
+  color: inherit;
+  cursor: default;
+  user-select: none;
+}
+
+.hist-item.win {
+  border-color: rgba(60, 255, 170, 0.14);
+  box-shadow: 0 0 0 1px rgba(60, 255, 170, 0.04) inset;
+}
+
+.hist-item.lose {
+  border-color: rgba(255, 110, 110, 0.14);
+  box-shadow: 0 0 0 1px rgba(255, 110, 110, 0.04) inset;
+}
+
+.hist-item .v {
+  font-weight: 700;
+  font-size: 12px;
+  opacity: 0.95;
+}
+
+.empty {
+  opacity: 0.65;
+}
+
 .summary {
   margin-top: 14px;
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -499,12 +689,27 @@ onBeforeUnmount(() => stopAnim())
   margin: 0 auto;
   position: relative;
   padding-top: 28px;
-
-  /* если вдруг где-то сверху есть странные слои — это лечит почти всё */
   isolation: isolate;
 }
 
-/* bubble fix */
+@media (max-width: 860px) {
+  .dice-top {
+    grid-template-columns: 1fr;
+  }
+  .hist-grid {
+    grid-template-columns: repeat(8, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .big {
+    font-size: 38px;
+  }
+  .hist-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
 .bar-wrap {
   position: relative;
   overflow: visible;

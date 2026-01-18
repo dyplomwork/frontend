@@ -85,6 +85,14 @@ export default {
     "s_ebeefd375d": "Win chance",
     "s_3245db459e": "Roll Over",
 
+    "s_dice_result": "Result",
+    "s_dice_last_roll": "Last roll",
+    "s_dice_no_rolls": "No rolls yet",
+    "s_dice_last_n": "Last {n}",
+    "s_dice_win": "Win",
+    "s_dice_lose": "Lose",
+    "s_dice_hint_over": "You win if the result is to the right of the Roll Over line.",
+
     "s_b7ccc175d0": "Game modes",
     "s_235e44683b": "Modes are visible to everyone, but playing requires login.",
 
