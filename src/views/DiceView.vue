@@ -47,7 +47,6 @@ const rollOver = computed(() => Math.max(1, Math.min(99, round2(Number(rollOverU
 const winChance = computed(() => round2(100 - rollOver.value))
 
 const multiplier = computed(() => payoutMul.value || 0)
-const profitOnWin = computed(() => Math.round(bet.value * (multiplier.value - 1) * 10000) / 10000)
 
 const needle = ref(50)
 const bump = ref(false)
@@ -348,28 +347,7 @@ onBeforeUnmount(() => stopAnim())
         @half="amount = Math.max(0, (Number(amount) || 0) / 2)"
         @double="amount = (Number(amount) || 0) * 2"
         @play="play"
-      >
-        <template #summary>
-          <div class="summary">
-            <div class="row-between">
-              <span class="muted">{{ $t('ui.s_ea1c527187') }}</span>
-              <span class="num">x{{ fmt(multiplier, 4) }}</span>
-            </div>
-            <div class="row-between">
-              <span class="muted">{{ $t('ui.s_047de663a9') }}</span>
-              <span class="num">{{ fmt(profitOnWin, 4) }}</span>
-            </div>
-            <div class="row-between">
-              <span class="muted">{{ $t('ui.s_ebeefd375d') }}</span>
-              <span class="num">{{ fmt(winChance, 2) }}%</span>
-            </div>
-            <div class="row-between">
-              <span class="muted">{{ $t('ui.s_3245db459e') }}</span>
-              <span class="num">{{ fmt(rollOver, 2) }}</span>
-            </div>
-          </div>
-        </template>
-      </GamePanel>
+      />
     </template>
 
     <div class="dice-top">
@@ -547,18 +525,11 @@ onBeforeUnmount(() => stopAnim())
 .card {
   border: 1px solid rgba(255, 255, 255, 0.06);
   background: rgba(0, 0, 0, 0.18);
-  border-radius: 16px;
-  padding: 14px;
+  border-radius: 14px;
+  padding: 12px;
   position: relative;
   overflow: hidden;
-}
-
-.card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(900px 260px at 20% 0%, rgba(255, 255, 255, 0.08), transparent 60%);
-  pointer-events: none;
+  box-sizing: border-box;
 }
 
 .card-head {
@@ -631,20 +602,28 @@ onBeforeUnmount(() => stopAnim())
 .hist-grid {
   margin-top: 12px;
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
   gap: 8px;
   position: relative;
   z-index: 1;
+  width: 100%;
+  min-width: 0;
 }
 
 .hist-item {
   border-radius: 12px;
-  padding: 10px 10px;
+  padding: 10px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   background: rgba(0, 0, 0, 0.24);
   color: inherit;
   cursor: default;
   user-select: none;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .hist-item.win {
@@ -661,28 +640,17 @@ onBeforeUnmount(() => stopAnim())
   font-weight: 700;
   font-size: 12px;
   opacity: 0.95;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
 }
 
 .empty {
   opacity: 0.65;
 }
 
-.summary {
-  margin-top: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(0, 0, 0, 0.18);
-  border-radius: 14px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.row-between {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
+
 
 .dial {
   width: min(920px, 100%);
@@ -696,17 +664,11 @@ onBeforeUnmount(() => stopAnim())
   .dice-top {
     grid-template-columns: 1fr;
   }
-  .hist-grid {
-    grid-template-columns: repeat(8, 1fr);
-  }
 }
 
 @media (max-width: 520px) {
   .big {
     font-size: 38px;
-  }
-  .hist-grid {
-    grid-template-columns: repeat(6, 1fr);
   }
 }
 
