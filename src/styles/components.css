@@ -217,6 +217,7 @@
   background: rgba(0,0,0,.18);
   border-radius: 16px;
   overflow: hidden;
+  width: 100%;
 }
 .howto-summary{
   list-style: none;
@@ -239,10 +240,10 @@
 
 /* Game layout */
 .game-page{ display: flex; flex-direction: column; gap: 16px; max-width: var(--page-max); margin: 0 auto; }
-.game-shell{ display: grid; grid-template-columns: 360px 1fr; gap: 16px; padding: 16px; }
+.game-shell{ display: grid; grid-template-columns: 360px 1fr; gap: 16px; padding: 16px; width: 100%; }
 .game-left{ min-width: 0; }
 .game-main{ min-width: 0; }
-.game-below{ padding: 16px; }
+.game-below{ padding: 16px; width: 100%; }
 
 @media (max-width: 900px){
   .game-shell{ grid-template-columns: 1fr; }

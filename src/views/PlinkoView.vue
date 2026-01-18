@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import GameLayout from '../components/GameLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
 import GameHowTo from '../components/GameHowTo.vue'
@@ -148,7 +148,8 @@ const table = computed(() =>
 const bet = computed(() => Math.max(0, Number(amount.value) || 0))
 const totalBet = computed(() => bet.value)
 
-const controlsDisabled = computed(() => activeBallCount() >= MAX_ACTIVE_BALLS)
+const activeBallsCount = computed(() => safeBalls.value.filter(b => b.visible || b.landing == null).length)
+const controlsDisabled = computed(() => activeBallsCount.value >= MAX_ACTIVE_BALLS)
 
 /** stage sizing */
 const stageEl = ref<HTMLElement | null>(null)
@@ -422,7 +423,7 @@ function availableBalance() {
 }
 
 function activeBallCount() {
-  return balls.value.filter(b => b.visible || b.landing == null).length
+  return activeBallsCount.value
 }
 
 async function dropInternal() {
@@ -476,7 +477,7 @@ async function dropInternal() {
     ? traceToBallResult(t)
     : { rights: Array(rows.value).fill(false), landing: 0, payout: 0, multiplier: table.value[0] ?? 0 }
 
-  const ball: Ball = {
+  const ball = reactive({
     id: Date.now() + Math.floor(Math.random() * 100000),
     bet: bet.value,
     win: totalWin,
@@ -487,7 +488,7 @@ async function dropInternal() {
     landing: null,
     msg: '',
     scale: 1
-  }
+  }) as Ball
   balls.value = [...balls.value, ball]
 
   await dropBall(ball, result)

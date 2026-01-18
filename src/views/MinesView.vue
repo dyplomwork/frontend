@@ -338,38 +338,6 @@ function cashOut() {
   return requireAuth(() => cashOutInternal())
 }
 
-async function randomPick() {
-  if (!canClick.value) return
-  const candidates = grid.value.filter((c) => !c.revealed)
-  if (!candidates.length) return
-  const pick = candidates[Math.floor(Math.random() * candidates.length)]
-  await reveal(pick)
-}
-
-async function resetInternal() {
-  sfx('click')
-
-  if (inGame.value && !lost.value) {
-    try {
-      await minesFinish()
-      await auth.fetchBalance()
-    } catch (e) {
-      reportError(e)
-    }
-  }
-
-  inGame.value = false
-  lost.value = false
-  safePicks.value = 0
-  multiplier.value = 1
-  message.value = ''
-  buildGrid()
-}
-
-function reset() {
-  return requireAuth(() => resetInternal())
-}
-
 // initial
 buildGrid()
 </script>
@@ -404,10 +372,6 @@ buildGrid()
           </div>
         </div>
 
-        <button class="btn btn-ghost" @click="randomPick" :disabled="!canClick">
-          Random Pick
-        </button>
-
         <template #summary>
           <div class="summary">
             <div class="label">Текущий профит: x{{ fmt(multiplier, 4) }}</div>
@@ -427,10 +391,6 @@ buildGrid()
 
           <button class="btn btn-primary" :class="{ 'cash-pulse': cashPulse }" @click="cashOut" :disabled="!(inGame && safePicks > 0)">
             Cashout ({{ fmt(payoutAmount, 2) }}K)
-          </button>
-
-          <button class="btn btn-ghost" @click="reset" :disabled="inGame">
-            Reset
           </button>
         </template>
       </GamePanel>
