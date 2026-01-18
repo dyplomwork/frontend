@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import GameLayout from '../components/GameLayout.vue'
+import GamePageLayout from '../components/GamePageLayout.vue'
 import GameHowTo from '../components/GameHowTo.vue'
 import GameStatus from '../components/GameStatus.vue'
 import { useAuthStore } from '../stores/auth'
@@ -483,7 +483,7 @@ function betOf(key: BetKey) {
 </script>
 
 <template>
-  <GameLayout>
+  <GamePageLayout>
     <template #panel>
       <div class="panel-stack">
         <div class="field">
@@ -841,7 +841,7 @@ function betOf(key: BetKey) {
         ]"
       />
     </template>
-  </GameLayout>
+  </GamePageLayout>
 </template>
 
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import GameLayout from '../components/GameLayout.vue'
+import GamePageLayout from '../components/GamePageLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
 import Modal from '../components/Modal.vue'
 import { useAuthStore } from '../stores/auth'
@@ -245,7 +245,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <GameLayout :min-height="560">
+  <GamePageLayout :min-height="560">
     <template #panel>
       <GamePanel
         v-model="amount"
@@ -456,7 +456,7 @@ onBeforeUnmount(() => {
         <button class="btn btn-primary" @click="createBattle">Create</button>
       </div>
     </Modal>
-  </GameLayout>
+  </GamePageLayout>
 </template>
 
 <style scoped>

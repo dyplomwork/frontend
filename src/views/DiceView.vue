@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
-import GameLayout from '../components/GameLayout.vue'
+import GamePageLayout from '../components/GamePageLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
 import GameHowTo from '../components/GameHowTo.vue'
 import { useAuthStore } from '../stores/auth'
@@ -316,7 +316,7 @@ onBeforeUnmount(() => stopAnim())
 </script>
 
 <template>
-  <GameLayout :min-height="560">
+  <GamePageLayout :min-height="560">
     <template #panel>
       <GamePanel
         v-model="amount"
@@ -473,7 +473,7 @@ onBeforeUnmount(() => stopAnim())
         ]"
       />
     </template>
-  </GameLayout>
+  </GamePageLayout>
 </template>
 
 <style scoped>

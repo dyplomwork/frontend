@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import GameLayout from '../components/GameLayout.vue'
+import GamePageLayout from '../components/GamePageLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
 import BaseSelect from '../components/BaseSelect.vue'
 import GameHowTo from '../components/GameHowTo.vue'
@@ -343,7 +343,7 @@ buildGrid()
 </script>
 
 <template>
-  <GameLayout :min-height="560">
+  <GamePageLayout :min-height="560">
     <template #panel>
       <GamePanel
         v-model="bet"
@@ -392,6 +392,7 @@ buildGrid()
           <button class="btn btn-primary" :class="{ 'cash-pulse': cashPulse }" @click="cashOut" :disabled="!(inGame && safePicks > 0)">
             Cashout ({{ fmt(payoutAmount, 2) }}K)
           </button>
+
         </template>
       </GamePanel>
     </template>
@@ -451,7 +452,7 @@ buildGrid()
         ]"
       />
     </template>
-  </GameLayout>
+  </GamePageLayout>
 </template>
 
 <style scoped>

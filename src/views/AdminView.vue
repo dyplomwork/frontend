@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import GameLayout from '../components/GameLayout.vue'
+import GamePageLayout from '../components/GamePageLayout.vue'
 import BaseSelect from '../components/BaseSelect.vue'
 import { api } from '../utils/api'
 import { useAuthStore } from '../stores/auth'
@@ -290,7 +290,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <GameLayout :min-height="640">
+  <GamePageLayout :min-height="640">
     <div class="admin-wrap">
       <div class="admin-head card">
         <div class="row-between" style="gap:12px;">
@@ -513,7 +513,7 @@ onMounted(async () => {
         </div>
       </div>
     </div>
-  </GameLayout>
+  </GamePageLayout>
 </template>
 
 <style scoped>
