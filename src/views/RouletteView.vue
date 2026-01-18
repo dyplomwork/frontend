@@ -846,7 +846,6 @@ function betOf(key: BetKey) {
 
 
 <style scoped>
-/* --- оставил твои стили как есть --- */
 .panel-stack {
   display: flex;
   flex-direction: column;
@@ -987,15 +986,16 @@ function betOf(key: BetKey) {
 }
 
 .roulette-wrap {
+  --wheel: clamp(260px, 28vw, 360px);
   display: grid;
-  grid-template-columns: 399px 1fr;
+  grid-template-columns: minmax(300px, var(--wheel)) minmax(0, 1fr);
   gap: 18px;
   align-items: start;
 }
 .wheel-area {
   position: relative;
-  width: 399px;
-  height: 399px;
+  width: var(--wheel);
+  height: var(--wheel);
   margin: 0 auto;
 }
 
@@ -1022,7 +1022,7 @@ function betOf(key: BetKey) {
 
 .history-under {
   margin: 10px auto 0;
-  width: 363px;
+  width: calc(var(--wheel) - 36px);
   border: 1px solid rgba(255, 255, 255, 0.06);
   background: rgba(0, 0, 0, 0.18);
   border-radius: 14px;
@@ -1085,6 +1085,18 @@ function betOf(key: BetKey) {
 .board {
   padding-top: 6px;
   overflow-x: auto;
+  overflow-y: visible;
+}
+.board::-webkit-scrollbar {
+  height: 10px;
+}
+.board::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12);
+  border-radius: 999px;
+}
+.board::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.04);
+  border-radius: 999px;
 }
 .board {
   --cell: 44px;
@@ -1093,18 +1105,28 @@ function betOf(key: BetKey) {
 
 .grid.grid-vertical {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
   gap: 12px;
+  align-items: flex-start;
+
+  min-width: max-content;
 }
+
 .main-table {
   display: flex;
   gap: 10px;
   align-items: flex-start;
+  flex: 0 0 auto;
 }
+
 .side-table {
+  flex: 0 0 auto;
+
   display: flex;
   gap: 10px;
   align-items: flex-start;
+  flex-wrap: wrap;
 }
 
 .cell-zero {
@@ -1317,6 +1339,15 @@ function betOf(key: BetKey) {
   }
   to {
     filter: brightness(1.38);
+  }
+}
+
+@media (max-width: 1200px) {
+  .roulette-wrap {
+    grid-template-columns: 1fr;
+  }
+  .board {
+    justify-self: center;
   }
 }
 
