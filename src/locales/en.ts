@@ -80,7 +80,7 @@ export default {
     "s_c099dc0228": "The ball falls through pegs and lands on a multiplier.",
 
     "s_de3c731be5": "Play",
-    "s_d1ef90f3c0": "SCXDROP • demo credits",
+    "s_d1ef90f3c0": "SCXDROP",
 
     "s_e152e62605": "Play casino games",
     "s_eda9fd1f8b":
