@@ -116,6 +116,14 @@ function numbersForOutsideBet(key: BetKey): number[] {
       return Array.from(redSet)
     case 'black':
       return Array.from({ length: 36 }, (_, i) => i + 1).filter((n) => !redSet.has(n))
+    case 'even':
+      return Array.from({ length: 18 }, (_, i) => (i + 1) * 2)
+    case 'odd':
+      return Array.from({ length: 18 }, (_, i) => i * 2 + 1)
+    case 'low':
+      return Array.from({ length: 18 }, (_, i) => i + 1)
+    case 'high':
+      return Array.from({ length: 18 }, (_, i) => i + 19)
     default:
       return []
   }
@@ -576,8 +584,8 @@ function betOf(key: BetKey) {
       </div>
 
       <div class="board">
-        <div class="grid grid-vertical">
-          <div class="main-table">
+        <div class="roulette-table">
+          <div class="table-top">
             <button
               class="cell-zero"
               :class="{ win: isWinKey('n:0'), tap: tappedKey === 'n:0' }"
@@ -625,10 +633,8 @@ function betOf(key: BetKey) {
                 </button>
               </div>
             </div>
-          </div>
 
-          <div class="side-table">
-            <div class="col-bets">
+            <div class="col-2to1">
               <button
                 class="cell out"
                 :class="{ win: isWinKey('Ряд1'), has: !!betOf('Ряд1'), tap: tappedKey === 'Ряд1' }"
@@ -686,117 +692,181 @@ function betOf(key: BetKey) {
                 </span>
               </button>
             </div>
+          </div>
 
-            <div class="col-bets">
-              <button
-                class="cell big"
-                :class="{
-                  win: isWinKey('Диапазон1'),
-                  has: !!betOf('Диапазон1'),
-                  tap: tappedKey === 'Диапазон1',
-                }"
-                @click="addBet('Диапазон1')"
-                @contextmenu.prevent="onBetContext($event, 'Диапазон1')"
-                @mouseenter="setHover('Диапазон1')"
-                @mouseleave="setHover('')"
+          <div class="dozens-row">
+            <button
+              class="cell big"
+              :class="{ win: isWinKey('Диапазон1'), has: !!betOf('Диапазон1'), tap: tappedKey === 'Диапазон1' }"
+              @click="addBet('Диапазон1')"
+              @contextmenu.prevent="onBetContext($event, 'Диапазон1')"
+              @mouseenter="setHover('Диапазон1')"
+              @mouseleave="setHover('')"
+            >
+              1 to 12
+              <span
+                v-if="betOf('Диапазон1')"
+                class="chip-badge"
+                :class="betBadgeClass(betOf('Диапазон1'))"
+                :style="betBadgeStyleByAmount(betOf('Диапазон1'))"
               >
-                1 to 12
-                <span
-                  v-if="betOf('Диапазон1')"
-                  class="chip-badge"
-                  :class="betBadgeClass(betOf('Диапазон1'))"
-                  :style="betBadgeStyleByAmount(betOf('Диапазон1'))"
-                >
-                  {{ fmt(betOf('Диапазон1'), 0) }}
-                </span>
-              </button>
+                {{ fmt(betOf('Диапазон1'), 0) }}
+              </span>
+            </button>
 
-              <button
-                class="cell big"
-                :class="{
-                  win: isWinKey('Диапазон2'),
-                  has: !!betOf('Диапазон2'),
-                  tap: tappedKey === 'Диапазон2',
-                }"
-                @click="addBet('Диапазон2')"
-                @contextmenu.prevent="onBetContext($event, 'Диапазон2')"
-                @mouseenter="setHover('Диапазон2')"
-                @mouseleave="setHover('')"
+            <button
+              class="cell big"
+              :class="{ win: isWinKey('Диапазон2'), has: !!betOf('Диапазон2'), tap: tappedKey === 'Диапазон2' }"
+              @click="addBet('Диапазон2')"
+              @contextmenu.prevent="onBetContext($event, 'Диапазон2')"
+              @mouseenter="setHover('Диапазон2')"
+              @mouseleave="setHover('')"
+            >
+              13 to 24
+              <span
+                v-if="betOf('Диапазон2')"
+                class="chip-badge"
+                :class="betBadgeClass(betOf('Диапазон2'))"
+                :style="betBadgeStyleByAmount(betOf('Диапазон2'))"
               >
-                13 to 24
-                <span
-                  v-if="betOf('Диапазон2')"
-                  class="chip-badge"
-                  :class="betBadgeClass(betOf('Диапазон2'))"
-                  :style="betBadgeStyleByAmount(betOf('Диапазон2'))"
-                >
-                  {{ fmt(betOf('Диапазон2'), 0) }}
-                </span>
-              </button>
+                {{ fmt(betOf('Диапазон2'), 0) }}
+              </span>
+            </button>
 
-              <button
-                class="cell big"
-                :class="{
-                  win: isWinKey('Диапазон3'),
-                  has: !!betOf('Диапазон3'),
-                  tap: tappedKey === 'Диапазон3',
-                }"
-                @click="addBet('Диапазон3')"
-                @contextmenu.prevent="onBetContext($event, 'Диапазон3')"
-                @mouseenter="setHover('Диапазон3')"
-                @mouseleave="setHover('')"
+            <button
+              class="cell big"
+              :class="{ win: isWinKey('Диапазон3'), has: !!betOf('Диапазон3'), tap: tappedKey === 'Диапазон3' }"
+              @click="addBet('Диапазон3')"
+              @contextmenu.prevent="onBetContext($event, 'Диапазон3')"
+              @mouseenter="setHover('Диапазон3')"
+              @mouseleave="setHover('')"
+            >
+              25 to 36
+              <span
+                v-if="betOf('Диапазон3')"
+                class="chip-badge"
+                :class="betBadgeClass(betOf('Диапазон3'))"
+                :style="betBadgeStyleByAmount(betOf('Диапазон3'))"
               >
-                25 to 36
-                <span
-                  v-if="betOf('Диапазон3')"
-                  class="chip-badge"
-                  :class="betBadgeClass(betOf('Диапазон3'))"
-                  :style="betBadgeStyleByAmount(betOf('Диапазон3'))"
-                >
-                  {{ fmt(betOf('Диапазон3'), 0) }}
-                </span>
-              </button>
-            </div>
+                {{ fmt(betOf('Диапазон3'), 0) }}
+              </span>
+            </button>
+          </div>
 
-            <div class="col-bets">
-              <button
-                class="cell big bet-red"
-                :class="{ win: isWinKey('red'), has: !!betOf('red'), tap: tappedKey === 'red' }"
-                @click="addBet('red')"
-                @contextmenu.prevent="onBetContext($event, 'red')"
-                @mouseenter="setHover('red')"
-                @mouseleave="setHover('')"
+          <div class="outside-row">
+            <button
+              class="cell big"
+              :class="{ win: isWinKey('low'), has: !!betOf('low'), tap: tappedKey === 'low' }"
+              @click="addBet('low')"
+              @contextmenu.prevent="onBetContext($event, 'low')"
+              @mouseenter="setHover('low')"
+              @mouseleave="setHover('')"
+            >
+              1 to 18
+              <span
+                v-if="betOf('low')"
+                class="chip-badge"
+                :class="betBadgeClass(betOf('low'))"
+                :style="betBadgeStyleByAmount(betOf('low'))"
               >
-                RED
-                <span
-                  v-if="betOf('red')"
-                  class="chip-badge"
-                  :class="betBadgeClass(betOf('red'))"
-                  :style="betBadgeStyleByAmount(betOf('red'))"
-                >
-                  {{ fmt(betOf('red'), 0) }}
-                </span>
-              </button>
+                {{ fmt(betOf('low'), 0) }}
+              </span>
+            </button>
 
-              <button
-                class="cell big bet-black"
-                :class="{ win: isWinKey('black'), has: !!betOf('black'), tap: tappedKey === 'black' }"
-                @click="addBet('black')"
-                @contextmenu.prevent="onBetContext($event, 'black')"
-                @mouseenter="setHover('black')"
-                @mouseleave="setHover('')"
+            <button
+              class="cell big"
+              :class="{ win: isWinKey('even'), has: !!betOf('even'), tap: tappedKey === 'even' }"
+              @click="addBet('even')"
+              @contextmenu.prevent="onBetContext($event, 'even')"
+              @mouseenter="setHover('even')"
+              @mouseleave="setHover('')"
+            >
+              EVEN
+              <span
+                v-if="betOf('even')"
+                class="chip-badge"
+                :class="betBadgeClass(betOf('even'))"
+                :style="betBadgeStyleByAmount(betOf('even'))"
               >
-                BLACK
-                <span
-                  v-if="betOf('black')"
-                  class="chip-badge"
-                  :class="betBadgeClass(betOf('black'))"
-                  :style="betBadgeStyleByAmount(betOf('black'))"
-                >
-                  {{ fmt(betOf('black'), 0) }}
-                </span>
-              </button>
-            </div>
+                {{ fmt(betOf('even'), 0) }}
+              </span>
+            </button>
+
+            <button
+              class="cell big bet-red"
+              :class="{ win: isWinKey('red'), has: !!betOf('red'), tap: tappedKey === 'red' }"
+              @click="addBet('red')"
+              @contextmenu.prevent="onBetContext($event, 'red')"
+              @mouseenter="setHover('red')"
+              @mouseleave="setHover('')"
+            >
+              RED
+              <span
+                v-if="betOf('red')"
+                class="chip-badge"
+                :class="betBadgeClass(betOf('red'))"
+                :style="betBadgeStyleByAmount(betOf('red'))"
+              >
+                {{ fmt(betOf('red'), 0) }}
+              </span>
+            </button>
+
+            <button
+              class="cell big bet-black"
+              :class="{ win: isWinKey('black'), has: !!betOf('black'), tap: tappedKey === 'black' }"
+              @click="addBet('black')"
+              @contextmenu.prevent="onBetContext($event, 'black')"
+              @mouseenter="setHover('black')"
+              @mouseleave="setHover('')"
+            >
+              BLACK
+              <span
+                v-if="betOf('black')"
+                class="chip-badge"
+                :class="betBadgeClass(betOf('black'))"
+                :style="betBadgeStyleByAmount(betOf('black'))"
+              >
+                {{ fmt(betOf('black'), 0) }}
+              </span>
+            </button>
+
+            <button
+              class="cell big"
+              :class="{ win: isWinKey('odd'), has: !!betOf('odd'), tap: tappedKey === 'odd' }"
+              @click="addBet('odd')"
+              @contextmenu.prevent="onBetContext($event, 'odd')"
+              @mouseenter="setHover('odd')"
+              @mouseleave="setHover('')"
+            >
+              ODD
+              <span
+                v-if="betOf('odd')"
+                class="chip-badge"
+                :class="betBadgeClass(betOf('odd'))"
+                :style="betBadgeStyleByAmount(betOf('odd'))"
+              >
+                {{ fmt(betOf('odd'), 0) }}
+              </span>
+            </button>
+
+            <button
+              class="cell big"
+              :class="{ win: isWinKey('high'), has: !!betOf('high'), tap: tappedKey === 'high' }"
+              @click="addBet('high')"
+              @contextmenu.prevent="onBetContext($event, 'high')"
+              @mouseenter="setHover('high')"
+              @mouseleave="setHover('')"
+            >
+              19 to 36
+              <span
+                v-if="betOf('high')"
+                class="chip-badge"
+                :class="betBadgeClass(betOf('high'))"
+                :style="betBadgeStyleByAmount(betOf('high'))"
+              >
+                {{ fmt(betOf('high'), 0) }}
+              </span>
+            </button>
           </div>
         </div>
 
@@ -986,11 +1056,13 @@ function betOf(key: BetKey) {
 }
 
 .roulette-wrap {
-  --wheel: clamp(260px, 28vw, 360px);
-  display: grid;
-  grid-template-columns: minmax(300px, var(--wheel)) minmax(0, 1fr);
-  gap: 18px;
-  align-items: start;
+  --wheel: clamp(240px, 24vw, 340px);
+  --zero: 70px;
+  --col: 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
 }
 .wheel-area {
   position: relative;
@@ -1084,49 +1156,50 @@ function betOf(key: BetKey) {
 
 .board {
   padding-top: 6px;
-  overflow-x: auto;
-  overflow-y: visible;
-}
-.board::-webkit-scrollbar {
-  height: 10px;
-}
-.board::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.12);
-  border-radius: 999px;
-}
-.board::-webkit-scrollbar-track {
-  background: rgba(255,255,255,0.04);
-  border-radius: 999px;
+  width: 100%;
 }
 .board {
   --cell: 44px;
   --gap: 6px;
 }
 
-.grid.grid-vertical {
+.roulette-table {
+  width: 100%;
   display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: flex-start;
-
-  min-width: max-content;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
 }
 
-.main-table {
+.table-top {
   display: flex;
-  gap: 10px;
   align-items: flex-start;
-  flex: 0 0 auto;
+  gap: 10px;
 }
 
-.side-table {
-  flex: 0 0 auto;
-
+.col-2to1 {
   display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: var(--gap);
+  width: var(--col);
+}
+
+.dozens-row,
+.outside-row {
+  display: grid;
+  gap: var(--gap);
+  margin-left: calc(var(--zero) + 10px);
+  margin-right: calc(var(--col) + 10px);
+}
+
+.dozens-row {
+  grid-template-columns: repeat(3, 1fr);
+  width: calc(var(--cell) * 12 + var(--gap) * 11);
+}
+
+.outside-row {
+  grid-template-columns: repeat(6, 1fr);
+  width: calc(var(--cell) * 12 + var(--gap) * 11);
 }
 
 .cell-zero {
@@ -1188,7 +1261,7 @@ function betOf(key: BetKey) {
   background: rgba(44, 58, 72, 0.92);
 }
 .cell.out {
-  width: var(--cell);
+  width: 100%;
   height: var(--cell);
   background: rgba(255, 255, 255, 0.03);
 }
@@ -1200,7 +1273,7 @@ function betOf(key: BetKey) {
   margin-left: 0;
 }
 .big {
-  width: calc(var(--cell) * 3 + var(--gap) * 2);
+  width: 100%;
   height: var(--cell);
 }
 
@@ -1287,8 +1360,8 @@ function betOf(key: BetKey) {
 }
 
 .wheel-svg {
-  width: 363px;
-  height: 363px;
+  width: var(--wheel);
+  height: var(--wheel);
   border-radius: 50%;
   overflow: hidden;
   box-shadow:
@@ -1342,36 +1415,25 @@ function betOf(key: BetKey) {
   }
 }
 
+@media (max-width: 1400px) {
+  .roulette-wrap {
+    --wheel: clamp(220px, 22vw, 310px);
+  }
+}
+
 @media (max-width: 1200px) {
   .roulette-wrap {
-    grid-template-columns: 1fr;
-  }
-  .board {
-    justify-self: center;
+    --wheel: 300px;
   }
 }
 
 @media (max-width: 980px) {
   .roulette-wrap {
-    grid-template-columns: 1fr;
-  }
-  .wheel-area {
-    width: 320px;
-    height: 320px;
-  }
-  .wheel-svg {
-    width: 300px;
-    height: 300px;
-    margin: 12px auto 0;
-  }
-  .history-under {
-    width: min(363px, 100%);
-  }
-  .main-table {
-    overflow-x: auto;
+    --wheel: 280px;
   }
   .board {
-    padding-top: 14px;
+    --cell: 42px;
+    --gap: 6px;
   }
 }
 @media (max-width: 420px) {
