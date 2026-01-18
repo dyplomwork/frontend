@@ -2,6 +2,7 @@
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter, RouterView, RouterLink } from 'vue-router'
 import { useAuthStore } from './stores/auth'
+import { useUiStore } from './stores/ui'
 import { isSfxOn, setSfxOn, sfx } from './utils/sfx'
 import { getBgmVolume, initBgm, isBgmOn, setBgmVolume } from './utils/bgm'
 import { formatNumber } from './utils/format'
@@ -14,6 +15,7 @@ import ToastHost from './components/ToastHost.vue'
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const ui = useUiStore()
 
 const { locale } = useI18n()
 const LS_LOCALE = 'app_locale_v1'
@@ -239,7 +241,7 @@ function logout() {
           <template v-if="auth.user">
             <div class="balance-pill">
               <span class="muted">{{ $t('ui.s_99a808d8d1') }}</span>
-              <span class="bal">{{ fmt(auth.user.balance, 2) }}</span>
+              <span class="bal">{{ fmt(ui.balanceOverride ?? auth.user.balance, 2) }}</span>
               <span class="coin" :aria-label="$t('ui.s_d940a38dce')">K</span>
             </div>
             <button class="btn" @click="logout">Logout</button>

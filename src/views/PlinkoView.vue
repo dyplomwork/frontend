@@ -18,10 +18,17 @@ const ui = useUiStore()
 const { requireAuth } = useRequireAuthAction()
 
 const amount = ref(0)
-const ballCount = ref(1)
 const difficulty = ref<'LOW'|'MEDIUM'|'HIGH'>('MEDIUM')
 const rows = ref(16)
-const spinning = ref(false)
+const inFlightStake = ref(0)
+const localBalance = ref(0)
+const pendingWinTotal = ref(0)
+const landedSinceSync = ref(0)
+const lastSyncAt = ref(0)
+const SYNC_INTERVAL_MS = 30_000
+const SYNC_EVERY_N_LANDED = 6
+const activeRequests = ref(0)
+const MAX_ACTIVE_BALLS = 30
 const message = ref('')
 const messageType = ref<'info' | 'success' | 'error'>('info')
 
@@ -35,6 +42,24 @@ function setError(e: unknown, fallback = 'Ошибка') {
   reportError(e)
 }
 const bigwinStore = useBigWinStore()
+
+watch(
+  () => auth.user?.balance,
+  (b) => {
+    if (b == null) return
+    if (!lastSyncAt.value) {
+      localBalance.value = Number(b) || 0
+      lastSyncAt.value = Date.now()
+      ui.setBalanceOverride(localBalance.value)
+      return
+    }
+  },
+  { immediate: true }
+)
+
+onBeforeUnmount(() => {
+  ui.setBalanceOverride(null)
+})
 
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
@@ -121,13 +146,9 @@ const table = computed(() =>
 )
 
 const bet = computed(() => Math.max(0, Number(amount.value) || 0))
-const ballsN = computed(() => Math.max(1, Math.min(50, Number(ballCount.value) || 1)))
+const totalBet = computed(() => bet.value)
 
-watch(ballCount, (v) => {
-  const n = Math.max(1, Math.min(50, Number(v) || 1))
-  if (n !== Number(v)) ballCount.value = n
-})
-const totalBet = computed(() => bet.value * ballsN.value)
+const controlsDisabled = computed(() => activeBallCount() >= MAX_ACTIVE_BALLS)
 
 /** stage sizing */
 const stageEl = ref<HTMLElement | null>(null)
@@ -175,6 +196,9 @@ const stageHeight = computed(() => {
 
 type Ball = {
   id: number
+  bet: number
+  win: number
+  net: number
   x: number
   y: number
   visible: boolean
@@ -372,31 +396,54 @@ async function dropBall(ball: Ball, result: BallResult) {
 }
 
 
-async function safeFetchBalance() {
+async function syncBalanceFromServer() {
   const fn = (auth as any)?.fetchBalance
   if (typeof fn !== 'function') return
-  try { await fn.call(auth) } catch {}
+  try {
+    await fn.call(auth)
+    const server = Number(auth.user?.balance ?? 0) || 0
+    localBalance.value = server - pendingWinTotal.value
+    ui.setBalanceOverride(localBalance.value)
+    lastSyncAt.value = Date.now()
+    landedSinceSync.value = 0
+  } catch {}
 }
 
-async function startInternal() {
-  if (spinning.value) return
+async function maybeSyncBalance(force = false) {
+  if (force || !lastSyncAt.value) return syncBalanceFromServer()
+  const age = Date.now() - lastSyncAt.value
+  if (age >= SYNC_INTERVAL_MS || landedSinceSync.value >= SYNC_EVERY_N_LANDED) {
+    return syncBalanceFromServer()
+  }
+}
+
+function availableBalance() {
+  return localBalance.value
+}
+
+function activeBallCount() {
+  return balls.value.filter(b => b.visible || b.landing == null).length
+}
+
+async function dropInternal() {
+  if (activeRequests.value > 0 && activeBallCount() >= MAX_ACTIVE_BALLS) return
   message.value = ''
   messageType.value = 'info'
 
-  // баланс перед стартом
-  await safeFetchBalance()
+  await maybeSyncBalance()
 
   if (bet.value <= 0) { messageType.value = 'error'; message.value = 'Укажи Amount'; return }
-  if ((auth.user?.balance ?? 0) < totalBet.value) { messageType.value = 'error'; message.value = 'Недостаточно баланса'; return }
+  if (activeBallCount() >= MAX_ACTIVE_BALLS) { messageType.value = 'error'; message.value = 'Слишком много шаров на поле'; return }
+  if (availableBalance() < bet.value) { messageType.value = 'error'; message.value = 'Недостаточно баланса'; return }
 
-  spinning.value = true
-  message.value = ''
-  balls.value = []
-  hitKeys.value = new Set()
+  localBalance.value -= bet.value
+  ui.setBalanceOverride(localBalance.value)
+  inFlightStake.value += bet.value
+  activeRequests.value += 1
+
+  if (hitKeys.value.size > 500) hitKeys.value = new Set()
 
   sfx('plinko_drop')
-
-  const n = ballsN.value
 
   let res: ApiPlay
   try {
@@ -404,58 +451,62 @@ async function startInternal() {
       method: 'POST',
       body: JSON.stringify({
         bet: bet.value,
-        balls: n,
+        balls: 1,
         rows: rows.value,
         difficulty: difficulty.value,
       }),
     })
   } catch (e) {
     setError(e, 'Ошибка игры (play)')
-    spinning.value = false
+    localBalance.value += bet.value
+    ui.setBalanceOverride(localBalance.value)
+    inFlightStake.value -= bet.value
+    activeRequests.value -= 1
     return
   }
+  activeRequests.value -= 1
+
+  const totalWin = Number(res?.total) || 0
+  const net = Math.round((totalWin - bet.value) * 100) / 100
+  pendingWinTotal.value += totalWin
 
   const traces = Array.isArray(res?.traces) ? res.traces : []
-  const results: BallResult[] = Array.from({ length: n }, (_, i) => {
-    const t = traces[i]
-    return t
-      ? traceToBallResult(t)
-      : { rights: Array(rows.value).fill(false), landing: 0, payout: 0, multiplier: table.value[0] ?? 0 }
-  })
+  const t = traces[0]
+  const result: BallResult = t
+    ? traceToBallResult(t)
+    : { rights: Array(rows.value).fill(false), landing: 0, payout: 0, multiplier: table.value[0] ?? 0 }
 
-  const created: Ball[] = Array.from({ length: n }, (_, i) => ({
-    id: Date.now() + i,
+  const ball: Ball = {
+    id: Date.now() + Math.floor(Math.random() * 100000),
+    bet: bet.value,
+    win: totalWin,
+    net,
     x: W.value / 2,
     y: 42,
     visible: false,
     landing: null,
     msg: '',
     scale: 1
-  }))
-  balls.value = created
+  }
+  balls.value = [...balls.value, ball]
 
-  const tasks = created.map(async (b, i) => {
-    await sleep(i * 80)
-    await dropBall(b, results[i])
-  })
-  await Promise.allSettled(tasks)
+  await dropBall(ball, result)
 
-  // баланс после игры
-  await safeFetchBalance()
+  inFlightStake.value -= ball.bet
+  pendingWinTotal.value -= ball.win
+  localBalance.value += ball.win
+  ui.setBalanceOverride(localBalance.value)
+  landedSinceSync.value += 1
+  void maybeSyncBalance()
 
-  const totalWin = Number(res?.total) || 0
-  // BIG/MEGA/SUPER by total round
-  bigwinStore.maybeShow(totalWin, totalBet.value)
-  const net = Math.round((totalWin - totalBet.value) * 100) / 100
+  bigwinStore.maybeShow(totalWin, bet.value)
   if (net > 0) message.value = `Профит +${fmt(net, 2)}`
-  else if (net < 0) message.value = `Минус ${fmt(net, 2)}`
+  else if (net < 0) message.value = `Минус ${fmt(-net, 2)}`
   else message.value = 'В ноль'
-
-  spinning.value = false
 }
 
 function start() {
-  return requireAuth(() => startInternal())
+  return requireAuth(() => dropInternal())
 }
 
 function binGradient(mult: number) {
@@ -480,8 +531,8 @@ if (typeof window !== 'undefined') {
     <template #panel>
       <GamePanel
         v-model="amount"
-        :disabled="spinning"
-        play-text="Start"
+        :disabled="controlsDisabled"
+        play-text="Drop"
         :message="message"
         :message-type="messageType"
         @half="amount = Math.max(0, (Number(amount)||0)/2)"
@@ -493,7 +544,7 @@ if (typeof window !== 'undefined') {
           <BaseSelect
             v-model="difficulty"
             :options="difficultyOptions"
-            :disabled="spinning"
+            :disabled="controlsDisabled"
             :aria-label="$t('ui.s_7b29ca96ad')"
           />
         </div>
@@ -503,18 +554,14 @@ if (typeof window !== 'undefined') {
           <BaseSelect
             v-model="rows"
             :options="rowsOptions"
-            :disabled="spinning"
+            :disabled="controlsDisabled"
             :aria-label="$t('ui.s_530f488f7a')"
           />
         </div>
 
         <div class="field">
-          <div class="label">{{ $t('ui.s_3136a9f696') }}</div>
-          <div class="balls-row">
-            <input class="input" v-model.number="ballCount" type="number" min="1" max="50" step="1" />
-            <div class="pill">×</div>
-          </div>
           <div class="mini">{{ $t('ui.s_66d3a865e2') }} <b class="num">{{ fmt(totalBet, 2) }}</b></div>
+          <div v-if="inFlightStake > 0" class="mini">В игре: <b class="num">{{ fmt(inFlightStake, 2) }}</b></div>
         </div>
       </GamePanel>
     </template>

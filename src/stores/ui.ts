@@ -16,6 +16,7 @@ function uid() {
 export const useUiStore = defineStore('ui', {
   state: () => ({
     toasts: [] as Toast[],
+    balanceOverride: null as number | null,
   }),
   actions: {
     toast(text: string, type: ToastType = 'info', ttlMs = 3500, title?: string) {
@@ -29,6 +30,10 @@ export const useUiStore = defineStore('ui', {
     },
     clear() {
       this.toasts = []
+    },
+
+    setBalanceOverride(v: number | null) {
+      this.balanceOverride = typeof v === 'number' && Number.isFinite(v) ? v : null
     },
   },
 })
