@@ -64,6 +64,24 @@
   gap: 8px;
   font-weight: 900;
 }
+.user-pill{
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--c-border);
+  background: rgba(255,255,255,.04);
+  color: var(--c-text);
+  display:flex;
+  align-items:center;
+  max-width: 26vw;
+}
+.user-pill .nick{
+  font-weight: 900;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .topbar-menu{ display:flex; align-items:center; gap: 10px; }
 
 .app-main{

@@ -13,7 +13,7 @@ export default {
     "s_d940a38dce": "Currency K",
     "s_99a808d8d1": "Balance",
     "s_3ff8fa6050": "Contacts:",
-    "s_767d7243e6": "INDIFFERENCE · All rights reserved.",
+    "s_767d7243e6": "SHARAX · All rights reserved.",
 
     "s_251bd81438": "Games",
     "s_e3afed0047": "Admin",

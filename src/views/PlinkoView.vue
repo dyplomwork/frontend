@@ -425,20 +425,26 @@ function activeBallCount() {
   return balls.value.filter(b => b.visible || b.landing == null).length
 }
 
-async function dropInternal() {
+async function dropInternal(count: number) {
+  if (count <= 0) return
   if (activeRequests.value > 0 && activeBallCount() >= MAX_ACTIVE_BALLS) return
   message.value = ''
   messageType.value = 'info'
 
   await maybeSyncBalance()
 
-  if (bet.value <= 0) { messageType.value = 'error'; message.value = 'Укажи Amount'; return }
-  if (activeBallCount() >= MAX_ACTIVE_BALLS) { messageType.value = 'error'; message.value = 'Слишком много шаров на поле'; return }
-  if (availableBalance() < bet.value) { messageType.value = 'error'; message.value = 'Недостаточно баланса'; return }
+  const freeSlots = Math.max(0, MAX_ACTIVE_BALLS - activeBallCount())
+  const n = Math.min(count, freeSlots)
 
-  localBalance.value -= bet.value
+  if (bet.value <= 0) { messageType.value = 'error'; message.value = 'Укажи Amount'; return }
+  if (n <= 0) { messageType.value = 'error'; message.value = 'Слишком много шаров на поле'; return }
+
+  const totalCost = bet.value * n
+  if (availableBalance() < totalCost) { messageType.value = 'error'; message.value = 'Недостаточно баланса'; return }
+
+  localBalance.value -= totalCost
   ui.setBalanceOverride(localBalance.value)
-  inFlightStake.value += bet.value
+  inFlightStake.value += totalCost
   activeRequests.value += 1
 
   if (hitKeys.value.size > 500) hitKeys.value = new Set()
@@ -451,62 +457,71 @@ async function dropInternal() {
       method: 'POST',
       body: JSON.stringify({
         bet: bet.value,
-        balls: 1,
+        balls: n,
         rows: rows.value,
         difficulty: difficulty.value,
       }),
     })
   } catch (e) {
     setError(e, 'Ошибка игры (play)')
-    localBalance.value += bet.value
+    localBalance.value += totalCost
     ui.setBalanceOverride(localBalance.value)
-    inFlightStake.value -= bet.value
+    inFlightStake.value -= totalCost
     activeRequests.value -= 1
     return
   }
   activeRequests.value -= 1
 
-  const totalWin = Number(res?.total) || 0
-  const net = Math.round((totalWin - bet.value) * 100) / 100
-  pendingWinTotal.value += totalWin
-
   const traces = Array.isArray(res?.traces) ? res.traces : []
-  const t = traces[0]
-  const result: BallResult = t
-    ? traceToBallResult(t)
-    : { rights: Array(rows.value).fill(false), landing: 0, payout: 0, multiplier: table.value[0] ?? 0 }
+  const winsSum = traces.slice(0, n).reduce((acc, t) => acc + (Number((t as any)?.win) || 0), 0)
+  pendingWinTotal.value += winsSum
 
-  const ball = reactive<Ball>({
-    id: Date.now() + Math.floor(Math.random() * 100000),
-    bet: bet.value,
-    win: totalWin,
-    net,
-    x: W.value / 2,
-    y: 42,
-    visible: false,
-    landing: null,
-    msg: '',
-    scale: 1
-  })
-  balls.value = [...balls.value, ball]
+  for (let i = 0; i < n; i++) {
+    const t = traces[i]
+    const win = Number((t as any)?.win) || 0
+    const net = Math.round((win - bet.value) * 100) / 100
+    const result: BallResult = t
+      ? traceToBallResult(t)
+      : { rights: Array(rows.value).fill(false), landing: 0, payout: 0, multiplier: table.value[0] ?? 0 }
 
-  await dropBall(ball, result)
+    const ball = reactive<Ball>({
+      id: Date.now() + Math.floor(Math.random() * 100000) + i,
+      bet: bet.value,
+      win,
+      net,
+      x: W.value / 2,
+      y: 42,
+      visible: false,
+      landing: null,
+      msg: '',
+      scale: 1
+    })
+    balls.value = [...balls.value, ball]
 
-  inFlightStake.value -= ball.bet
-  pendingWinTotal.value -= ball.win
-  localBalance.value += ball.win
-  ui.setBalanceOverride(localBalance.value)
-  landedSinceSync.value += 1
-  void maybeSyncBalance()
+    void (async () => {
+      await dropBall(ball, result)
 
-  bigwinStore.maybeShow(totalWin, bet.value)
-  if (net > 0) message.value = `Профит +${fmt(net, 2)}`
-  else if (net < 0) message.value = `Минус ${fmt(-net, 2)}`
-  else message.value = 'В ноль'
+      inFlightStake.value -= ball.bet
+      pendingWinTotal.value -= ball.win
+      localBalance.value += ball.win
+      ui.setBalanceOverride(localBalance.value)
+      landedSinceSync.value += 1
+      void maybeSyncBalance()
+
+      bigwinStore.maybeShow(ball.win, ball.bet)
+      if (ball.net > 0) message.value = `Профит +${fmt(ball.net, 2)}`
+      else if (ball.net < 0) message.value = `Минус ${fmt(-ball.net, 2)}`
+      else message.value = 'В ноль'
+    })()
+  }
 }
 
 function start() {
-  return requireAuth(() => dropInternal())
+  return requireAuth(() => dropInternal(1))
+}
+
+function dropMany(n: number) {
+  return requireAuth(() => dropInternal(n))
 }
 
 function binGradient(mult: number) {
@@ -539,6 +554,12 @@ if (typeof window !== 'undefined') {
         @double="amount = (Number(amount)||0)*2"
         @play="start"
       >
+        <div class="quick-drop-row">
+          <button class="btn btn-ghost" :disabled="controlsDisabled" @click="dropMany(5)">Drop 5</button>
+          <button class="btn btn-ghost" :disabled="controlsDisabled" @click="dropMany(10)">Drop 10</button>
+          <button class="btn btn-ghost" :disabled="controlsDisabled" @click="dropMany(25)">Drop 25</button>
+        </div>
+
         <div class="field">
           <div class="label">{{ $t('ui.s_7b29ca96ad') }}</div>
           <BaseSelect
@@ -632,6 +653,8 @@ if (typeof window !== 'undefined') {
 
 <style scoped>
 .field{ margin-top: 8px; }
+.quick-drop-row{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+.quick-drop-row .btn{ height: 42px; border-radius: 14px; }
 .label{ color: var(--muted); font-size: 12px; margin-bottom: 8px; font-weight: 600; }
 .balls-row{ display:grid; grid-template-columns: 1fr auto; gap: 10px; align-items:center; }
 .pill{

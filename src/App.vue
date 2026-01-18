@@ -239,6 +239,9 @@ function logout() {
 
         <div class="top-right">
           <template v-if="auth.user">
+            <div class="user-pill" :title="auth.user.nickname">
+              <span class="nick">{{ auth.user.nickname }}</span>
+            </div>
             <div class="balance-pill">
               <span class="muted">{{ $t('ui.s_99a808d8d1') }}</span>
               <span class="bal">{{ fmt(ui.balanceOverride ?? auth.user.balance, 2) }}</span>
