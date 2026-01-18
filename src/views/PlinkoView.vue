@@ -196,6 +196,7 @@ const stageHeight = computed(() => {
 
 type Ball = {
   id: number
+  seed: number
   bet: number
   win: number
   net: number
@@ -205,6 +206,13 @@ type Ball = {
   landing: number | null
   msg: string
   scale: number
+  rot: number
+  rot0: number
+  rotAmp: number
+  rotSpeed: number
+  wobbleX: number
+  wobbleY: number
+  wobbleSpeed: number
 }
 
 const balls = ref<Ball[]>([])
@@ -279,8 +287,11 @@ async function tweenTo(ball: Ball, toX: number, toY: number, ms: number, arc = 0
       const x = fromX + (toX - fromX) * k
       const lift = arc > 0 ? Math.sin(Math.PI * k) * arc : 0
       const y = fromY + (toY - fromY) * k - lift
-      ball.x = x
-      ball.y = y
+      const tsec = now * 0.001
+      const wob = Math.sin(tsec * (ball.wobbleSpeed || 0) + (ball.seed || 0))
+      ball.x = x + wob * (ball.wobbleX || 0)
+      ball.y = y + Math.cos(tsec * (ball.wobbleSpeed || 0) + (ball.seed || 0)) * (ball.wobbleY || 0)
+      ball.rot = ball.rot0 + Math.sin(tsec * ball.rotSpeed + ball.seed) * ball.rotAmp
       if (p < 1) requestAnimationFrame(tick)
       else resolve()
     }
@@ -339,18 +350,19 @@ async function dropBall(ball: Ball, result: BallResult) {
   ball.msg = ''
   ball.scale = 1
 
-  ball.x = W.value / 2
-  ball.y = 42
+  ball.x = W.value / 2 + jitterSigned(ball.seed * 0.000001, pegGapX.value * 0.12)
+  ball.y = 42 + jitterSigned(ball.seed * 0.000002, 3)
 
   let idx = 0
   for (let r = 0; r < rows.value; r++) {
     const hit = pegPos(r, idx)
 
-    const sx = jitterSigned(ball.id * 0.001 + r * 1.31, 1.6)
-    const sy = jitterSigned(ball.id * 0.002 + r * 2.17, 0.8)
+    const sx = jitterSigned(ball.seed * 0.0003 + r * 1.31, 1.8)
+    const sy = jitterSigned(ball.seed * 0.0005 + r * 2.17, 0.9)
 
     // glide into peg (smooth)
-    await tweenTo(ball, hit.x + sx, hit.y - 10 + sy, 95, 8)
+    const d1 = 82 + jitter01(ball.seed * 0.00001 + r * 2.07) * 45
+    await tweenTo(ball, hit.x + sx, hit.y - 10 + sy, d1, 8)
 
     // visual + audio "thud"
     void flashPeg(r, idx)
@@ -361,9 +373,10 @@ async function dropBall(ball: Ball, result: BallResult) {
 
     if (r < rows.value - 1) {
       const next = pegPos(r + 1, idx)
-      const nx = jitterSigned(ball.id * 0.003 + r * 3.11, 1.3)
-      const ny = jitterSigned(ball.id * 0.004 + r * 4.07, 0.7)
-      await tweenTo(ball, next.x + nx, next.y - 10 + ny, 115, 10)
+      const nx = jitterSigned(ball.seed * 0.0007 + r * 3.11, 1.5)
+      const ny = jitterSigned(ball.seed * 0.0009 + r * 4.07, 0.8)
+      const d2 = 98 + jitter01(ball.seed * 0.00002 + r * 1.33) * 55
+      await tweenTo(ball, next.x + nx, next.y - 10 + ny, d2, 10)
     }
   }
 
@@ -486,6 +499,7 @@ async function dropInternal(count: number) {
 
     const ball = reactive<Ball>({
       id: Date.now() + Math.floor(Math.random() * 100000) + i,
+      seed: Math.floor(Math.random() * 1_000_000_000),
       bet: bet.value,
       win,
       net,
@@ -494,11 +508,20 @@ async function dropInternal(count: number) {
       visible: false,
       landing: null,
       msg: '',
-      scale: 1
+      scale: 1,
+      rot: 0,
+      rot0: jitterSigned(Math.random() * 9999, 180),
+      rotAmp: 6 + Math.random() * 16,
+      rotSpeed: 3 + Math.random() * 6,
+      wobbleX: 0.25 + Math.random() * 0.8,
+      wobbleY: 0.1 + Math.random() * 0.45,
+      wobbleSpeed: 5 + Math.random() * 6
     })
     balls.value = [...balls.value, ball]
 
     void (async () => {
+      const stagger = Math.floor(jitter01(ball.seed) * 120) + i * 35
+      if (stagger > 0) await sleep(stagger)
       await dropBall(ball, result)
 
       inFlightStake.value -= ball.bet
@@ -555,9 +578,9 @@ if (typeof window !== 'undefined') {
         @play="start"
       >
         <div class="quick-drop-row">
-          <button class="btn btn-ghost" :disabled="controlsDisabled" @click="dropMany(5)">Drop 5</button>
-          <button class="btn btn-ghost" :disabled="controlsDisabled" @click="dropMany(10)">Drop 10</button>
-          <button class="btn btn-ghost" :disabled="controlsDisabled" @click="dropMany(25)">Drop 25</button>
+          <button class="btn btn-primary" :disabled="controlsDisabled" @click="dropMany(5)">Drop 5</button>
+          <button class="btn btn-primary" :disabled="controlsDisabled" @click="dropMany(10)">Drop 10</button>
+          <button class="btn btn-primary" :disabled="controlsDisabled" @click="dropMany(25)">Drop 25</button>
         </div>
 
         <div class="field">
@@ -606,7 +629,7 @@ if (typeof window !== 'undefined') {
               :key="b.id"
               class="ball"
               v-show="b.visible"
-              :style="{ left: b.x + 'px', top: b.y + 'px', transform: `translate(-50%, -50%) scale(${b.scale || 1})` }"
+              :style="{ left: b.x + 'px', top: b.y + 'px', transform: `translate(-50%, -50%) scale(${b.scale || 1}) rotate(${b.rot || 0}deg)` }"
             />
           </div>
 
