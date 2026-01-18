@@ -3,6 +3,9 @@ const KEY = 'casino_sfx_on_v1'
 let ctx: AudioContext | null = null
 let master: GainNode | null = null
 
+let fileCache: Map<string, HTMLAudioElement> | null = null
+let plinkoBounceUrls: string[] | null = null
+
 export function isSfxOn(){
   if (typeof window === 'undefined' || typeof localStorage === 'undefined') return true
   return localStorage.getItem(KEY) !== '0'
@@ -19,6 +22,37 @@ function ensure(){
   master = ctx.createGain()
   master.gain.value = 0.12
   master.connect(ctx.destination)
+}
+
+function ensureFiles(){
+  if(fileCache) return
+  fileCache = new Map()
+  plinkoBounceUrls = [
+    '/sfx/plinko_bounce_2_var1.wav',
+    '/sfx/plinko_bounce_2_var2.wav',
+    '/sfx/plinko_bounce_2_var3.wav',
+    '/sfx/plinko_bounce_2_var4.wav',
+  ]
+}
+
+function playFile(url: string, gain = 0.8){
+  if(!isSfxOn()) return
+  if (typeof Audio === 'undefined') return
+  ensureFiles()
+  if(!fileCache) return
+  let base = fileCache.get(url)
+  if(!base){
+    base = new Audio(url)
+    base.preload = 'auto'
+    base.volume = gain
+    fileCache.set(url, base)
+  }
+  const node = base.cloneNode(true) as HTMLAudioElement
+  node.volume = gain
+  try {
+    node.currentTime = 0
+  } catch {}
+  void node.play().catch(()=>{})
 }
 
 function beep(freq: number, durMs: number, type: OscillatorType = 'sine'){
@@ -88,6 +122,7 @@ export function sfx(kind: SfxKey | string) {
   const minInterval: Partial<Record<SfxKey, number>> = {
     dice_tick: 180,
     plinko_tick: 70,
+    plinko_hit: 35,
     spin: 90,
   }
   const mi = minInterval[kind as SfxKey]
@@ -101,7 +136,7 @@ export function sfx(kind: SfxKey | string) {
     last.set(kind, now)
   }
 
-  const k = kind === 'ui_tick' ? 'click' : kind === 'plinko_hit' ? 'plinko_tick' : kind
+  const k = kind === 'ui_tick' ? 'click' : kind
 
   switch(k){
     case 'click':
@@ -133,6 +168,17 @@ export function sfx(kind: SfxKey | string) {
     case 'plinko_tick':
       beep(420, 55, 'triangle')
       break
+    case 'plinko_hit': {
+      ensureFiles()
+      const list = (plinkoBounceUrls || []).filter(Boolean)
+      if(list.length){
+        const idx = Math.floor(Math.random() * list.length)
+        playFile(list[idx], 0.75)
+      } else {
+        playFile('/sfx/plinko_bounce.mp3', 0.75)
+      }
+      break
+    }
 
     // mines
     case 'mine_safe':
