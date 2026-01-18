@@ -215,7 +215,7 @@ async function playInternal() {
     }
 
     try {
-      await auth.fetchBalance()
+      await auth.fetchBalance({ force: true })
     } catch (e) {
       reportError(e)
     }
@@ -400,24 +400,28 @@ onBeforeUnmount(() => stopAnim())
     </div>
 
     <div class="dial">
-      <div class="scale-top" aria-hidden="true">
-        <div class="tick" style="left: 0%"><span>0</span></div>
-        <div class="tick" style="left: 25%"><span>25</span></div>
-        <div class="tick" style="left: 50%"><span>50</span></div>
-        <div class="tick" style="left: 75%"><span>75</span></div>
-        <div class="tick" style="left: 100%"><span>100</span></div>
+      <div class="scale-row" aria-hidden="true">
+        <div class="scale-label" style="left: 0%">0</div>
+        <div class="scale-label" style="left: 25%">25</div>
+        <div class="scale-label" style="left: 50%">50</div>
+        <div class="scale-label" style="left: 75%">75</div>
+        <div class="scale-label" style="left: 100%">100</div>
       </div>
 
       <div class="bar-wrap">
-        <div class="bar bet" :class="[flashZone, { shake: barShake }]">
-          <div class="track">
-            <div class="split red" :style="{ width: rollOver + '%' }" />
-            <div class="split green" :style="{ width: 100 - rollOver + '%' }" />
-            <div class="track-shine" aria-hidden="true" />
+        <div
+          class="bar bet"
+          :class="[flashZone, { shake: barShake }]"
+          :style="{ '--ro': rollOver + '%', '--needle': needle + '%' }"
+        >
+          <div class="track" aria-hidden="true">
+            <div class="track-inner"></div>
+            <div class="track-ticks"></div>
+            <div class="track-cut" :class="{ pulse: linePulse }"></div>
           </div>
 
           <input
-            class="bar-slider"
+            class="dice-slider"
             type="range"
             min="1"
             max="99"
@@ -431,22 +435,7 @@ onBeforeUnmount(() => stopAnim())
             aria-label="Roll Over"
           />
 
-          <div
-            class="roll-line"
-            :class="{ pulse: linePulse }"
-            :style="{ left: rollOver + '%' }"
-            aria-hidden="true"
-          />
-
-          <div class="roll-thumb" :style="{ left: rollOver + '%' }" aria-hidden="true">
-            <div class="thumb-grip">
-              <span class="grip-bar"></span>
-              <span class="grip-bar"></span>
-              <span class="grip-bar"></span>
-            </div>
-          </div>
-
-          <div class="thumb-bubble-layer" :style="{ left: rollOver + '%' }" aria-hidden="true">
+          <div class="thumb-bubble-layer" aria-hidden="true">
             <div class="thumb-bubble">
               <div class="bubble-top">ROLL OVER</div>
               <div class="bubble-val">{{ fmt(rollOver, 2) }}</div>
@@ -457,10 +446,10 @@ onBeforeUnmount(() => stopAnim())
             class="result-puck"
             :class="[flashZone, { bump, trail: trailOn }]"
             :style="{
-              left: needle + '%',
-              transform: `translate(-50%, -50%) scale(${puckScale})`,
-              '--glow': String(puckGlow),
-            }"
+          left: needle + '%',
+          transform: `translate(-50%, -50%) scale(${puckScale})`,
+          '--glow': String(puckGlow),
+        }"
             :data-v="resultLabel"
             aria-hidden="true"
           >
@@ -678,24 +667,8 @@ onBeforeUnmount(() => stopAnim())
   z-index: 1;
 }
 
-.scale-top {
-  position: absolute;
-  top: 0;
-  left: 8px;
-  right: 8px;
-  height: 22px;
-  pointer-events: none;
-  z-index: 0;
-}
-.tick {
-  position: absolute;
-  top: 0;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
+
+
 .tick::after {
   content: '';
   border-left: 7px solid transparent;
@@ -761,22 +734,8 @@ onBeforeUnmount(() => stopAnim())
   display: flex;
 }
 
-.split {
-  height: 100%;
-}
-.split.red {
-  background-image:
-    linear-gradient(90deg, rgba(255, 64, 87, 0.95), rgba(255, 64, 87, 0.45)),
-    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0 1px, rgba(0, 0, 0, 0) 1px 7px);
-  background-blend-mode: normal, multiply;
-}
-.split.green {
-  flex: 1;
-  background-image:
-    linear-gradient(90deg, rgba(0, 231, 1, 0.42), rgba(0, 231, 1, 0.95)),
-    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0 1px, rgba(0, 0, 0, 0) 1px 9px);
-  background-blend-mode: normal, multiply;
-}
+
+
 
 .track-shine {
   position: absolute;
@@ -802,17 +761,6 @@ onBeforeUnmount(() => stopAnim())
   }
 }
 
-.bar-slider {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 48px;
-  margin: 0;
-  opacity: 0;
-  z-index: 8;
-  -webkit-appearance: none;
-  appearance: none;
-}
 .bar-slider::-webkit-slider-runnable-track {
   height: 48px;
   background: transparent;
@@ -834,20 +782,181 @@ onBeforeUnmount(() => stopAnim())
   background: transparent;
 }
 
-.roll-line {
+.scale-row {
+  position: absolute;
+  top: 0;
+  left: 10px;
+  right: 10px;
+  height: 22px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.scale-label {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: grid;
+  place-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 10px 18px rgba(0, 0, 0, 0.55);
+}
+
+.scale-label::after {
+  content: '';
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 9px solid rgba(255, 255, 255, 0.16);
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
+}
+
+.track {
+  position: relative;
+  height: 100%;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+    inset 0 10px 18px rgba(0, 0, 0, 0.26);
+}
+
+.track-inner {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(
+      90deg,
+      rgba(255, 64, 87, 0.92) 0%,
+      rgba(255, 64, 87, 0.52) var(--ro),
+      rgba(0, 231, 1, 0.52) var(--ro),
+      rgba(0, 231, 1, 0.92) 100%
+    ),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.06) 0 1px,
+      rgba(0, 0, 0, 0) 1px 9px
+    );
+  background-blend-mode: normal, multiply;
+}
+
+.track-ticks {
+  position: absolute;
+  inset: 0;
+  opacity: 0.55;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.08) 0 1px,
+    rgba(0, 0, 0, 0) 1px 18px
+  );
+  mix-blend-mode: overlay;
+}
+
+.track-cut {
   position: absolute;
   top: 6px;
   bottom: 6px;
+  left: var(--ro);
   width: 2px;
   transform: translateX(-1px);
   background: rgba(255, 255, 255, 0.34);
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.35),
     0 0 18px rgba(255, 255, 255, 0.12);
-  z-index: 6;
-  pointer-events: none;
   border-radius: 2px;
+  pointer-events: none;
 }
+
+.track-cut.pulse {
+  animation: linePulse 420ms ease-out;
+}
+
+@keyframes linePulse {
+  0% {
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.35),
+      0 0 10px rgba(255, 255, 255, 0.14);
+    opacity: 0.9;
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.35),
+      0 0 26px rgba(255, 255, 255, 0.22);
+    opacity: 1;
+  }
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.35),
+      0 0 14px rgba(255, 255, 255, 0.12);
+    opacity: 0.95;
+  }
+}
+
+.dice-slider {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 65px;
+  margin: 0;
+  background: transparent;
+  z-index: 8;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.dice-slider::-webkit-slider-runnable-track {
+  height: 48px;
+  background: transparent;
+}
+
+.dice-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(120, 205, 255, 0.98), rgba(56, 145, 255, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 18px 32px rgba(0, 0, 0, 0.48),
+    0 0 0 1px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 0 18px rgba(120, 205, 255, 0.18);
+}
+
+.dice-slider::-moz-range-track {
+  height: 48px;
+  background: transparent;
+  border: none;
+}
+
+.dice-slider::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(120, 205, 255, 0.98), rgba(56, 145, 255, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 18px 32px rgba(0, 0, 0, 0.48),
+    0 0 0 1px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 0 18px rgba(120, 205, 255, 0.18);
+}
+
+.thumb-bubble-layer {
+  position: absolute;
+  left: var(--ro);
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 50;
+  pointer-events: none;
+  overflow: visible;
+}
+
 .roll-line.pulse {
   animation: linePulse 420ms ease-out;
 }
@@ -872,24 +981,6 @@ onBeforeUnmount(() => stopAnim())
   }
 }
 
-.roll-thumb {
-  position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 24px;
-  height: 40px;
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(120, 205, 255, 0.96), rgba(56, 145, 255, 0.96));
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow:
-    0 18px 32px rgba(0, 0, 0, 0.48),
-    0 0 0 1px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.24),
-    inset 0 -10px 18px rgba(0, 0, 0, 0.14);
-  z-index: 9;
-  pointer-events: none;
-  backdrop-filter: blur(6px);
-}
 .roll-thumb::after {
   content: '';
   position: absolute;

@@ -258,7 +258,7 @@ async function approveTicket(id: number) {
     })
     const t = tickets.value.find(x => x.id === Number(id))
     if (t) t.status = 'APPROVED'
-    await auth.fetchBalance().catch(() => {})
+    await auth.fetchBalance({ force: true }).catch(() => {})
     msg.value = 'Тикет подтверждён'
   } catch (e: any) {
     err.value = e?.message || 'Не удалось подтвердить тикет'
@@ -276,7 +276,7 @@ async function rejectTicket(id: number) {
     })
     const t = tickets.value.find(x => x.id === Number(id))
     if (t) t.status = 'REJECTED'
-    await auth.fetchBalance().catch(() => {})
+    await auth.fetchBalance({ force: true }).catch(() => {})
     msg.value = 'Тикет отклонён'
   } catch (e: any) {
     err.value = e?.message || 'Не удалось отклонить тикет'

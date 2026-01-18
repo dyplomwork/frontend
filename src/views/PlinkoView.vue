@@ -417,7 +417,7 @@ async function syncBalanceFromServer() {
   const fn = (auth as any)?.fetchBalance
   if (typeof fn !== 'function') return
   try {
-    await fn.call(auth)
+    await fn.call(auth, { force: true })
     const server = Number(auth.user?.balance ?? 0) || 0
     localBalance.value = server - pendingWinTotal.value
     ui.setBalanceOverride(localBalance.value)

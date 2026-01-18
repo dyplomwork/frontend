@@ -59,7 +59,7 @@ export const useGameStore = defineStore('game', {
       try {
         const res = await casesPlay(caseId)
 
-        await auth.fetchBalance().catch(() => {})
+        await auth.fetchBalance({ force: true }).catch(() => {})
 
         return {
           ok: true,

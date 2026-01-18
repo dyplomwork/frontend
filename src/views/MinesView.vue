@@ -193,7 +193,7 @@ async function startInternal() {
 
     // balance decreased on backend
     // balance decreased on backend
-    await auth.fetchBalance()
+    await auth.fetchBalance({ force: true })
 
     try {
       const s = await minesGetSession()
@@ -263,7 +263,7 @@ async function revealInternal(cell: Cell) {
         explodingId.value = null
       }, 680)
 
-      await auth.fetchBalance()
+      await auth.fetchBalance({ force: true })
       return
     }
 
@@ -289,7 +289,7 @@ async function revealInternal(cell: Cell) {
       revealWholeField(fin.field)
       inGame.value = false
       lost.value = true
-      await auth.fetchBalance()
+      await auth.fetchBalance({ force: true })
     } catch (e2) {
       reportError(e2)
     }
@@ -328,7 +328,7 @@ async function cashOutInternal() {
 
     inGame.value = false
     lost.value = false
-    await auth.fetchBalance()
+    await auth.fetchBalance({ force: true })
   } catch (e: any) {
     setError(e, 'Ошибка вывода')
   }

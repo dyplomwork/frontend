@@ -149,7 +149,7 @@ async function createBattle() {
     createOpen.value = false
     selectedId.value = b.id
     await refreshList()
-    await auth.fetchBalance().catch(() => {})
+    await auth.fetchBalance({ force: true }).catch(() => {})
   } catch (e: any) {
     error.value = e?.message || 'Ошибка'
   }
@@ -165,7 +165,7 @@ async function joinBattle() {
     sfx('click')
     selected.value = await battlesJoin(selected.value.id)
     await refreshList()
-    await auth.fetchBalance().catch(() => {})
+    await auth.fetchBalance({ force: true }).catch(() => {})
   } catch (e: any) {
     error.value = e?.message || 'Ошибка'
   }
@@ -178,7 +178,7 @@ async function cancelBattle() {
     sfx('click')
     await battlesCancel(selected.value.id)
     await refreshList()
-    await auth.fetchBalance().catch(() => {})
+    await auth.fetchBalance({ force: true }).catch(() => {})
   } catch (e: any) {
     error.value = e?.message || 'Ошибка'
   }
@@ -215,7 +215,7 @@ async function approve() {
     const upd = await battlesApprove({ id: b.id, side: sideToSend })
     selected.value = upd
     await refreshList()
-    await auth.fetchBalance().catch(() => {})
+    await auth.fetchBalance({ force: true }).catch(() => {})
     if (upd.status === 'FINISHED' && upd.resultSide) showCoinResult(upd.resultSide)
   } catch (e: any) {
     error.value = e?.message || 'Ошибка'

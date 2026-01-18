@@ -462,7 +462,7 @@ async function spinInternal() {
 
     if (shouldRefreshBalance) {
       try {
-        await auth.fetchBalance()
+        await auth.fetchBalance({ force: true })
       } catch (e) {
         reportError(e)
       }
