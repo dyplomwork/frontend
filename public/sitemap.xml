@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://example.vercel.app/</loc></url>
+  <url><loc>https://example.vercel.app/login</loc></url>
+  <url><loc>https://example.vercel.app/register</loc></url>
   <url><loc>https://example.vercel.app/plinko</loc></url>
   <url><loc>https://example.vercel.app/roulette</loc></url>
+  <url><loc>https://example.vercel.app/mines</loc></url>
+  <url><loc>https://example.vercel.app/dice</loc></url>
+  <url><loc>https://example.vercel.app/coinflip</loc></url>
   <url><loc>https://example.vercel.app/cases</loc></url>
   <url><loc>https://example.vercel.app/cases/starter</loc></url>
-  <url><loc>https://example.vercel.app/cases/lucky</loc></url>
-  <url><loc>https://example.vercel.app/cases/diamond</loc></url>
+  <url><loc>https://example.vercel.app/cases/premium</loc></url>
+  <url><loc>https://example.vercel.app/cases/elite</loc></url>
 </urlset>

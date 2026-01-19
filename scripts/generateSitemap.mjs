@@ -3,22 +3,16 @@ import path from 'node:path'
 
 const cwd = process.cwd()
 
-// Базовый URL сайта (на Vercel задашь в ENV: VITE_SITE_URL)
 const SITE_URL =
   process.env.VITE_SITE_URL ||
   process.env.SITE_URL ||
   'https://example.vercel.app'
 
-// Список публичных страниц (добавляй/удаляй по факту)
-const routes = [
-  '/',
-  '/plinko',
-  '/roulette',
-  '/cases',
-  '/cases/starter',
-  '/cases/lucky',
-  '/cases/diamond',
-]
+const routes = ['/', '/login', '/register', '/plinko', '/roulette', '/mines', '/dice', '/coinflip', '/cases']
+
+const caseIds = ['starter', 'premium', 'elite']
+
+const allRoutes = [...routes, ...caseIds.map((id) => `/cases/${id}`)]
 
 function xmlEscape(s) {
   return s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
@@ -30,7 +24,7 @@ function joinUrl(base, p) {
   return `${b}${pp}`
 }
 
-const urlset = routes
+const urlset = allRoutes
   .map((p) => {
     const loc = xmlEscape(joinUrl(SITE_URL, p))
     return `  <url><loc>${loc}</loc></url>`
@@ -52,4 +46,4 @@ Sitemap: ${joinUrl(SITE_URL, '/sitemap.xml')}
 fs.writeFileSync(path.join(cwd, 'public', 'sitemap.xml'), sitemap, 'utf8')
 fs.writeFileSync(path.join(cwd, 'public', 'robots.txt'), robots, 'utf8')
 
-console.log(`[sitemap] Generated ${routes.length} urls for ${SITE_URL}`)
+console.log(`[sitemap] Generated ${allRoutes.length} urls for ${SITE_URL}`)

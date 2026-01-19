@@ -26,10 +26,10 @@ export const CASES: CaseDef[] = [
     ],
   },
   {
-    id: 'elite', // 👈 обязательно совпадает с register("elite", ...)
+    id: 'elite',
     name: 'Elite Case',
     modelEmoji: '👑',
-    price: 100, // можно для UI, но реальная цена придёт с бэка
-    loot: [], // можно пусто, если ты гидратишь всё с бэка
+    price: 100,
+    loot: [],
   },
 ]
