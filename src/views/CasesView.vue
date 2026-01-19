@@ -45,7 +45,7 @@ function lootIcon(amount: number){
           @click="sfx('click')"
         >
           <div class="tile-top">
-            <div class="emoji">{{ c.modelEmoji }}</div>
+            <img class="case-ic" :src="`/icon/${c.id}.png`" :alt="c.name" />
             <div class="name">{{ c.name }}</div>
             <div class="price">{{ fmt(c.price, 0) }} <span class="coin">K</span></div>
           </div>
@@ -105,7 +105,7 @@ h2{ margin:0; color: #eaf3ff; }
   box-shadow: 0 16px 40px rgba(0,0,0,.32), 0 0 26px rgba(90,180,255,.10);
 }
 .tile-top{ display:flex; flex-direction:column; gap: 8px; }
-.emoji{ font-size: 56px; line-height: 1; filter: drop-shadow(0 10px 18px rgba(0,0,0,.35)); }
+.case-ic{ width: 56px; height: 56px; display:block; object-fit: contain; filter: drop-shadow(0 10px 18px rgba(0,0,0,.35)); }
 .name{ font-weight: 900; }
 .price{ color: rgba(255,255,255,.72); font-weight: 800; display:flex; align-items:center; gap: 8px; }
 .tile-bottom{ margin-top: 12px; display:flex; justify-content:flex-end; }

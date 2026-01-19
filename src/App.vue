@@ -104,7 +104,7 @@ function logout() {
     <aside class="app-sidebar" :class="{ open: sidebarOpen }">
       <div class="side-top">
         <button class="icon-btn" @click="toggleSidebar" :title="$t('ui.s_menu')">
-          <span class="ic">≡</span>
+          <img class="topbar-menu-ic" src="/icon/menu.png" alt="Menu" />
         </button>
       </div>
 
@@ -115,7 +115,7 @@ function logout() {
           :class="{ active: route.path === '/' }"
           :title="$t('ui.s_8cf04a9734')"
         >
-          <span class="side-ic">🏠</span>
+          <span class="side-ic"><img class="nav-ic" src="/icon/home.png" alt="Home" /></span>
           <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_8cf04a9734') }}</span>
         </RouterLink>
         <RouterLink
@@ -124,7 +124,7 @@ function logout() {
           :class="{ active: route.path.startsWith('/roulette') }"
           :title="$t('ui.s_3cf6443ea2')"
         >
-          <span class="side-ic">🎡</span>
+          <span class="side-ic"><img class="nav-ic" src="/icon/roulette.png" alt="Roulette" /></span>
           <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_3cf6443ea2') }}</span>
         </RouterLink>
         <RouterLink
@@ -133,7 +133,7 @@ function logout() {
           :class="{ active: route.path.startsWith('/dice') }"
           :title="$t('ui.s_a5b6cdb9de')"
         >
-          <span class="side-ic">🎲</span>
+          <span class="side-ic"><img class="nav-ic" src="/icon/dice.png" alt="Dice" /></span>
           <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_a5b6cdb9de') }}</span>
         </RouterLink>
         <RouterLink
@@ -143,7 +143,7 @@ function logout() {
           :title="$t('ui.s_24397a9d6f')"
         >
           <span class="side-ic">
-            <img src="/icon/coinflip.svg" alt="Coin Flip" />
+            <img class="nav-ic" src="/icon/coinflip.png" alt="Coin Flip" />
           </span>
           <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_24397a9d6f') }}</span>
         </RouterLink>
@@ -153,7 +153,7 @@ function logout() {
           :class="{ active: route.path.startsWith('/plinko') }"
           :title="$t('ui.s_6643fdd61a')"
         >
-          <span class="side-ic">🔻</span>
+          <span class="side-ic"><img class="nav-ic" src="/icon/plinko.png" alt="Plinko" /></span>
           <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_6643fdd61a') }}</span>
         </RouterLink>
         <RouterLink
@@ -162,7 +162,7 @@ function logout() {
           :class="{ active: route.path.startsWith('/mines') }"
           :title="$t('ui.s_c3fc302af4')"
         >
-          <span class="side-ic">💣</span>
+          <span class="side-ic"><img class="nav-ic" src="/icon/mines.png" alt="Mines" /></span>
           <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_c3fc302af4') }}</span>
         </RouterLink>
         <RouterLink
@@ -171,7 +171,7 @@ function logout() {
           :class="{ active: route.path.startsWith('/cases') }"
           :title="$t('ui.s_b1f0b866ff')"
         >
-          <span class="side-ic">🎁</span>
+          <span class="side-ic"><img class="nav-ic" src="/icon/cases.png" alt="Cases" /></span>
           <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_b1f0b866ff') }}</span>
         </RouterLink>
         <RouterLink
@@ -180,7 +180,7 @@ function logout() {
           :class="{ active: route.path.startsWith('/profile') }"
           :title="$t('ui.s_cce99c598c')"
         >
-          <span class="side-ic">👤</span>
+          <span class="side-ic"><img class="nav-ic" src="/icon/profile.png" alt="Profile" /></span>
           <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_cce99c598c') }}</span>
         </RouterLink>
       </nav>
@@ -228,9 +228,7 @@ function logout() {
       <header class="app-topbar">
         <div class="top-left">
           <button class="icon-btn topbar-menu" @click="toggleSidebar" aria-label="Menu">
-            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-              <path fill="currentColor" d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z" />
-            </svg>
+            <img class="topbar-menu-ic" src="/icon/menu.png" alt="Menu" />
           </button>
           <div class="logo" @click="router.push('/')">
             <span class="logo-mark">SCXDROP</span>

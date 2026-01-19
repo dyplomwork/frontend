@@ -112,7 +112,9 @@
   padding: 0 12px;
   transition: transform .12s ease, background .12s ease, border-color .12s ease, color .12s ease;
 }
-.side-ic{ width: 26px; display:grid; place-items:center; font-size: 18px; }
+.side-ic{ width: 36px; height: 36px; display:grid; place-items:center; }
+.side-ic .nav-ic{ width: 32px; height: 32px; display:block; object-fit: contain; }
+.topbar-menu-ic{ width: 38px; height: 38px; display:block; object-fit: contain; }
 .side-txt{ font-weight: 900; letter-spacing: .2px; font-size: 13px; opacity: .92; }
 .side-link:hover{ transform: translateY(-1px); background: rgba(255,255,255,.05); border-color: var(--c-border); }
 .side-link.active{

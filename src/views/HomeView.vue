@@ -39,7 +39,7 @@ const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 
     <div class="grid">
       <RouterLink class="game card" to="/roulette">
-        <div class="icon">🎡</div>
+        <div class="icon"><img src="/icon/roulette.png" alt="Roulette" /></div>
         <div class="meta">
           <div class="title">{{ $t('ui.s_3cf6443ea2') }}</div>
           <div class="muted">{{ $t('ui.s_17e45c77d3') }}</div>
@@ -47,7 +47,7 @@ const fmt = (v: number | string, d = 2) => formatNumber(v, d)
       </RouterLink>
 
       <RouterLink class="game card" to="/plinko">
-        <div class="icon">🔻</div>
+        <div class="icon"><img src="/icon/plinko.png" alt="Plinko" /></div>
         <div class="meta">
           <div class="title">{{ $t('ui.s_6643fdd61a') }}</div>
           <div class="muted">{{ $t('ui.s_e09fbe469f') }}</div>
@@ -55,7 +55,7 @@ const fmt = (v: number | string, d = 2) => formatNumber(v, d)
       </RouterLink>
 
       <RouterLink class="game card" to="/mines">
-        <div class="icon">💣</div>
+        <div class="icon"><img src="/icon/mines.png" alt="Mines" /></div>
         <div class="meta">
           <div class="title">{{ $t('ui.s_c3fc302af4') }}</div>
           <div class="muted">{{ $t('ui.s_d212d1ac25') }}</div>
@@ -63,7 +63,7 @@ const fmt = (v: number | string, d = 2) => formatNumber(v, d)
       </RouterLink>
 
       <RouterLink class="game card" to="/cases">
-        <div class="icon">🎁</div>
+        <div class="icon"><img src="/icon/cases.png" alt="Cases" /></div>
         <div class="meta">
           <div class="title">{{ $t('ui.s_b1f0b866ff') }}</div>
           <div class="muted">{{ $t('ui.s_03480973d3') }}</div>
@@ -71,7 +71,7 @@ const fmt = (v: number | string, d = 2) => formatNumber(v, d)
       </RouterLink>
 
       <RouterLink class="game card" to="/dice">
-        <div class="icon">🎲</div>
+        <div class="icon"><img src="/icon/dice.png" alt="Dice" /></div>
         <div class="meta">
           <div class="title">{{ $t('ui.s_a5b6cdb9de') }}</div>
           <div class="muted">{{ $t('ui.s_35079404ba') }}</div>
@@ -79,9 +79,7 @@ const fmt = (v: number | string, d = 2) => formatNumber(v, d)
       </RouterLink>
 
       <RouterLink class="game card" to="/coinflip">
-        <span class="icon">
-          <img src="/icon/coinflip.svg" alt="Coin Flip" />
-        </span>
+        <div class="icon"><img src="/icon/coinflip.png" alt="Coin Flip" /></div>
 
         <div class="meta">
           <div class="title">{{ $t('ui.s_24397a9d6f') }}</div>
@@ -181,6 +179,12 @@ h2 {
   border-radius: 14px;
   background: rgba(0, 0, 0, 0.18);
   border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.icon img{
+  width: 26px;
+  height: 26px;
+  display:block;
+  object-fit: contain;
 }
 .title {
   font-weight: 1000;

@@ -331,7 +331,7 @@ watch(quickOpen, (v) => {
         </div>
 
         <div class="model">
-          <div class="emoji">{{ c.modelEmoji }}</div>
+          <img class="case-ic" :src="`/icon/${c.id}.png`" :alt="c.name" />
           <div class="muted">{{ $t('ui.s_9390802b18') }}</div>
         </div>
 
@@ -463,7 +463,7 @@ watch(quickOpen, (v) => {
   padding: 14px;
   text-align:center;
 }
-.emoji{ font-size: 88px; line-height: 1; filter: drop-shadow(0 14px 20px rgba(0,0,0,.35)); }
+.case-ic{ width: 88px; height: 88px; display:block; object-fit: contain; filter: drop-shadow(0 14px 20px rgba(0,0,0,.35)); }
 .muted{ color: rgba(255,255,255,.68); }
 .small{ font-size: 12px; opacity: .85; }
 
