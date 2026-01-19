@@ -1,15 +1,20 @@
 /* ========= Base / reset ========= */
 *{ box-sizing: border-box; }
-html, body{ height:100%; }
+html, body{ min-height: 100%; }
+html{
+  background:
+    radial-gradient(68vmax 40vmax at 50% -10%, rgba(92,255,146,.12), rgba(0,0,0,0) 70%),
+    radial-gradient(44vmax 36vmax at 18% 12%, rgba(90,180,255,.08), rgba(0,0,0,0) 65%),
+    radial-gradient(38vmax 32vmax at 86% 20%, rgba(58,74,138,.10), rgba(0,0,0,0) 65%),
+    linear-gradient(180deg, var(--c-bg), #091118 55%, #070d12);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
 body{
   margin:0;
+  min-height: 100vh;
   color: var(--c-text);
-  background:
-    radial-gradient(55vmax 38vmax at 50% -12vmax, rgba(92,255,146,.12), rgba(0,0,0,0) 62%),
-    radial-gradient(46vmax 34vmax at 12% 18%, rgba(56,189,248,.07), rgba(0,0,0,0) 70%),
-    radial-gradient(42vmax 30vmax at 88% 22%, rgba(168,85,247,.06), rgba(0,0,0,0) 72%),
-    radial-gradient(30vmax 22vmax at 50% 112%, rgba(92,255,146,.06), rgba(0,0,0,0) 70%),
-    linear-gradient(180deg, var(--c-bg), #091118 55%, #070d12);
+  background: transparent;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
