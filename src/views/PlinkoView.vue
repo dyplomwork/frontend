@@ -656,21 +656,21 @@ if (typeof window !== 'undefined') {
     <template #below>
       <GameHowTo
         :heading="$t('ui.s_howto_plinko')"
-        intro="Запускайте шары сверху и наблюдайте, в какой слот они попадут. Множитель зависит от выбранной сложности и количества рядов: крайние слоты обычно дают выше множитель, но попадают реже." 
+        :intro="$t('ui.s_howto_plinko_intro')"
         :sections="[
-          { title: 'Базовые шаги', items: [
-            'Укажите сумму ставки и количество шаров (Balls).',
-            'Выберите Difficulty и количество Rows — это меняет таблицу множителей.',
-            'Нажмите Start и дождитесь падения шаров.',
-            'Итоговая выплата складывается из результатов всех шаров.'
+          { title: $t('ui.s_howto_steps'), items: [
+            $t('ui.s_howto_plinko_step_1'),
+            $t('ui.s_howto_plinko_step_2'),
+            $t('ui.s_howto_plinko_step_3'),
+            $t('ui.s_howto_plinko_step_4')
           ]},
-          { title: 'Режимы и механики', items: [
-            'Higher risk: высокая сложность/больше рядов чаще приводит к крайним слотам с большими множителями, но общий разброс результатов выше.',
-            'Multiple balls: несколько шаров сглаживают дисперсию, но требуют большего общего бет.'
+          { title: $t('ui.s_howto_mechanics'), items: [
+            $t('ui.s_howto_plinko_mech_1'),
+            $t('ui.s_howto_plinko_mech_2')
           ]},
-          { title: 'Советы', items: [
-            'Если играете на стабильность — увеличивайте Balls и выбирайте более мягкую сложность.',
-            'Если цель — поймать большой множитель, снижайте Balls и пробуйте более рискованные настройки.'
+          { title: $t('ui.s_howto_tips'), items: [
+            $t('ui.s_howto_plinko_tip_1'),
+            $t('ui.s_howto_plinko_tip_2')
           ]}
         ]"
       />

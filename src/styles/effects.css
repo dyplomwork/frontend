@@ -8,6 +8,17 @@ body::before{
   background-image:
     linear-gradient(90deg, rgba(58,74,138,.22) 1px, transparent 1px),
     linear-gradient(0deg, rgba(58,74,138,.16) 1px, transparent 1px);
-  background-size: 84px 84px;
+  background-size: clamp(56px, 6vw, 92px) clamp(56px, 6vw, 92px);
   mask-image: radial-gradient(70% 55% at 50% 35%, #000 60%, transparent 100%);
+}
+
+body::after{
+  content:'';
+  position: fixed;
+  inset: 0;
+  pointer-events:none;
+  background:
+    radial-gradient(90vmax 60vmax at 50% 0%, rgba(0,0,0,0) 0 45%, rgba(0,0,0,.35) 100%),
+    radial-gradient(70vmax 55vmax at 50% 120%, rgba(0,0,0,0) 0 40%, rgba(0,0,0,.45) 100%);
+  opacity: .75;
 }

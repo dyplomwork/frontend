@@ -460,22 +460,22 @@ onBeforeUnmount(() => stopAnim())
     <template #below>
       <GameHowTo
         :heading="$t('ui.s_howto_dice')"
-        intro="Вы выбираете порог Roll Over и делаете ставку. Система генерирует число от 0 до 100: если результат выше выбранного порога — вы выигрываете по рассчитанному множителю. Чем выше шанс — тем ниже множитель."
+        :intro="$t('ui.s_howto_dice_intro')"
         :sections="[
-          { title: 'Базовые шаги', items: [
-            'Укажите сумму ставки.',
-            'Выберите значение Roll Over на шкале.',
-            'Нажмите Play и дождитесь результата.',
-            'В случае победы выплата рассчитывается автоматически.'
+          { title: $t('ui.s_howto_steps'), items: [
+            $t('ui.s_howto_dice_step_1'),
+            $t('ui.s_howto_dice_step_2'),
+            $t('ui.s_howto_dice_step_3'),
+            $t('ui.s_howto_dice_step_4')
           ]},
-          { title: 'Механика и режимы', items: [
-            'Roll Over задаёт порог: шанс победы равен 100 − Roll Over.',
-            'Множитель растёт при уменьшении шанса победы.',
-            'Результат и ставка влияют только на текущий раунд.'
+          { title: $t('ui.s_howto_mechanics'), items: [
+            $t('ui.s_howto_dice_mech_1'),
+            $t('ui.s_howto_dice_mech_2'),
+            $t('ui.s_howto_dice_mech_3')
           ]},
-          { title: 'Советы', items: [
-            'Для более стабильной игры выбирайте более высокий шанс победы.',
-            'Для риск-игры снижайте шанс победы и ловите высокий множитель, но помните, что серия проигрышей возможна.'
+          { title: $t('ui.s_howto_tips'), items: [
+            $t('ui.s_howto_dice_tip_1'),
+            $t('ui.s_howto_dice_tip_2')
           ]}
         ]"
       />

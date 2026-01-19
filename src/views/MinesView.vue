@@ -390,7 +390,7 @@ buildGrid()
           </div>
 
           <button class="btn btn-primary" :class="{ 'cash-pulse': cashPulse }" @click="cashOut" :disabled="!(inGame && safePicks > 0)">
-            Cashout ({{ fmt(payoutAmount, 2) }}K)
+            {{ $t('ui.s_cashout') }} ({{ fmt(payoutAmount, 2) }}K)
           </button>
 
         </template>
@@ -432,22 +432,22 @@ buildGrid()
     <template #below>
       <GameHowTo
         :heading="$t('ui.s_howto_mines')"
-        intro="Открывайте безопасные клетки, увеличивайте множитель и забирайте выигрыш в любой момент. Чем больше мин на поле — тем выше потенциальный множитель, но тем выше риск."
+        :intro="$t('ui.s_howto_mines_intro')"
         :sections="[
-          { title: 'Базовые шаги', items: [
-            'Выберите сумму ставки и количество мин.',
-            'Нажмите Play — ставка списывается, начинается раунд.',
-            'Открывайте клетки: алмаз увеличивает множитель, мина завершает раунд.',
-            'Нажмите Cashout в любой момент после первого удачного открытия, чтобы зафиксировать выигрыш.'
+          { title: $t('ui.s_howto_steps'), items: [
+            $t('ui.s_howto_mines_step_1'),
+            $t('ui.s_howto_mines_step_2'),
+            $t('ui.s_howto_mines_step_3'),
+            $t('ui.s_howto_mines_step_4')
           ]},
-          { title: 'Режимы и механики', items: [
-            'Количество мин влияет на вероятность и рост множителя: больше мин — выше награда и выше шанс проигрыша.',
-            'Следующий множитель показывает потенциальный результат при успешном следующем открытии.',
-            'Если открыть все безопасные клетки, игра автоматически завершится выигрышем.'
+          { title: $t('ui.s_howto_mechanics'), items: [
+            $t('ui.s_howto_mines_mech_1'),
+            $t('ui.s_howto_mines_mech_2'),
+            $t('ui.s_howto_mines_mech_3')
           ]},
-          { title: 'Подсказки', items: [
-            'Не увеличивайте риск резко: повышайте число мин постепенно, чтобы понять динамику.',
-            'Фиксируйте прибыль раньше, если цель — стабильная игра, а не максимальный множитель.'
+          { title: $t('ui.s_howto_tips'), items: [
+            $t('ui.s_howto_mines_tip_1'),
+            $t('ui.s_howto_mines_tip_2')
           ]}
         ]"
       />

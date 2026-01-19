@@ -890,23 +890,23 @@ function betOf(key: BetKey) {
 
     <template #below>
       <GameHowTo
-        heading="Roulette — как играть"
-        intro="Классическая европейская рулетка: делайте ставки на число или группы (цвет, чёт/нечёт, диапазоны, ряды). После вращения выплата начисляется автоматически в зависимости от выпавшего номера." 
+        :heading="$t('ui.s_howto_roulette')"
+        :intro="$t('ui.s_howto_roulette_intro')"
         :sections="[
-          { title: 'Базовые шаги', items: [
-            'Выберите фишку (Chip) — это размер ставки за клик.',
-            'Кликайте по полю: можно ставить на число или на внешние ставки (цвет, чёт/нечёт, диапазон и т.д.).',
-            'Используйте Undo, чтобы отменить последний шаг, или Clear, чтобы очистить всё.',
-            'Нажмите Play и дождитесь результата.'
+          { title: $t('ui.s_howto_steps'), items: [
+            $t('ui.s_howto_roulette_step_1'),
+            $t('ui.s_howto_roulette_step_2'),
+            $t('ui.s_howto_roulette_step_3'),
+            $t('ui.s_howto_roulette_step_4')
           ]},
-          { title: 'Режимы ставок', items: [
-            'Number — ставка на конкретное число (обычно самый высокий коэффициент).',
-            'Outside bets — ставки на группы: Red/Black, Even/Odd, Low/High, диапазоны 1–12 / 13–24 / 25–36, ряды.',
-            'Можно комбинировать ставки: общий Amount — это сумма всех выбранных позиций.'
+          { title: $t('ui.s_howto_mechanics'), items: [
+            $t('ui.s_howto_roulette_mech_1'),
+            $t('ui.s_howto_roulette_mech_2'),
+            $t('ui.s_howto_roulette_mech_3')
           ]},
-          { title: 'Советы', items: [
-            'Не разгоняйте общий Amount слишком быстро: несколько кликов по разным позициям быстро увеличивают сумму.',
-            'Для более ровной игры используйте групповые ставки; для максимальной прибыли — ставки на числа, но с большим риском.'
+          { title: $t('ui.s_howto_tips'), items: [
+            $t('ui.s_howto_roulette_tip_1'),
+            $t('ui.s_howto_roulette_tip_2')
           ]}
         ]"
       />

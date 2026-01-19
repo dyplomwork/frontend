@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '../stores/auth'
 import { useTicketsStore } from '../stores/tickets'
 import { formatNumber } from '../utils/format'
 
 const auth = useAuthStore()
 const tickets = useTicketsStore()
+const { t } = useI18n()
 
 const amount = ref<number>(100)
 const amount2 = ref<number>(100)
@@ -23,7 +25,6 @@ async function loadMineSafe(){
   try{
     await tickets.fetchMine()
   }catch{
-    // ignore
   }
 }
 
@@ -41,27 +42,27 @@ watch(
 
 async function requestDeposit(){
   message.value = ''
-  if(!auth.user){ message.value = 'Нужен вход'; return }
-  if(amount.value <= 0){ message.value = 'Сумма должна быть больше 0'; return }
+  if(!auth.user){ message.value = t('ui.s_need_login'); return }
+  if(amount.value <= 0){ message.value = t('ui.s_amount_gt0'); return }
   try{
     await tickets.create('DEPOSIT', amount.value)
-    message.value = 'Заявка на пополнение отправлена в админку.'
+    message.value = t('ui.s_ticket_deposit_sent')
     await loadMineSafe()
   }catch{
-    message.value = 'Не удалось создать тикет.'
+    message.value = t('ui.s_ticket_create_failed')
   }
 }
 
 async function requestWithdraw(){
   message.value = ''
-  if(!auth.user){ message.value = 'Нужен вход'; return }
-  if(amount2.value <= 0){ message.value = 'Сумма должна быть больше 0'; return }
+  if(!auth.user){ message.value = t('ui.s_need_login'); return }
+  if(amount2.value <= 0){ message.value = t('ui.s_amount_gt0'); return }
   try{
     await tickets.create('WITHDRAW', amount2.value)
-    message.value = 'Заявка на вывод отправлена в админку.'
+    message.value = t('ui.s_ticket_withdraw_sent')
     await loadMineSafe()
   }catch{
-    message.value = 'Не удалось создать тикет.'
+    message.value = t('ui.s_ticket_create_failed')
   }
 }
 
@@ -88,7 +89,7 @@ async function refreshAll(){
           <b>{{ $t('ui.s_9edfcfc6ba') }}</b>
           <div class="row" style="gap:10px; margin-top:10px; flex-wrap:wrap;">
             <input class="input" type="number" v-model.number="amount" min="1" />
-            <button class="btn btn-primary" @click="requestDeposit" :disabled="loading">Создать тикет</button>
+            <button class="btn btn-primary" @click="requestDeposit" :disabled="loading">{{ $t('ui.s_create_ticket') }}</button>
           </div>
         </div>
 
@@ -96,7 +97,7 @@ async function refreshAll(){
           <b>{{ $t('ui.s_79cabd47b2') }}</b>
           <div class="row" style="gap:10px; margin-top:10px; flex-wrap:wrap;">
             <input class="input" type="number" v-model.number="amount2" min="1" />
-            <button class="btn btn-primary" @click="requestWithdraw" :disabled="loading">Создать тикет</button>
+            <button class="btn btn-primary" @click="requestWithdraw" :disabled="loading">{{ $t('ui.s_create_ticket') }}</button>
           </div>
         </div>
       </div>
@@ -107,7 +108,7 @@ async function refreshAll(){
     <div class="card">
       <div class="row-between">
         <h3 style="margin:0;">{{ $t('ui.s_3f0a73cab1') }}</h3>
-        <button class="btn" @click="refreshAll" :disabled="loading">Refresh</button>
+        <button class="btn" @click="refreshAll" :disabled="loading">{{ $t('ui.s_refresh') }}</button>
       </div>
 
       <div v-if="loading" class="muted" style="margin-top:12px;">{{ $t('ui.s_43e40d49fd') }}</div>
@@ -116,18 +117,18 @@ async function refreshAll(){
       <div v-else class="grid" style="gap:10px; margin-top:12px;">
         <div v-for="t in mineSafe" :key="String(t.id)" class="card2 row-between" style="gap:12px;">
           <div class="grid" style="gap:4px;">
-            <b>#{{ String(t.id).slice(0,6) }} • {{ t.type === 'DEPOSIT' ? 'Пополнение' : 'Вывод' }}</b>
+            <b>#{{ String(t.id).slice(0,6) }} • {{ t.type === 'DEPOSIT' ? $t('ui.s_ticket_deposit') : $t('ui.s_ticket_withdraw') }}</b>
             <span class="muted">{{ t.createdAt ? new Date(t.createdAt).toLocaleString() : '-' }}</span>
             <span class="badge" :class="'st-' + t.status">{{ t.status }}</span>
           </div>
           <div class="row" style="gap:8px;">
-            <span class="badge">amount: {{ fmt(t.amount, 2) }}</span>
+            <span class="badge">{{ $t('ui.s_ticket_amount') }}: {{ fmt(t.amount, 2) }}</span>
           </div>
         </div>
       </div>
 
       <div v-if="!loading && pending.length" class="muted" style="margin-top:10px;">
-        Pending: {{ pending.length }} (ожидают подтверждения админом)
+        {{ $t('ui.s_ticket_pending', { n: pending.length }) }}
       </div>
     </div>
   </div>

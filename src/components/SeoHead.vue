@@ -5,10 +5,10 @@ import { useHead } from '@unhead/vue'
 
 const route = useRoute()
 
-const siteName = 'Casino Simulator'
+const siteName = 'SCXDROP'
 const fallbackTitle = `${siteName} — Plinko, Roulette, Mines, Dice, Cases`
 const fallbackDescription =
-  'A lightweight casino simulator (demo) with Plinko, Roulette, Mines, Dice and Cases. Try your luck and test strategies.'
+  'Casino-style games: Plinko, Roulette, Mines, Dice and Cases — clean UI, fast gameplay.'
 
 const title = computed(() => (route.meta?.title as string) || fallbackTitle)
 const description = computed(() => (route.meta?.description as string) || fallbackDescription)

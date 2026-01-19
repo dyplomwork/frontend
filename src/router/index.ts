@@ -22,9 +22,8 @@ export const routes = [
     component: HomeView,
     meta: {
       public: true,
-      title: 'Casino Simulator — Plinko, Roulette, Mines, Dice, Cases',
-      description:
-        'A lightweight casino simulator (demo) with Plinko, Roulette, Mines, Dice and Cases. Try your luck and test strategies.',
+      title: 'SCXDROP — Casino Games',
+      description: 'Casino-style games: Plinko, Roulette, Mines, Dice, Coin Flip and Cases.',
     },
   },
   {
@@ -33,8 +32,8 @@ export const routes = [
     component: LoginView,
     meta: {
       public: true,
-      title: 'Login — Casino Simulator',
-      description: 'Log in to your Casino Simulator profile.',
+      title: 'SCXDROP — Login',
+      description: 'Log in to your SCXDROP profile.',
     },
   },
   {
@@ -43,8 +42,8 @@ export const routes = [
     component: RegisterView,
     meta: {
       public: true,
-      title: 'Register — Casino Simulator',
-      description: 'Create an account for Casino Simulator.',
+      title: 'SCXDROP — Register',
+      description: 'Create an account for SCXDROP.',
     },
   },
   {
@@ -53,8 +52,8 @@ export const routes = [
     component: RouletteView,
     meta: {
       public: true,
-      title: 'Roulette — Casino Simulator',
-      description: 'European roulette demo: bet on red/black, even/odd, ranges or a number.',
+      title: 'SCXDROP — Roulette',
+      description: 'European roulette: bet on numbers, colors, even/odd and ranges.',
     },
   },
   {
@@ -63,8 +62,8 @@ export const routes = [
     component: MinesView,
     meta: {
       public: true,
-      title: 'Mines — Casino Simulator',
-      description: 'Mines game demo: pick tiles, avoid mines, cash out multipliers.',
+      title: 'SCXDROP — Mines',
+      description: 'Mines: open tiles, increase multiplier and cash out anytime.',
     },
   },
   {
@@ -73,8 +72,8 @@ export const routes = [
     component: PlinkoView,
     meta: {
       public: true,
-      title: 'Plinko — Casino Simulator',
-      description: 'Plinko demo with multipliers and smooth ball animations.',
+      title: 'SCXDROP — Plinko',
+      description: 'Plinko: drop balls and hit multipliers based on risk and rows.',
     },
   },
   {
@@ -83,8 +82,8 @@ export const routes = [
     component: DiceView,
     meta: {
       public: true,
-      title: 'Dice — Casino Simulator',
-      description: 'Dice game demo: choose chance and profit, roll under or over.',
+      title: 'SCXDROP — Dice',
+      description: 'Dice: choose Roll Over, chance and multiplier, then roll for the result.',
     },
   },
   {
@@ -93,7 +92,7 @@ export const routes = [
     component: CoinFlipView,
     meta: {
       public: true,
-      title: 'Coin Flip — Casino Simulator',
+      title: 'SCXDROP — Coin Flip',
       description: 'Coin flip battles: create, join and approve the result.',
     },
   },
@@ -103,7 +102,7 @@ export const routes = [
     component: CasesView,
     meta: {
       public: true,
-      title: 'Cases — Casino Simulator',
+      title: 'SCXDROP — Cases',
       description: 'Open cases and get rewards. See drop chances and expected value.',
     },
   },
@@ -113,7 +112,7 @@ export const routes = [
     component: CaseDetailView,
     meta: {
       public: true,
-      title: 'Case — Casino Simulator',
+      title: 'SCXDROP — Case',
       description: 'Case details: prizes, chances and expected value.',
     },
   },
@@ -123,7 +122,7 @@ export const routes = [
     component: ProfileView,
     meta: {
       requiresAuth: true,
-      title: 'Profile — Casino Simulator',
+      title: 'SCXDROP — Profile',
       description: 'Your profile and balance.',
     },
   },
@@ -134,7 +133,7 @@ export const routes = [
     meta: {
       requiresAuth: true,
       requiresAdmin: true,
-      title: 'Admin — Casino Simulator',
+      title: 'SCXDROP — Admin',
       description: 'Admin panel.',
     },
   },

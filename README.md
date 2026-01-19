@@ -1,4 +1,4 @@
-# Casino Simulator (Frontend) — Vue 3 + Vite
+# SCXDROP (Frontend) — Vue 3 + Vite
 
 
 ## Запуск

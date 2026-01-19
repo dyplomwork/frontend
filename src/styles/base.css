@@ -5,7 +5,10 @@ body{
   margin:0;
   color: var(--c-text);
   background:
-    radial-gradient(900px 520px at 50% -10%, rgba(92,255,146,.10), rgba(0,0,0,0)),
+    radial-gradient(55vmax 38vmax at 50% -12vmax, rgba(92,255,146,.12), rgba(0,0,0,0) 62%),
+    radial-gradient(46vmax 34vmax at 12% 18%, rgba(56,189,248,.07), rgba(0,0,0,0) 70%),
+    radial-gradient(42vmax 30vmax at 88% 22%, rgba(168,85,247,.06), rgba(0,0,0,0) 72%),
+    radial-gradient(30vmax 22vmax at 50% 112%, rgba(92,255,146,.06), rgba(0,0,0,0) 70%),
     linear-gradient(180deg, var(--c-bg), #091118 55%, #070d12);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
