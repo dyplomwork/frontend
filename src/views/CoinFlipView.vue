@@ -212,7 +212,7 @@ async function approve() {
   approving.value = true
   try {
     sfx('click')
-    const upd = await battlesApprove({ id: b.id, side: sideToSend })
+    const upd = await battlesApprove(b.id, { side: sideToSend })
     selected.value = upd
     await refreshList()
     await auth.fetchBalance({ force: true }).catch(() => {})
@@ -422,8 +422,7 @@ onBeforeUnmount(() => {
             </div>
           </div>
           <div class="muted small">
-            (While backend is not ready this page uses a safe mock storage. When you add your battles-service,
-            the same UI will start calling real endpoints automatically.)
+            Итог раунда определён после подтверждения обоих игроков.
           </div>
         </div>
       </div>
