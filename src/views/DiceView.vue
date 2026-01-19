@@ -347,67 +347,34 @@ onBeforeUnmount(() => stopAnim())
         @half="amount = Math.max(0, (Number(amount) || 0) / 2)"
         @double="amount = (Number(amount) || 0) * 2"
         @play="play"
-      />
-    </template>
+      >
+        <div class="summary dice-result" :class="flashZone">
+          <div class="row-between dice-result-head">
+            <div class="label">{{ $t('ui.s_dice_result') }}</div>
+            <div class="dice-stats">
+              <span>{{ $t('ui.s_3245db459e') }}: <b>{{ fmt(rollOver, 2) }}</b></span>
+              <span class="sep">•</span>
+              <span>{{ $t('ui.s_ebeefd375d') }}: <b>{{ fmt(winChance, 2) }}%</b></span>
+              <span class="sep">•</span>
+              <span>{{ $t('ui.s_ea1c527187') }}: <b>x{{ fmt(multiplier, 4) }}</b></span>
+            </div>
+          </div>
 
-    <div class="dice-top">
-      <div class="card result">
-        <div class="card-head">
-          <div class="title">{{ $t('ui.s_dice_result') }}</div>
-          <div class="meta" :class="flashZone">
-            <span>{{ $t('ui.s_3245db459e') }}:</span>
-            <b>{{ fmt(rollOver, 2) }}</b>
-            <span class="dot"></span>
-            <span>{{ $t('ui.s_ebeefd375d') }}:</span>
-            <b>{{ fmt(winChance, 2) }}%</b>
-            <span class="dot"></span>
-            <span>{{ $t('ui.s_ea1c527187') }}:</span>
-            <b>x{{ fmt(multiplier, 4) }}</b>
+          <div class="dice-big">
+            <span v-if="displayRoll != null">{{ fmt(displayRoll, 2) }}</span>
+            <span v-else class="muted">—</span>
+          </div>
+
+          <div class="dice-sub muted">
+            <span v-if="lastRoll != null">{{ $t('ui.s_dice_last_roll') }}: <b>{{ fmt(lastRoll, 2) }}</b></span>
+            <span v-else>{{ $t('ui.s_dice_no_rolls') }}</span>
           </div>
         </div>
+      </GamePanel>
+    </template>
 
-        <div class="big" :class="flashZone">
-          <span v-if="displayRoll != null">{{ fmt(displayRoll, 2) }}</span>
-          <span v-else class="empty">—</span>
-        </div>
-
-        <div class="sub" :class="flashZone">
-          <span v-if="lastRoll != null">{{ $t('ui.s_dice_last_roll') }}: <b>{{ fmt(lastRoll, 2) }}</b></span>
-          <span v-else class="muted">{{ $t('ui.s_dice_no_rolls') }}</span>
-        </div>
-      </div>
-
-      <div class="card history">
-        <div class="card-head">
-          <div class="title">{{ $t('ui.s_16d2b386b2') }}</div>
-          <div class="muted small">{{ $t('ui.s_dice_last_n', { n: 12 }) }}</div>
-        </div>
-
-        <div v-if="history.length" class="hist-grid">
-          <button
-            v-for="(h, i) in history"
-            :key="h.ts + '-' + i"
-            class="hist-item"
-            :class="h.isWin ? 'win' : 'lose'"
-            type="button"
-            :title="h.isWin ? $t('ui.s_dice_win') : $t('ui.s_dice_lose')"
-          >
-            <span class="v">{{ fmt(h.roll, 2) }}</span>
-          </button>
-        </div>
-        <div v-else class="empty muted">{{ $t('ui.s_dice_no_rolls') }}</div>
-      </div>
-    </div>
-
+    <div class="dice-field">
     <div class="dial">
-      <div class="scale-row" aria-hidden="true">
-        <div class="scale-label" style="left: 0%">0</div>
-        <div class="scale-label" style="left: 25%">25</div>
-        <div class="scale-label" style="left: 50%">50</div>
-        <div class="scale-label" style="left: 75%">75</div>
-        <div class="scale-label" style="left: 100%">100</div>
-      </div>
-
       <div class="bar-wrap">
         <div
           class="bar bet"
@@ -435,22 +402,14 @@ onBeforeUnmount(() => stopAnim())
             aria-label="Roll Over"
           />
 
-          <div class="thumb-bubble-layer" aria-hidden="true">
-            <div class="thumb-bubble">
-              <div class="bubble-top">ROLL OVER</div>
-              <div class="bubble-val">{{ fmt(rollOver, 2) }}</div>
-            </div>
-          </div>
-
           <div
             class="result-puck"
             :class="[flashZone, { bump, trail: trailOn }]"
             :style="{
-          left: needle + '%',
-          transform: `translate(-50%, -50%) scale(${puckScale})`,
-          '--glow': String(puckGlow),
-        }"
-            :data-v="resultLabel"
+              left: needle + '%',
+              transform: `translate(-50%, -50%) scale(${puckScale})`,
+              '--glow': String(puckGlow),
+            }"
             aria-hidden="true"
           >
             <div
@@ -476,10 +435,32 @@ onBeforeUnmount(() => stopAnim())
       </div>
     </div>
 
+    <div class="summary dice-history">
+      <div class="row-between dice-history-head">
+        <div class="label">{{ $t('ui.s_16d2b386b2') }}</div>
+        <div class="muted small">{{ $t('ui.s_dice_last_n', { n: 12 }) }}</div>
+      </div>
+
+      <div v-if="history.length" class="hist-grid">
+        <button
+          v-for="(h, i) in history"
+          :key="h.ts + '-' + i"
+          class="hist-item"
+          :class="h.isWin ? 'win' : 'lose'"
+          type="button"
+          :title="h.isWin ? $t('ui.s_dice_win') : $t('ui.s_dice_lose')"
+        >
+          <span class="v">{{ fmt(h.roll, 2) }}</span>
+        </button>
+      </div>
+      <div v-else class="empty muted">{{ $t('ui.s_dice_no_rolls') }}</div>
+     </div>
+    </div>
+
     <template #below>
       <GameHowTo
         :heading="$t('ui.s_howto_dice')"
-        intro="Вы выбираете порог Roll Over и делаете ставку. Система генерирует число от 0 до 100: если результат выше выбранного порога — вы выигрываете по рассчитанному множителю. Чем выше шанс — тем ниже множитель." 
+        intro="Вы выбираете порог Roll Over и делаете ставку. Система генерирует число от 0 до 100: если результат выше выбранного порога — вы выигрываете по рассчитанному множителю. Чем выше шанс — тем ниже множитель."
         :sections="[
           { title: 'Базовые шаги', items: [
             'Укажите сумму ставки.',
@@ -502,185 +483,20 @@ onBeforeUnmount(() => stopAnim())
   </GamePageLayout>
 </template>
 
+
 <style scoped>
-.dice-top {
-  width: min(920px, 100%);
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: 14px;
-}
-
-.card {
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(0, 0, 0, 0.18);
-  border-radius: 14px;
-  padding: 12px;
-  position: relative;
-  overflow: hidden;
-  box-sizing: border-box;
-}
-
-.card-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  position: relative;
-  z-index: 1;
-}
-
-.title {
-  font-weight: 700;
-  letter-spacing: 0.2px;
-}
-
-.meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  opacity: 0.9;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.meta b {
-  font-weight: 700;
-}
-
-.dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.35);
-  display: inline-block;
-  margin: 0 2px;
-}
-
-.big {
-  margin-top: 12px;
-  font-size: 44px;
-  font-weight: 800;
-  letter-spacing: -0.8px;
-  line-height: 1;
-  position: relative;
-  z-index: 1;
-}
-
-.big.win {
-  text-shadow: 0 0 18px rgba(90, 255, 170, 0.25);
-}
-
-.big.lose {
-  text-shadow: 0 0 18px rgba(255, 110, 110, 0.22);
-}
-
-.sub {
-  margin-top: 8px;
-  font-size: 13px;
-  position: relative;
-  z-index: 1;
-  opacity: 0.9;
-}
-
-.small {
-  font-size: 12px;
-}
-
-.hist-grid {
-  margin-top: 12px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
-  gap: 8px;
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  min-width: 0;
-}
-
-.hist-item {
-  border-radius: 12px;
-  padding: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(0, 0, 0, 0.24);
-  color: inherit;
-  cursor: default;
-  user-select: none;
-  width: 100%;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-}
-
-.hist-item.win {
-  border-color: rgba(60, 255, 170, 0.14);
-  box-shadow: 0 0 0 1px rgba(60, 255, 170, 0.04) inset;
-}
-
-.hist-item.lose {
-  border-color: rgba(255, 110, 110, 0.14);
-  box-shadow: 0 0 0 1px rgba(255, 110, 110, 0.04) inset;
-}
-
-.hist-item .v {
-  font-weight: 700;
-  font-size: 12px;
-  opacity: 0.95;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-variant-numeric: tabular-nums;
-}
-
-.empty {
-  opacity: 0.65;
-}
-
-
-
 .dial {
   width: min(920px, 100%);
   margin: 0 auto;
   position: relative;
-  padding-top: 28px;
+  padding-top: 6px;
   isolation: isolate;
-}
-
-@media (max-width: 860px) {
-  .dice-top {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 520px) {
-  .big {
-    font-size: 38px;
-  }
 }
 
 .bar-wrap {
   position: relative;
   overflow: visible;
   z-index: 1;
-}
-
-
-
-.tick::after {
-  content: '';
-  border-left: 7px solid transparent;
-  border-right: 7px solid transparent;
-  border-top: 10px solid rgba(255, 255, 255, 0.18);
-  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
-}
-.tick span {
-  font-size: 13px;
-  font-weight: 900;
-  color: rgba(255, 255, 255, 0.92);
-  text-shadow: 0 10px 18px rgba(0, 0, 0, 0.55);
 }
 
 .bar.bet {
@@ -697,6 +513,7 @@ onBeforeUnmount(() => stopAnim())
   overflow: hidden;
   z-index: 1;
 }
+
 .bar.bet.shake {
   animation: barShakeSoft 180ms ease-in-out;
 }
@@ -720,99 +537,6 @@ onBeforeUnmount(() => stopAnim())
   100% {
     transform: translateX(0);
   }
-}
-
-.track {
-  position: relative;
-  height: 100%;
-  border-radius: 999px;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.04);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
-    inset 0 10px 18px rgba(0, 0, 0, 0.26);
-  display: flex;
-}
-
-
-
-
-.track-shine {
-  position: absolute;
-  inset: -40% -60%;
-  background: linear-gradient(
-    115deg,
-    rgba(255, 255, 255, 0) 38%,
-    rgba(255, 255, 255, 0.12) 50%,
-    rgba(255, 255, 255, 0) 62%
-  );
-  transform: translateX(-40%);
-  animation: shine 3.8s linear infinite;
-  pointer-events: none;
-  mix-blend-mode: screen;
-  opacity: 0.55;
-}
-@keyframes shine {
-  0% {
-    transform: translateX(-40%);
-  }
-  100% {
-    transform: translateX(40%);
-  }
-}
-
-.bar-slider::-webkit-slider-runnable-track {
-  height: 48px;
-  background: transparent;
-}
-.bar-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 64px;
-  height: 44px;
-}
-.bar-slider::-moz-range-track {
-  height: 48px;
-  background: transparent;
-  border: none;
-}
-.bar-slider::-moz-range-thumb {
-  width: 64px;
-  height: 44px;
-  border: none;
-  background: transparent;
-}
-
-.scale-row {
-  position: absolute;
-  top: 0;
-  left: 10px;
-  right: 10px;
-  height: 22px;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.scale-label {
-  position: absolute;
-  top: 0;
-  transform: translateX(-50%);
-  display: grid;
-  place-items: center;
-  gap: 4px;
-  font-size: 12px;
-  font-weight: 900;
-  color: rgba(255, 255, 255, 0.9);
-  text-shadow: 0 10px 18px rgba(0, 0, 0, 0.55);
-}
-
-.scale-label::after {
-  content: '';
-  width: 0;
-  height: 0;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-top: 9px solid rgba(255, 255, 255, 0.16);
-  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
 }
 
 .track {
@@ -916,16 +640,15 @@ onBeforeUnmount(() => stopAnim())
 
 .dice-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(120, 205, 255, 0.98), rgba(56, 145, 255, 0.98));
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(180deg, rgba(248, 250, 253, 0.98), rgba(206, 214, 226, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.6);
   box-shadow:
     0 18px 32px rgba(0, 0, 0, 0.48),
-    0 0 0 1px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.24),
-    0 0 18px rgba(120, 205, 255, 0.18);
+    0 0 0 1px rgba(0, 0, 0, 0.45),
+    inset 0 2px 0 rgba(255, 255, 255, 0.55);
 }
 
 .dice-slider::-moz-range-track {
@@ -935,126 +658,15 @@ onBeforeUnmount(() => stopAnim())
 }
 
 .dice-slider::-moz-range-thumb {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(120, 205, 255, 0.98), rgba(56, 145, 255, 0.98));
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(180deg, rgba(248, 250, 253, 0.98), rgba(206, 214, 226, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.6);
   box-shadow:
     0 18px 32px rgba(0, 0, 0, 0.48),
-    0 0 0 1px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.24),
-    0 0 18px rgba(120, 205, 255, 0.18);
-}
-
-.thumb-bubble-layer {
-  position: absolute;
-  left: var(--ro);
-  top: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 50;
-  pointer-events: none;
-  overflow: visible;
-}
-
-.roll-line.pulse {
-  animation: linePulse 420ms ease-out;
-}
-@keyframes linePulse {
-  0% {
-    box-shadow:
-      0 0 0 1px rgba(0, 0, 0, 0.35),
-      0 0 10px rgba(255, 255, 255, 0.14);
-    opacity: 0.9;
-  }
-  50% {
-    box-shadow:
-      0 0 0 1px rgba(0, 0, 0, 0.35),
-      0 0 26px rgba(255, 255, 255, 0.22);
-    opacity: 1;
-  }
-  100% {
-    box-shadow:
-      0 0 0 1px rgba(0, 0, 0, 0.35),
-      0 0 14px rgba(255, 255, 255, 0.12);
-    opacity: 0.95;
-  }
-}
-
-.roll-thumb::after {
-  content: '';
-  position: absolute;
-  inset: 2px;
-  border-radius: 13px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
-}
-
-.thumb-grip {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  gap: 1px;
-  z-index: 2;
-}
-.grip-bar {
-  width: 7px;
-  height: 3px;
-  border-radius: 999px;
-  background: rgba(10, 26, 40, 0.78);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    0 8px 18px rgba(0, 0, 0, 0.25);
-}
-
-.thumb-bubble-layer {
-  position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 50;
-  pointer-events: none;
-  overflow: visible;
-}
-
-.thumb-bubble {
-  position: absolute;
-  left: 50%;
-  top: -54px;
-  transform: translateX(-50%);
-  min-width: 108px;
-  padding: 8px 10px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.38);
-  box-shadow:
-    0 18px 34px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  text-align: center;
-  z-index: 9999;
-}
-.thumb-bubble::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: -8px;
-  transform: translateX(-50%);
-  border-left: 9px solid transparent;
-  border-right: 9px solid transparent;
-  border-top: 9px solid rgba(0, 0, 0, 0.38);
-  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.45));
-}
-.bubble-top {
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
-  color: rgba(255, 255, 255, 0.72);
-}
-.bubble-val {
-  margin-top: 2px;
-  font-size: 14px;
-  font-weight: 1000;
-  color: rgba(255, 255, 255, 0.95);
-  text-shadow: 0 10px 18px rgba(0, 0, 0, 0.55);
+    0 0 0 1px rgba(0, 0, 0, 0.45),
+    inset 0 2px 0 rgba(255, 255, 255, 0.55);
 }
 
 .result-puck {
@@ -1087,22 +699,111 @@ onBeforeUnmount(() => stopAnim())
   opacity: 0.85;
 }
 
-.result-puck::after {
-  content: attr(data-v);
-  position: absolute;
-  top: -34px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 12px;
+.controls {
+  margin-top: 16px;
+}
+
+.dice-history {
+  width: min(920px, 100%);
+  margin: 14px auto 0;
+  margin-top: auto;
+}
+
+.dice-history-head {
+  gap: 12px;
+  align-items: baseline;
+}
+
+.hist-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.hist-item {
+  border-radius: 12px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.24);
+  color: inherit;
+  cursor: default;
+  user-select: none;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.hist-item.win {
+  border-color: rgba(60, 255, 170, 0.14);
+  box-shadow: 0 0 0 1px rgba(60, 255, 170, 0.04) inset;
+}
+
+.hist-item.lose {
+  border-color: rgba(255, 110, 110, 0.14);
+  box-shadow: 0 0 0 1px rgba(255, 110, 110, 0.04) inset;
+}
+
+.hist-item .v {
   font-weight: 900;
-  letter-spacing: 0.02em;
-  color: rgba(255, 255, 255, 0.92);
-  padding: 4px 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.32);
-  text-shadow: 0 8px 16px rgba(0, 0, 0, 0.55);
+  font-size: 12px;
+  opacity: 0.95;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+
+.empty {
+  opacity: 0.65;
+  margin-top: 10px;
+}
+
+.dice-result {
+  margin-top: 12px;
+}
+
+.dice-result-head {
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.dice-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.dice-stats b {
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.sep {
+  opacity: 0.55;
+}
+
+.dice-big {
+  margin-top: 10px;
+  font-size: 38px;
+  font-weight: 950;
+  letter-spacing: -0.6px;
+  text-align: center;
+  line-height: 1;
+}
+
+.dice-sub {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 12px;
 }
 
 .burst {
@@ -1113,6 +814,7 @@ onBeforeUnmount(() => stopAnim())
   height: 1px;
   pointer-events: none;
 }
+
 .burst .p {
   position: absolute;
   width: 6px;
@@ -1121,39 +823,47 @@ onBeforeUnmount(() => stopAnim())
   opacity: 0;
   animation: particle 520ms ease-out forwards;
 }
+
 .burst.win .p {
   background: rgba(0, 231, 1, 0.92);
   box-shadow: 0 0 18px rgba(0, 231, 1, 0.28);
 }
+
 .burst.lose .p {
   background: rgba(255, 64, 87, 0.92);
   box-shadow: 0 0 18px rgba(255, 64, 87, 0.28);
 }
+
 .burst .p1 {
   animation-delay: 0ms;
   --dx: -22px;
   --dy: -14px;
 }
+
 .burst .p2 {
   animation-delay: 18ms;
   --dx: 18px;
   --dy: -18px;
 }
+
 .burst .p3 {
   animation-delay: 28ms;
   --dx: -14px;
   --dy: 20px;
 }
+
 .burst .p4 {
   animation-delay: 10ms;
   --dx: 24px;
   --dy: 10px;
 }
+
 .burst .p5 {
   animation-delay: 36ms;
   --dx: 0px;
   --dy: -26px;
 }
+
 .burst .p6 {
   animation-delay: 44ms;
   --dx: 0px;
@@ -1174,40 +884,18 @@ onBeforeUnmount(() => stopAnim())
   }
 }
 
-.controls {
-  margin-top: 16px;
-}
-.last {
-  margin-top: 14px;
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.legend {
-  margin-top: 10px;
+.dice-field {
+  width: min(920px, 100%);
+  margin: 0 auto;
   display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  opacity: 0.9;
-}
-.pill {
-  font-size: 12px;
-  font-weight: 900;
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.22);
-}
-.pill.red {
-  color: rgba(255, 160, 171, 0.95);
-}
-.pill.green {
-  color: rgba(160, 255, 160, 0.95);
+  flex-direction: column;
+  min-height: 360px; /* подбери под свой дизайн */
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .track-shine {
-    animation: none;
-    opacity: 0.25;
+@media (max-width: 520px) {
+  .dice-big {
+    font-size: 34px;
   }
 }
 </style>
+
