@@ -453,7 +453,7 @@ watch(quickOpen, (v) => {
   font-weight: 900;
   letter-spacing: .08em;
 }
-.title{ margin:0; color: #eaf3ff; }
+.title{ margin:0; color: rgba(255,248,236,.92); }
 .price{ color: rgba(255,255,255,.75); font-weight: 900; display:flex; align-items:center; gap: 8px; }
 
 .model{
@@ -605,9 +605,9 @@ watch(quickOpen, (v) => {
   left: 50%;
   width: 120px;
   transform: translateX(-50%);
-  border-left: 2px solid rgba(90,180,255,.35);
-  border-right: 2px solid rgba(90,180,255,.35);
-  box-shadow: 0 0 24px rgba(90,180,255,.18);
+  border-left: 2px solid rgba(255,178,74,.38);
+  border-right: 2px solid rgba(255,178,74,.38);
+  box-shadow: 0 0 26px rgba(255,122,24,.18);
   pointer-events:none;
 }
 
@@ -671,7 +671,7 @@ watch(quickOpen, (v) => {
   padding: 10px 12px;
 }
 .loot-row.common{ border-color: rgba(255,255,255,.08); }
-.loot-row.rare{ border-color: rgba(90,180,255,.28); box-shadow: 0 0 0 1px rgba(90,180,255,.10); }
+.loot-row.rare{ border-color: rgba(61,255,157,.30); box-shadow: 0 0 0 1px rgba(61,255,157,.12); }
 .loot-row.epic{ border-color: rgba(255,115,220,.30); box-shadow: 0 0 0 1px rgba(255,115,220,.10); }
 .loot-row.legendary{ border-color: rgba(255,208,90,.32); box-shadow: 0 0 0 1px rgba(255,208,90,.12); }
 

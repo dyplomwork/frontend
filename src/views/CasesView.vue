@@ -75,7 +75,7 @@ function lootIcon(amount: number){
 <style scoped>
 .app-page{ padding: 18px 8px 34px; }
 .game-card{
-  background: rgba(14,26,36,.72);
+  background: rgba(20,20,15,.74);
   border: 1px solid rgba(255,255,255,.06);
   border-radius: 18px;
   box-shadow: 0 18px 40px rgba(0,0,0,.35);
@@ -83,7 +83,7 @@ function lootIcon(amount: number){
   padding: 18px;
 }
 .header{ display:flex; align-items:flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
-h2{ margin:0; color: #eaf3ff; }
+h2{ margin:0; color: rgba(255,248,236,.92); }
 .muted{ margin: 6px 0 0; color: rgba(255,255,255,.68); }
 .cases-grid{
   display:grid;
@@ -101,8 +101,8 @@ h2{ margin:0; color: #eaf3ff; }
 }
 .case-tile:hover{
   transform: translateY(-2px);
-  border-color: rgba(90,180,255,.22);
-  box-shadow: 0 16px 40px rgba(0,0,0,.32), 0 0 26px rgba(90,180,255,.10);
+  border-color: rgba(255,178,74,.22);
+  box-shadow: 0 16px 40px rgba(0,0,0,.32), 0 0 26px rgba(255,122,24,.10);
 }
 .tile-top{ display:flex; flex-direction:column; gap: 8px; }
 .case-ic{ width: 56px; height: 56px; display:block; object-fit: contain; filter: drop-shadow(0 10px 18px rgba(0,0,0,.35)); }
@@ -122,7 +122,7 @@ h2{ margin:0; color: #eaf3ff; }
 }
 .loot-chip .ic{ filter: drop-shadow(0 8px 14px rgba(0,0,0,.35)); }
 .loot-chip.common{ border-color: rgba(255,255,255,.10); }
-.loot-chip.rare{ border-color: rgba(90,180,255,.28); }
+.loot-chip.rare{ border-color: rgba(61,255,157,.30); }
 .loot-chip.epic{ border-color: rgba(255,115,220,.30); }
 .loot-chip.legendary{ border-color: rgba(255,208,90,.32); }
 .pill{ padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.04); color: rgba(255,255,255,.82); font-weight: 800; }

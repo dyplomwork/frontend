@@ -1355,7 +1355,7 @@ function betOf(key: BetKey) {
   opacity: 0.95;
 }
 .mini-pill .v {
-  color: #eaf3ff;
+  color: rgba(255,248,236,.92);
   font-weight: 900;
 }
 

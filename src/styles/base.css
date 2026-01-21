@@ -3,10 +3,10 @@
 html, body{ min-height: 100%; }
 html{
   background:
-    radial-gradient(68vmax 40vmax at 50% -10%, rgba(92,255,146,.12), rgba(0,0,0,0) 70%),
-    radial-gradient(44vmax 36vmax at 18% 12%, rgba(90,180,255,.08), rgba(0,0,0,0) 65%),
-    radial-gradient(38vmax 32vmax at 86% 20%, rgba(58,74,138,.10), rgba(0,0,0,0) 65%),
-    linear-gradient(180deg, var(--c-bg), #091118 55%, #070d12);
+    radial-gradient(70vmax 46vmax at 50% -12%, rgba(255,178,74,.12), rgba(0,0,0,0) 70%),
+    radial-gradient(46vmax 38vmax at 18% 10%, rgba(61,255,157,.08), rgba(0,0,0,0) 66%),
+    radial-gradient(40vmax 34vmax at 86% 18%, rgba(255,122,24,.07), rgba(0,0,0,0) 68%),
+    linear-gradient(180deg, var(--c-bg), #0a0b07 55%, #070805);
   background-attachment: fixed;
   background-repeat: no-repeat;
 }
@@ -19,16 +19,16 @@ body{
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-a{ color: rgba(92,255,146,.92); text-decoration: none; }
+a{ color: rgba(255,178,74,.95); text-decoration: none; }
 a:hover{ text-decoration: underline; }
 
-::selection{ background: rgba(92,255,146,.22); }
+::selection{ background: rgba(255,178,74,.22); }
 
 button, input, select, textarea{ font-family: inherit; color: inherit; }
 img{ max-width: 100%; display:block; }
 
 :focus-visible{
-  outline: 2px solid rgba(92,255,146,.55);
+  outline: 2px solid rgba(255,178,74,.55);
   outline-offset: 2px;
 }
 

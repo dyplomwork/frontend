@@ -717,15 +717,15 @@ if (typeof window !== 'undefined') {
   box-shadow:
     inset 0 0 0 1px rgba(0,0,0,.22),
     0 0 12px rgba(255,255,255,.10),
-    0 0 18px rgba(90,180,255,.06);
+    0 0 18px rgba(255,122,24,.08);
   transition: transform .08s ease, box-shadow .08s ease, filter .08s ease;
 }
 .peg.hit{
   transform: translate(-50%,-50%) scale(1.85);
   box-shadow:
     inset 0 0 0 1px rgba(0,0,0,.22),
-    0 0 18px rgba(90,180,255,.28),
-    0 0 38px rgba(90,180,255,.18);
+    0 0 18px rgba(255,178,74,.26),
+    0 0 38px rgba(255,122,24,.18);
   filter: brightness(1.15);
 }
 .balls{ position:absolute; inset:0; }
@@ -733,8 +733,8 @@ if (typeof window !== 'undefined') {
   position:absolute;
   width: 14px; height: 14px;
   border-radius: 999px;
-  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.98), rgba(110,200,255,.95));
-  box-shadow: 0 0 18px rgba(90,180,255,.24), 0 18px 40px rgba(0,0,0,.35);
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.98), rgba(255,178,74,.95));
+  box-shadow: 0 0 18px rgba(255,122,24,.22), 0 18px 40px rgba(0,0,0,.35);
   transform: translate(-50%, -50%);
   transition: none;
   z-index: 5;
