@@ -33,7 +33,7 @@ const fmt = (v: number | string, d = 0) => formatNumber(v, d)
           <div class="tile-top">
             <img class="case-ic" :src="`/icon/${c.id}.png`" :alt="c.name" />
             <div class="name">{{ c.name }}</div>
-            <div class="price">{{ fmt(c.price, 0) }} <span class="coin">K</span></div>
+            <div class="price"><span class="num">{{ fmt(c.price, 0) }}</span> <span class="coin">K</span></div>
           </div>
 
           <div class="tile-bottom">
@@ -81,9 +81,11 @@ h2{ margin:0; color: rgba(255,248,236,.92); }
   box-shadow: 0 16px 40px rgba(0,0,0,.32), 0 0 26px rgba(255,122,24,.10);
 }
 .tile-top{ display:flex; flex-direction:column; align-items:center; text-align:center; gap: 10px; width: 100%; }
-.case-ic{ width: 62px; height: 62px; display:block; object-fit: contain; filter: drop-shadow(0 10px 18px rgba(0,0,0,.35)); }
-.name{ font-weight: 1000; }
-.price{ color: rgba(255,255,255,.76); font-weight: 900; display:flex; align-items:center; justify-content:center; gap: 8px; }
+.case-ic{ width: 72px; height: 72px; display:block; object-fit: contain; filter: drop-shadow(0 10px 18px rgba(0,0,0,.35)); }
+.name{ font-weight: 1000; font-size: 16px; letter-spacing: .8px; text-transform: uppercase; color: rgba(255,214,140,.98); text-shadow: 0 0 22px rgba(255,122,24,.18), 0 2px 0 rgba(0,0,0,.35); position: relative; }
+.name:after{ content: ''; display:block; width: 70%; height: 1px; margin-top: 8px; background: linear-gradient(90deg, transparent, rgba(255,178,74,.55), transparent); box-shadow: 0 0 18px rgba(255,122,24,.18); }
+.price{ color: rgba(255,248,236,.92); font-weight: 1000; display:flex; align-items:center; justify-content:center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: rgba(0,0,0,.22); border: 1px solid rgba(255,178,74,.22); box-shadow: 0 10px 22px rgba(0,0,0,.20), 0 0 18px rgba(255,122,24,.10); }
+.num{ font-size: 15px; }
 .tile-bottom{ margin-top: 14px; width: 100%; }
 .open-btn{
   width: 100%;

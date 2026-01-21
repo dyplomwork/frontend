@@ -156,20 +156,19 @@ export default {
     "s_de3c731be5": "Play",
     "s_d1ef90f3c0": "SCXDROP",
 
-    "s_e152e62605": "Play casino games",
-    "s_eda9fd1f8b":
-      "Roulette, Plinko, Mines and Cases — clean casino-style UI.",
+    "s_e152e62605": "SCXDROP - WELCOME",
+    "s_eda9fd1f8b": "Choose a game and go!",
 
     "s_1b70a40f4f": "Play now",
     "s_e9f82b6536": "Open cases",
 
     "s_08bd40c754": "Account",
-    "s_17e45c77d3": "Classic bets • history • repeat",
+    "s_17e45c77d3": "Bet on numbers & colors",
     "s_e09fbe469f": "Multiple balls • highlights • smooth fall",
     "s_d212d1ac25": "Quick select • cashout",
-    "s_03480973d3": "Minimal • odds table",
-    "s_35079404ba": "Roll over • odds • indicator",
-    "s_0c54815c09": "Create battle • join • confirm",
+    "s_03480973d3": "Open cases and hit drops",
+    "s_35079404ba": "Higher/lower quick roll",
+    "s_0c54815c09": "1v1 coinflip duel",
 
     "s_873362e50a": "nickname / discord",
     "s_4c3fdc5cab": "Login",

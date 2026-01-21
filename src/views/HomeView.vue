@@ -1,39 +1,13 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
-import { formatNumber } from '../utils/format'
-
-const auth = useAuthStore()
-const balance = computed(() => auth.user?.balance ?? 0)
-const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 </script>
 
 <template>
   <div class="home">
     <div class="hero card">
-      <div class="hero-left">
-        <div class="pill">{{ $t('ui.s_d1ef90f3c0') }}</div>
+      <div class="hero-welcome">
         <h1>{{ $t('ui.s_e152e62605') }}</h1>
-        <p class="muted">
-          {{ $t('ui.s_eda9fd1f8b') }}
-        </p>
-        <div class="cta">
-          <RouterLink class="btn primary" to="/roulette">{{ $t('ui.s_1b70a40f4f') }}</RouterLink>
-          <RouterLink class="btn" to="/cases">{{ $t('ui.s_e9f82b6536') }}</RouterLink>
-        </div>
-      </div>
-      <div class="hero-right">
-        <div class="stat">
-          <div class="label">{{ $t('ui.s_99a808d8d1') }}</div>
-          <div class="value">
-            {{ fmt(balance, 2) }} <span class="coin" :aria-label="$t('ui.s_d940a38dce')">K</span>
-          </div>
-        </div>
-        <div class="stat">
-          <div class="label">{{ $t('ui.s_08bd40c754') }}</div>
-          <div class="value">{{ auth.user ? auth.user.nickname : 'Guest' }}</div>
-        </div>
+        <p>{{ $t('ui.s_eda9fd1f8b') }}</p>
       </div>
     </div>
 
@@ -117,155 +91,56 @@ const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 }
 .hero {
   display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: stretch;
-}
-.hero-left {
-  flex: 1;
-  min-width: 260px;
-}
-.hero-right {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-width: 220px;
-  justify-content: flex-end;
-}
-.pill {
-  display: inline-flex;
+  justify-content: center;
   align-items: center;
-  gap: 8px;
-  font-weight: 800;
-  font-size: 12px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.15);
+  padding: 34px 16px;
 }
-h1 {
-  margin: 10px 0 8px;
-  font-size: 34px;
-  letter-spacing: 0.3px;
+.hero-welcome {
+  text-align: center;
+  max-width: 740px;
 }
-h2 {
+.hero-welcome h1 {
   margin: 0;
-  font-size: 18px;
+  font-size: 34px;
+  font-weight: 1000;
+  letter-spacing: 0.6px;
+  color: rgba(255, 214, 140, 0.98);
+  text-shadow: 0 0 26px rgba(255, 122, 24, 0.18);
 }
-.muted {
-  color: rgba(255, 255, 255, 0.65);
-}
-.cta {
-  display: flex;
-  gap: 10px;
-  margin-top: 14px;
-  flex-wrap: wrap;
+.hero-welcome p {
+  margin: 10px 0 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-weight: 900;
 }
 .game {
   display: flex;
+  gap: 14px;
   align-items: center;
-  gap: 12px;
-  transition: transform 0.12s ease;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
 }
 .game:hover {
   transform: translateY(-2px);
+  border-color: rgba(255, 178, 74, 0.22);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.32), 0 0 26px rgba(255, 122, 24, 0.1);
 }
-.icon {
-  font-size: 26px;
-  width: 75px;
-  height: 75px;
-  display: grid;
-  place-items: center;
-  border-radius: 18px;
-  background: rgba(0, 0, 0, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-.icon img{
-  width: 58px;
-  height: 58px;
-  display:block;
+.icon img {
+  width: 44px;
+  height: 44px;
   object-fit: contain;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35));
+}
+.meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 .title {
   font-weight: 1000;
+  color: rgba(255, 248, 236, 0.92);
 }
-.row-between {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.badge {
-  font-weight: 900;
-  font-size: 12px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-.stat {
-  padding: 12px;
-  border-radius: 14px;
-  background: rgba(0, 0, 0, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-.stat .label {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
+.muted {
+  color: rgba(255, 255, 255, 0.68);
   font-weight: 800;
-}
-.stat .value {
-  font-size: 16px;
-  font-weight: 1000;
-}
-
-/* Home refinements */
-.hero {
-  background:
-    radial-gradient(900px 420px at 10% 0%, rgba(92, 255, 146, 0.12), transparent 60%),
-    radial-gradient(700px 360px at 90% 10%, rgba(56, 189, 248, 0.1), transparent 55%),
-    rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-.game .icon {
-  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.22));
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Layout tuning for Home */
-.home {
-  max-width: 1180px;
-  margin: 0 auto;
-}
-.hero.card {
-  padding: 22px;
-  min-height: 210px;
-}
-.hero-left {
-  max-width: 560px;
-}
-.hero-right {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(160px, 1fr));
-  gap: 12px;
-  align-content: start;
-}
-.stat {
-  min-height: 72px;
-  padding: 14px;
-}
-.grid {
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-}
-.game.card {
-  min-height: 120px;
-  padding: 14px 16px;
-}
-.game .icon {
-  width: 96px;
-  height: 96px;
-  border-radius: 18px;
-  display: grid;
-  place-items: center;
+  font-size: 12px;
 }
 </style>
