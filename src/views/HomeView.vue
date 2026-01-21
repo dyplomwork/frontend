@@ -172,17 +172,17 @@ h2 {
 }
 .icon {
   font-size: 26px;
-  width: 44px;
-  height: 44px;
+  width: 68px;
+  height: 68px;
   display: grid;
   place-items: center;
-  border-radius: 14px;
+  border-radius: 18px;
   background: rgba(0, 0, 0, 0.18);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 .icon img{
-  width: 26px;
-  height: 26px;
+  width: 52px;
+  height: 52px;
   display:block;
   object-fit: contain;
 }
@@ -258,13 +258,13 @@ h2 {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 .game.card {
-  min-height: 86px;
+  min-height: 120px;
   padding: 14px 16px;
 }
 .game .icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
+  width: 96px;
+  height: 96px;
+  border-radius: 18px;
   display: grid;
   place-items: center;
 }
