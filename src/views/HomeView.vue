@@ -172,8 +172,8 @@ h2 {
 }
 .icon {
   font-size: 26px;
-  width: 68px;
-  height: 68px;
+  width: 75px;
+  height: 75px;
   display: grid;
   place-items: center;
   border-radius: 18px;
@@ -181,8 +181,8 @@ h2 {
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 .icon img{
-  width: 52px;
-  height: 52px;
+  width: 58px;
+  height: 58px;
   display:block;
   object-fit: contain;
 }

@@ -332,7 +332,6 @@ watch(quickOpen, (v) => {
 
         <div class="model">
           <img class="case-ic" :src="`/icon/${c.id}.png`" :alt="c.name" />
-          <div class="muted">{{ $t('ui.s_9390802b18') }}</div>
         </div>
 
         <label class="toggle">
@@ -422,7 +421,10 @@ watch(quickOpen, (v) => {
 <style scoped>
 .app-page{ padding: 18px 8px 34px; }
 .game-card{
-  background: rgba(14,26,36,.72);
+  background:
+    radial-gradient(1200px 520px at 40% 0%, rgba(61,255,157,.10), transparent 58%),
+    radial-gradient(900px 520px at 95% 10%, rgba(255,178,74,.14), transparent 62%),
+    rgba(20,20,15,.74);
   border: 1px solid rgba(255,255,255,.06);
   border-radius: 18px;
   box-shadow: 0 18px 40px rgba(0,0,0,.35);
@@ -435,8 +437,8 @@ watch(quickOpen, (v) => {
 .left-panel{
   width: 340px;
   padding: 18px;
-  border-right: 1px solid rgba(255,255,255,.06);
-  background: rgba(10,20,28,.55);
+  border-right: 1px solid rgba(255,178,74,.10);
+  background: rgba(10,10,7,.58);
   display:flex;
   flex-direction: column;
   gap: 14px;
@@ -463,7 +465,7 @@ watch(quickOpen, (v) => {
   padding: 14px;
   text-align:center;
 }
-.case-ic{ width: 88px; height: 88px; display:block; object-fit: contain; filter: drop-shadow(0 14px 20px rgba(0,0,0,.35)); }
+.case-ic{ width: 116px; height: 116px; display:block; margin: 0 auto; object-fit: contain; filter: drop-shadow(0 18px 26px rgba(0,0,0,.45)); }
 .muted{ color: rgba(255,255,255,.68); }
 .small{ font-size: 12px; opacity: .85; }
 
@@ -473,11 +475,11 @@ watch(quickOpen, (v) => {
   border:0;
   padding: 14px 12px;
   border-radius: 12px;
-  background: #15d24a;
-  color: #07130c;
+  background: linear-gradient(180deg, rgba(255,178,74,1), rgba(255,122,24,1));
+  color: rgba(20,15,8,.96);
   font-weight: 1000;
   cursor:pointer;
-  box-shadow: 0 10px 26px rgba(21,210,74,.18);
+  box-shadow: 0 10px 26px rgba(255,122,24,.18), 0 0 22px rgba(255,178,74,.14);
 }
 .primary:disabled{ opacity:.55; cursor:not-allowed; }
 
@@ -514,12 +516,12 @@ watch(quickOpen, (v) => {
   transition: left .14s ease, background .14s ease;
 }
 .toggle input:checked + .tbox{
-  background: rgba(21,210,74,.16);
-  border-color: rgba(21,210,74,.28);
+  background: rgba(61,255,157,.14);
+  border-color: rgba(61,255,157,.30);
 }
 .toggle input:checked + .tbox::after{
   left: 21px;
-  background: #15d24a;
+  background: rgba(61,255,157,.92);
 }
 .ttext{ font-weight: 900; color: rgba(255,255,255,.86); }
 
@@ -532,7 +534,7 @@ watch(quickOpen, (v) => {
   color: rgba(255,255,255,.82);
   font-weight: 800;
 }
-.pill.ok{ border-color: rgba(21,210,74,.35); background: rgba(21,210,74,.10); }
+.pill.ok{ border-color: rgba(61,255,157,.35); background: rgba(61,255,157,.10); }
 .pill.err{ border-color: rgba(248,81,73,.45); background: rgba(248,81,73,.10); }
 .pill.muted{ opacity:.85; }
 

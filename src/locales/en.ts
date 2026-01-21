@@ -126,7 +126,7 @@ export default {
     "s_928735d6f2": "credits",
     "s_544eb8623d": "Case loot",
     "s_72fecc72fc": "Open cases and get credits to your balance. All cases in one place.",
-    "s_4351cfebe4": "View",
+    "s_4351cfebe4": "Open",
     "s_650be61892": "Mode",
 
     "s_f664b8e28e": "Coin flip battles",

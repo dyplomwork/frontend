@@ -13,8 +13,8 @@
   top: 0;
   height: 100vh;
   padding: 14px 12px;
-  border-right: 1px solid var(--c-border);
-  background: rgba(10,20,28,.62);
+  border-right: 1px solid rgba(255,178,74,.10);
+  background: linear-gradient(180deg, rgba(18,16,10,.76), rgba(10,10,7,.64));
   backdrop-filter: blur(10px);
   display:flex;
   flex-direction:column;
@@ -38,8 +38,10 @@
   gap: 12px;
   padding: 16px 16px;
   margin: calc(var(--main-pad-y, 18px) * -1) calc(var(--main-pad-x, 18px) * -1) 18px;
-  border-bottom: 1px solid rgba(255,255,255,.08);
-  background: linear-gradient(180deg, rgba(20,34,44,.92), rgba(12,20,28,.78));
+  border-bottom: 1px solid rgba(255,178,74,.10);
+  background:
+    radial-gradient(1200px 220px at 60% -40%, rgba(255,178,74,.22), transparent 60%),
+    linear-gradient(180deg, rgba(22,20,12,.92), rgba(10,10,7,.78));
   backdrop-filter: blur(10px);
   box-shadow: 0 14px 40px rgba(0,0,0,.35);
 }
@@ -115,8 +117,8 @@
   transition: transform .12s ease, background .12s ease, border-color .12s ease, color .12s ease;
 }
 .side-ic{ width: 48px; height: 48px; display:grid; place-items:center; }
-.side-ic .nav-ic{ width: 39px; height: 39px; display:block; object-fit: contain; }
-.topbar-menu-ic{ width: 63px; height: 43px; display:block; object-fit: contain; }
+.side-ic .nav-ic{ width: 43px; height: 43px; display:block; object-fit: contain; }
+.topbar-menu-ic{ width: 69px; height: 47px; display:block; object-fit: contain; }
 
 .side-top .icon-btn{ width: 48px; height: 48px; border-radius: 18px; }
 .side-txt{ font-weight: 900; letter-spacing: .2px; font-size: 13px; opacity: .92; }
