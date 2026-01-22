@@ -581,12 +581,9 @@ onBeforeUnmount(() => {
     inset 0 8px 14px rgba(255,255,255,.10),
     inset 0 -14px 22px rgba(0,0,0,.35),
     0 18px 35px rgba(0,0,0,.45);
-  background:
-    radial-gradient(circle at 30% 30%, rgba(255,255,255,.28), rgba(255,255,255,0) 45%),
-    radial-gradient(circle at 70% 70%, rgba(0,0,0,.25), rgba(0,0,0,0) 55%),
-    linear-gradient(180deg, rgba(245,197,66,.95), rgba(204,156,32,.92));
+  background: url("/icon/coin_k.png") center/cover no-repeat;
 }
-.face .glyph{ font-weight: 1000; font-size: 40px; color: rgba(16, 22, 28, .92); text-shadow: 0 8px 18px rgba(0,0,0,.22); }
+.face .glyph{ display:none; }
 .face .ring{
   position:absolute;
   inset: 10px;
@@ -597,12 +594,9 @@ onBeforeUnmount(() => {
 .front{ transform: translateZ(10px); }
 .back{
   transform: rotateY(180deg) translateZ(10px);
-  background:
-    radial-gradient(circle at 35% 30%, rgba(255,255,255,.18), rgba(255,255,255,0) 45%),
-    radial-gradient(circle at 70% 70%, rgba(0,0,0,.25), rgba(0,0,0,0) 55%),
-    linear-gradient(180deg, rgba(56,189,248,.95), rgba(43,120,255,.92));
+  background: url("/icon/coin_k.png") center/cover no-repeat;
 }
-.back .glyph{ color: rgba(255,255,255,.92); text-shadow: 0 10px 20px rgba(0,0,0,.35); font-size: 30px; letter-spacing: .08em; }
+.back .glyph{ display:none; }
 
 .edge{
   position:absolute;

@@ -26,24 +26,22 @@
   background: rgba(255,255,255,.04);
   color: var(--c-muted);
   font-weight: 800;
-  font-size: 13px;
+  font-size: 0;
+  line-height: 0;
 }
 
 /* Currency coin (K) */
 .coin{
-  display:inline-grid;
-  place-items:center;
-  width: 22px;
-  height: 22px;
+  display:inline-block;
+  width: 32px;
+  height: 32px;
   margin-left: 6px;
   border-radius: 999px;
-  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.55), rgba(250,204,21,.85) 35%, rgba(234,179,8,.85));
-  border: 1px solid rgba(250,204,21,.45);
-  box-shadow: 0 6px 14px rgba(250,204,21,.12);
-  color: rgba(0,0,0,.85);
-  font-weight: 1000;
-  font-size: 12px;
-  line-height: 1;
+  background: url("/icon/coin_k.png") center/contain no-repeat;
+  vertical-align: middle;
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
 }
 
 
@@ -52,7 +50,8 @@
   width: var(--control-h);
   height: var(--control-h);
   margin-left: 0;
-  font-size: 13px;
+  font-size: 0;
+  line-height: 0;
 }
 /* Buttons */
 .btn{
