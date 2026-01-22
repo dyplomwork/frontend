@@ -15,9 +15,32 @@ const message = ref('')
 
 const loading = computed(() => tickets.loading)
 const mineSafe = computed(() => tickets.mine ?? [])
-const pending = computed(() => mineSafe.value.filter(t => t.status === 'PENDING'))
+const pending = computed(() => mineSafe.value.filter(t => statusKey(t.status) === 'pending'))
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
+
+function statusKey(v: any){
+  const s = String(v ?? '').toLowerCase()
+  if(s === 'approved') return 'approved'
+  if(s === 'rejected') return 'rejected'
+  return 'pending'
+}
+
+function statusLabel(v: any){
+  const k = statusKey(v)
+  return t(`ui.s_ticket_status_${k}`)
+}
+
+function shortId(v: any){
+  const s = String(v ?? '').trim()
+  if(!s) return '-'
+  return s.slice(0,6)
+}
+
+function safeAmount(v: any){
+  const n = Number(v)
+  return Number.isFinite(n) ? n : 0
+}
 
 
 async function loadMineSafe(){
@@ -77,7 +100,6 @@ async function refreshAll(){
     <div class="card">
       <div class="row-between">
         <h2 class="profile-title">{{ $t('ui.s_a46c372347') }}</h2>
-        <span v-if="auth.user" class="badge balance-badge">{{ $t('ui.s_b5397350cb') }} <span class="bal">{{ fmt(auth.user.balance, 2) }}</span><span class="coin" :aria-label="$t('ui.s_d940a38dce')">K</span></span>
       </div>
 
       <p class="muted profile-hint">
@@ -117,12 +139,12 @@ async function refreshAll(){
       <div v-else class="grid" style="gap:10px; margin-top:12px;">
         <div v-for="t in mineSafe" :key="String(t.id)" class="card2 row-between" style="gap:12px;">
           <div class="grid" style="gap:4px;">
-            <b>#{{ String(t.id).slice(0,6) }} • {{ t.type === 'DEPOSIT' ? $t('ui.s_ticket_deposit') : $t('ui.s_ticket_withdraw') }}</b>
+            <b>#{{ shortId(t.id) }} • {{ t.type === 'DEPOSIT' ? $t('ui.s_ticket_deposit') : $t('ui.s_ticket_withdraw') }}</b>
             <span class="muted">{{ t.createdAt ? new Date(t.createdAt).toLocaleString() : '-' }}</span>
-            <span class="badge" :class="'st-' + t.status">{{ t.status }}</span>
+            <span class="badge" :class="'st-' + statusKey(t.status)">{{ statusLabel(t.status) }}</span>
           </div>
           <div class="row" style="gap:8px;">
-            <span class="badge">{{ $t('ui.s_ticket_amount') }}: {{ fmt(t.amount, 2) }}</span>
+            <span class="badge">{{ $t('ui.s_ticket_amount') }}: {{ fmt(safeAmount(t.amount), 2) }}</span>
           </div>
         </div>
       </div>
@@ -144,9 +166,6 @@ async function refreshAll(){
 .profile-title{ margin:0; }
 .profile-hint{ margin-top: 8px; }
 .profile-panels{ margin-top: 12px; }
-.balance-badge{ display:inline-flex; align-items:center; gap:8px; padding: 8px 12px; }
-.balance-badge{ max-width: 100%; flex-wrap: wrap; }
-.balance-badge .bal{ font-weight: 900; overflow-wrap: anywhere; }
 .card2{ padding: 16px; border-radius: 16px; }
 
 </style>
