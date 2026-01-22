@@ -374,7 +374,7 @@ buildGrid()
 
         <template #summary>
           <div class="summary">
-            <div class="label">Текущий профит: x{{ fmt(multiplier, 4) }}</div>
+            <div class="label">{{ $t('ui.s_mines_current_profit') }}: x{{ fmt(multiplier, 4) }}</div>
             <div class="net">
               <span class="num">{{ fmt(totalNetGain, 2) }}</span>
               <span class="coin">K</span>
@@ -382,7 +382,7 @@ buildGrid()
           </div>
 
           <div class="summary" style="margin-top: 10px">
-            <div class="label">Следующий множитель: x{{ nextMultiplier == null ? '—' : fmt(nextMultiplier, 4) }}</div>
+            <div class="label">{{ $t('ui.s_mines_next_multiplier') }}: x{{ nextMultiplier == null ? '—' : fmt(nextMultiplier, 4) }}</div>
             <div class="net">
               <span class="num">{{ nextMultiplier == null ? '—' : fmt(nextNetGain, 2) }}</span>
               <span class="coin">K</span>
@@ -420,8 +420,8 @@ buildGrid()
           <div class="tile-inner">
             <div class="face front"></div>
             <div class="face back">
-              <span v-if="cell.hasMine">💣</span>
-              <span v-else>💎</span>
+              <img v-if="cell.hasMine" class="reveal-ic" src="/icon/mines_mine.png" alt="Mine" />
+              <img v-else class="reveal-ic" src="/icon/mines_gem.png" alt="Gem" />
             </div>
           </div>
         </button>
@@ -539,6 +539,20 @@ buildGrid()
 }
 .face.back {
   transform: rotateY(180deg);
+}
+
+.reveal-ic{
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.35));
+}
+
+.reveal-ic{
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35));
 }
 
 /* --- Explosion VFX (only when clicked mine) --- */

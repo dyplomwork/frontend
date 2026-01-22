@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import GamePageLayout from '../components/GamePageLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
 import Modal from '../components/Modal.vue'
@@ -18,6 +19,8 @@ import {
 } from '../api/battles'
 
 const auth = useAuthStore()
+
+const { t } = useI18n()
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 
@@ -48,6 +51,20 @@ const myId = computed(() => String(auth.user?.id || ''))
 const isMine = computed(() => !!selected.value && selected.value.creatorId === myId.value)
 const isJoiner = computed(() => !!selected.value && String(selected.value.joinerId || '') === myId.value)
 const isParticipant = computed(() => isMine.value || isJoiner.value)
+
+const statusText = (s: string) => {
+  const k = `ui.s_cf_status_${String(s || '').toLowerCase()}`
+  const v = t(k)
+  return v === k ? s : v
+}
+
+const sideText = (s: CoinSide | string | null | undefined) => {
+  if (!s) return '—'
+  const v = String(s).toLowerCase()
+  if (v === 'heads') return t('ui.s_cf_heads')
+  if (v === 'tails') return t('ui.s_cf_tails')
+  return String(s)
+}
 
 const canJoin = computed(() => {
   const b = selected.value
@@ -136,12 +153,12 @@ function openCreate() {
 
 async function createBattle() {
   if (!auth.user) {
-    error.value = 'Нужен вход'
+    error.value = t('ui.s_need_login')
     return
   }
   const a = Math.max(0, Number(amount.value) || 0)
-  if (a <= 0) return (error.value = 'Укажи Amount')
-  if (auth.user.balance < a) return (error.value = 'Недостаточно баланса')
+  if (a <= 0) return (error.value = t('ui.s_cf_error_enter_amount'))
+  if (auth.user.balance < a) return (error.value = t('ui.s_insufficient_balance'))
 
   error.value = ''
   try {
@@ -157,8 +174,8 @@ async function createBattle() {
 
 async function joinBattle() {
   if (!selected.value) return
-  if (!auth.user) return (error.value = 'Нужен вход')
-  if (auth.user.balance < Number(selected.value.amount || 0)) return (error.value = 'Недостаточно баланса')
+  if (!auth.user) return (error.value = t('ui.s_need_login'))
+  if (auth.user.balance < Number(selected.value.amount || 0)) return (error.value = t('ui.s_insufficient_balance'))
 
   error.value = ''
   try {
@@ -201,12 +218,12 @@ function showCoinResult(side: CoinSide) {
 async function approve() {
   const b = selected.value
   if (!b) return
-  if (!auth.user) return (error.value = 'Нужен вход')
+  if (!auth.user) return (error.value = t('ui.s_need_login'))
   if (!canApprove.value) return
 
   const locked = yourLockedSide.value
   const sideToSend = locked || (mySide.value ? (mySide.value as CoinSide) : null)
-  if (!sideToSend) return (error.value = 'Выбери сторону (Heads/Tails)')
+  if (!sideToSend) return (error.value = t('ui.s_cf_error_pick_side'))
 
   error.value = ''
   approving.value = true
@@ -251,7 +268,7 @@ onBeforeUnmount(() => {
         v-model="amount"
         :disabled="loading"
         :message="error"
-        play-text="Create"
+        :play-text="$t('ui.s_cf_create')"
         @play="openCreate"
         @half="amount = Math.max(0, (Number(amount) || 0) / 2)"
         @double="amount = (Number(amount) || 0) * 2"
@@ -276,10 +293,10 @@ onBeforeUnmount(() => {
         <template #below>
           <div class="panel-actions">
             <button class="btn btn-ghost" :disabled="loading" @click="refreshList">
-              🔄 Refresh
+              🔄 {{ $t('ui.s_cf_refresh') }}
             </button>
             <button class="btn btn-primary" :disabled="!isAuthed" @click="openCreate">
-              🪙 Create Battle
+              🪙 {{ $t('ui.s_cf_create_battle') }}
             </button>
           </div>
         </template>
@@ -289,12 +306,12 @@ onBeforeUnmount(() => {
     <div class="cf">
       <div class="lobby panel">
         <div class="lobby-head">
-          <div class="title">Battles</div>
-          <div class="muted small">Open lobbies • approvals • fair coin</div>
+          <div class="title">{{ $t('ui.s_cf_battles') }}</div>
+          <div class="muted small">{{ $t('ui.s_cf_subtitle') }}</div>
         </div>
 
-        <div v-if="loading" class="muted small pad">Loading…</div>
-        <div v-else-if="!visibleList.length" class="muted small pad">No battles yet. Create the first one.</div>
+        <div v-if="loading" class="muted small pad">{{ $t('ui.s_cf_loading') }}</div>
+        <div v-else-if="!visibleList.length" class="muted small pad">{{ $t('ui.s_cf_empty') }}</div>
 
         <button
           v-for="b in visibleList"
@@ -307,8 +324,8 @@ onBeforeUnmount(() => {
             <div class="b-creator">
               <span class="dot" :class="b.status.toLowerCase()" />
               <span class="nick">{{ b.creatorNick }}</span>
-              <span class="muted small" v-if="b.joinerNick">vs {{ b.joinerNick }}</span>
-              <span class="muted small" v-else>waiting…</span>
+              <span class="muted small" v-if="b.joinerNick">{{ $t('ui.s_cf_vs') }} {{ b.joinerNick }}</span>
+              <span class="muted small" v-else>{{ $t('ui.s_cf_waiting') }}</span>
             </div>
             <div class="b-amt">
               <span class="amt">{{ fmt(b.amount, 2) }}</span>
@@ -316,9 +333,9 @@ onBeforeUnmount(() => {
             </div>
           </div>
           <div class="b-bottom">
-            <span class="badge" :class="b.status.toLowerCase()">{{ b.status }}</span>
-            <span class="muted small" v-if="b.creatorSide">Creator: {{ b.creatorSide }}</span>
-            <span class="muted small" v-else>Creator: ?</span>
+            <span class="badge" :class="b.status.toLowerCase()">{{ statusText(b.status) }}</span>
+            <span class="muted small" v-if="b.creatorSide">{{ $t('ui.s_cf_creator') }}: {{ sideText(b.creatorSide) }}</span>
+            <span class="muted small" v-else>{{ $t('ui.s_cf_creator') }}: ?</span>
           </div>
         </button>
       </div>
@@ -326,12 +343,12 @@ onBeforeUnmount(() => {
       <div class="stage panel" v-if="selected">
         <div class="stage-head">
           <div class="title">
-            Battle #{{ selected.id.slice(0, 6) }}
-            <span class="badge" :class="selected.status.toLowerCase()">{{ selected.status }}</span>
+            {{ $t('ui.s_cf_battle') }} #{{ selected.id.slice(0, 6) }}
+            <span class="badge" :class="selected.status.toLowerCase()">{{ statusText(selected.status) }}</span>
           </div>
           <div class="muted small">
             {{ selected.creatorNick }}
-            <span class="muted">vs</span>
+            <span class="muted">{{ $t('ui.s_cf_vs') }}</span>
             {{ selected.joinerNick || '…' }}
           </div>
         </div>
@@ -350,62 +367,62 @@ onBeforeUnmount(() => {
           </div>
 
           <div class="coin-hud" v-if="coinState !== 'idle'">
-            <div class="muted small">Result</div>
-            <div class="result">{{ coinResult || '…' }}</div>
+            <div class="muted small">{{ $t('ui.s_cf_result') }}</div>
+            <div class="result">{{ coinResult ? sideText(coinResult) : '…' }}</div>
           </div>
         </div>
 
         <div class="info-grid">
           <div class="info">
-            <div class="muted small">Amount</div>
+            <div class="muted small">{{ $t('ui.s_cf_amount') }}</div>
             <div class="big">{{ fmt(selected.amount, 2) }} <span class="coin">K</span></div>
           </div>
           <div class="info">
-            <div class="muted small">Creator side</div>
-            <div class="big">{{ selected.creatorSide || '—' }}</div>
+            <div class="muted small">{{ $t('ui.s_cf_creator_side') }}</div>
+            <div class="big">{{ sideText(selected.creatorSide) }}</div>
           </div>
           <div class="info">
-            <div class="muted small">Joiner side</div>
-            <div class="big">{{ selected.joinerSide || '—' }}</div>
+            <div class="muted small">{{ $t('ui.s_cf_joiner_side') }}</div>
+            <div class="big">{{ sideText(selected.joinerSide) }}</div>
           </div>
           <div class="info">
-            <div class="muted small">Approvals</div>
+            <div class="muted small">{{ $t('ui.s_cf_approvals') }}</div>
             <div class="big">
               <span class="ok" :class="{ on: !!selected.approvals?.[selected.creatorId] }">{{ selected.approvals?.[selected.creatorId] ? '✓' : '…' }}</span>
-              <span class="muted">&nbsp;creator</span>
+              <span class="muted">&nbsp;{{ $t('ui.s_cf_creator') }}</span>
               <span class="muted">&nbsp;•&nbsp;</span>
               <span
                 class="ok"
                 :class="{ on: !!selected.joinerId && !!selected.approvals?.[String(selected.joinerId)] }"
               >{{ selected.joinerId && selected.approvals?.[String(selected.joinerId)] ? '✓' : '…' }}</span>
-              <span class="muted">&nbsp;joiner</span>
+              <span class="muted">&nbsp;{{ $t('ui.s_cf_joiner') }}</span>
             </div>
           </div>
         </div>
 
         <div class="actions">
-          <button class="btn" :disabled="loading" @click="refreshSelected">↻ Sync</button>
+          <button class="btn" :disabled="loading" @click="refreshSelected">↻ {{ $t('ui.s_cf_sync') }}</button>
 
           <button class="btn btn-blue" :disabled="!canJoin" @click="joinBattle">
-            Join
+            {{ $t('ui.s_cf_join') }}
           </button>
 
           <button class="btn btn-ghost" :disabled="!canCancel" @click="cancelBattle">
-            Cancel
+            {{ $t('ui.s_cf_cancel') }}
           </button>
 
           <div class="approve" v-if="selected.status === 'APPROVING'">
-            <div class="muted small">Your approve</div>
+            <div class="muted small">{{ $t('ui.s_cf_your_approve') }}</div>
             <div class="pick" v-if="!yourLockedSide">
-              <button class="pill" :class="{ on: mySide === 'heads' }" @click="mySide = 'heads'">Heads</button>
-              <button class="pill" :class="{ on: mySide === 'tails' }" @click="mySide = 'tails'">Tails</button>
+              <button class="pill" :class="{ on: mySide === 'heads' }" @click="mySide = 'heads'">{{ $t('ui.s_cf_heads') }}</button>
+              <button class="pill" :class="{ on: mySide === 'tails' }" @click="mySide = 'tails'">{{ $t('ui.s_cf_tails') }}</button>
             </div>
             <div class="muted small" v-else>
-              Locked: <b>{{ yourLockedSide }}</b>
+              {{ $t('ui.s_cf_locked') }}: <b>{{ sideText(yourLockedSide) }}</b>
             </div>
 
             <button class="btn btn-primary" :disabled="!canApprove || approving" @click="approve">
-              ✅ Approve
+              ✅ {{ $t('ui.s_cf_approve') }}
             </button>
           </div>
         </div>
@@ -413,46 +430,46 @@ onBeforeUnmount(() => {
         <div v-if="selected.status === 'FINISHED'" class="result-card">
           <div class="r-top">
             <div>
-              <div class="muted small">Winner</div>
+            <div class="muted small">{{ $t('ui.s_cf_winner') }}</div>
               <div class="winner">{{ selected.winnerId === selected.creatorId ? selected.creatorNick : selected.joinerNick }}</div>
             </div>
             <div class="right">
-              <div class="muted small">Result side</div>
-              <div class="winner">{{ selected.resultSide }}</div>
+            <div class="muted small">{{ $t('ui.s_cf_result_side') }}</div>
+            <div class="winner">{{ sideText(selected.resultSide) }}</div>
             </div>
           </div>
           <div class="muted small">
-            Итог раунда определён после подтверждения обоих игроков.
+            {{ $t('ui.s_cf_round_defined') }}
           </div>
         </div>
       </div>
 
       <div class="stage panel" v-else>
-        <div class="pad muted">Pick a battle from the list</div>
+        <div class="pad muted">{{ $t('ui.s_cf_pick_battle') }}</div>
       </div>
     </div>
 
     <Modal v-if="createOpen" :open="createOpen" @close="createOpen = false">
-      <div class="modal-title">Create Coin Flip Battle</div>
+      <div class="modal-title">{{ $t('ui.s_cf_create_title') }}</div>
       <div class="modal-body">
         <div class="form">
-          <label class="lbl">Amount</label>
+          <label class="lbl">{{ $t('ui.s_cf_amount') }}</label>
           <input class="input" type="number" min="0" step="0.01" v-model.number="amount" placeholder="10" />
 
-          <label class="lbl">Side (optional)</label>
+          <label class="lbl">{{ $t('ui.s_cf_side_optional') }}</label>
           <div class="pick">
-            <button class="pill" :class="{ on: side === 'heads' }" @click="side = side === 'heads' ? '' : 'heads'">Heads</button>
-            <button class="pill" :class="{ on: side === 'tails' }" @click="side = side === 'tails' ? '' : 'tails'">Tails</button>
-            <button class="pill" :class="{ on: side === '' }" @click="side = ''">Random</button>
+            <button class="pill" :class="{ on: side === 'heads' }" @click="side = side === 'heads' ? '' : 'heads'">{{ $t('ui.s_cf_heads') }}</button>
+            <button class="pill" :class="{ on: side === 'tails' }" @click="side = side === 'tails' ? '' : 'tails'">{{ $t('ui.s_cf_tails') }}</button>
+            <button class="pill" :class="{ on: side === '' }" @click="side = ''">{{ $t('ui.s_cf_random') }}</button>
           </div>
           <div class="muted small">
-            Если выберешь сторону, второму игроку автоматически назначится противоположная.
+            {{ $t('ui.s_cf_hint_side') }}
           </div>
         </div>
       </div>
       <div class="modal-actions">
-        <button class="btn btn-ghost" @click="createOpen = false">Cancel</button>
-        <button class="btn btn-primary" @click="createBattle">Create</button>
+        <button class="btn btn-ghost" @click="createOpen = false">{{ $t('ui.s_cf_cancel') }}</button>
+        <button class="btn btn-primary" @click="createBattle">{{ $t('ui.s_cf_create') }}</button>
       </div>
     </Modal>
   </GamePageLayout>

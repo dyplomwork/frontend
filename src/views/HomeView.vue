@@ -124,8 +124,8 @@ import { RouterLink } from 'vue-router'
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.32), 0 0 26px rgba(255, 122, 24, 0.1);
 }
 .icon img {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   object-fit: contain;
   filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35));
 }
