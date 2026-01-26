@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import GamePageLayout from '../components/GamePageLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
 import GameHowTo from '../components/GameHowTo.vue'
@@ -30,7 +30,7 @@ const lastSyncAt = ref(0)
 const SYNC_INTERVAL_MS = 30_000
 const SYNC_EVERY_N_LANDED = 6
 const activeRequests = ref(0)
-const MAX_ACTIVE_BALLS = 30
+const MAX_ACTIVE_BALLS = 150
 const message = ref('')
 const messageType = ref<'info' | 'success' | 'error'>('info')
 
@@ -78,7 +78,6 @@ const difficultyOptions = computed(() =>
 
 const rowsOptions = computed(() => rowsList.map((r) => ({ value: r, label: String(r) })))
 
-/** fallback multipliers */
 const baseTables: Record<string, number[]> = {
   'low:8':    [3, 1.5, 1.1, 1.0, 0.7, 1.0, 1.1, 1.5, 3],
   'medium:8': [8, 2.0, 1.3, 0.7, 0.3, 0.7, 1.3, 2.0, 8],
@@ -103,7 +102,6 @@ function fallbackTable() {
   return Array.from({ length: n }, (_, i) => (i === 0 || i === n - 1 ? 10 : 1))
 }
 
-/** multipliers: async load -> ref */
 const multipliers = ref<number[]>(fallbackTable())
 const loadingMult = ref(false)
 
@@ -154,7 +152,6 @@ const totalBet = computed(() => bet.value)
 
 const controlsDisabled = computed(() => activeBallCount() >= MAX_ACTIVE_BALLS)
 
-/** stage sizing */
 const stageEl = ref<HTMLElement | null>(null)
 const stageW = ref(620)
 const stageH = ref(560)
@@ -198,17 +195,30 @@ const stageHeight = computed(() => {
   return clamp(420, h, 860)
 })
 
-type Ball = {
+type Segment = {
+  x0: number
+  y0: number
+  x1: number
+  y1: number
+  t0: number
+  ms: number
+  arc: number
+  pegKey?: string
+}
+
+type BallState = {
   id: number
   seed: number
   bet: number
   win: number
   net: number
+  rights: boolean[]
+  landing: number
+  msg: string
+  startAt: number
+  segments: Segment[]
   x: number
   y: number
-  visible: boolean
-  landing: number | null
-  msg: string
   scale: number
   rot: number
   rot0: number
@@ -217,11 +227,20 @@ type Ball = {
   wobbleX: number
   wobbleY: number
   wobbleSpeed: number
+  bumpUntil: number
+  lastPegKey: string | null
+  finishedAt: number | null
+  removedAt: number | null
+  didLand: boolean
 }
 
-const balls = ref<Ball[]>([])
-const safeBalls = computed(() => (balls.value || []).filter(Boolean) as Ball[])
-const hitKeys = ref<Set<string>>(new Set())
+const canvasEl = ref<HTMLCanvasElement | null>(null)
+const activeBalls = ref(0)
+
+const ballsArr: BallState[] = []
+const pool: BallState[] = []
+
+const pegHitUntil = new Map<string, number>()
 
 function pegPos(r: number, c: number) {
   const cols = r + 1
@@ -257,7 +276,6 @@ const binsWidth = computed(() => {
   return (n - 1) * pegGapX.value + BIN_SIZE.value
 })
 
-/** glow */
 const glowBin = ref<number | null>(null)
 let glowTimer: number | null = null
 function setGlow(i: number){
@@ -274,59 +292,331 @@ function easeInOutCubic(t: number){ return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t
 
 function jitter01(seed: number){
   const x = Math.sin(seed) * 10000
-  return x - Math.floor(x) // 0..1
+  return x - Math.floor(x)
 }
 function jitterSigned(seed: number, amp = 1){
   return (jitter01(seed) * 2 - 1) * amp
 }
 
-async function tweenTo(ball: Ball, toX: number, toY: number, ms: number, arc = 0){
-  const fromX = ball.x
-  const fromY = ball.y
-  const start = performance.now()
-  return await new Promise<void>((resolve) => {
-    const tick = (now: number) => {
-      const p = Math.min(1, (now - start) / Math.max(1, ms))
-      const k = easeInOutCubic(p)
-      const x = fromX + (toX - fromX) * k
-      const lift = arc > 0 ? Math.sin(Math.PI * k) * arc : 0
-      const y = fromY + (toY - fromY) * k - lift
-      const tsec = now * 0.001
-      const wob = Math.sin(tsec * (ball.wobbleSpeed || 0) + (ball.seed || 0))
-      ball.x = x + wob * (ball.wobbleX || 0)
-      ball.y = y + Math.cos(tsec * (ball.wobbleSpeed || 0) + (ball.seed || 0)) * (ball.wobbleY || 0)
-      ball.rot = ball.rot0 + Math.sin(tsec * ball.rotSpeed + ball.seed) * ball.rotAmp
-      if (p < 1) requestAnimationFrame(tick)
-      else resolve()
-    }
-    requestAnimationFrame(tick)
-  })
-}
-
-async function bump(ball: Ball, strength = 6){
-  const baseScale = ball.scale || 1
-  ball.scale = baseScale * 1.12
-  await tweenTo(ball, ball.x, ball.y - strength, 50, 0)
-  await tweenTo(ball, ball.x, ball.y + strength * 0.35, 70, 0)
-  ball.scale = baseScale
-}
-
 function sleep(ms: number) { return new Promise<void>((r) => setTimeout(r, ms)) }
 
-async function flashPeg(r: number, c: number) {
-  const key = `${r}-${c}`
-  hitKeys.value.add(key)
-  await sleep(90)
-  hitKeys.value.delete(key)
+let rafId: number | null = null
+let lastHitSfxAt = 0
+
+let ctx: CanvasRenderingContext2D | null = null
+let dpr = 1
+
+let ballSprite: HTMLCanvasElement | null = null
+
+function rebuildCanvas() {
+  const el = canvasEl.value
+  if (!el) return
+  dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1))
+  const w = Math.max(1, Math.floor(stageW.value))
+  const h = Math.max(1, Math.floor(stageHeight.value))
+  el.width = Math.floor(w * dpr)
+  el.height = Math.floor(h * dpr)
+  el.style.width = w + 'px'
+  el.style.height = h + 'px'
+  ctx = el.getContext('2d')
+  if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  ballSprite = makeBallSprite(16)
 }
 
-/** backend response */
+onMounted(() => {
+  if (typeof window === 'undefined') return
+  rebuildCanvas()
+  if (rafId !== null) cancelAnimationFrame(rafId)
+  rafId = requestAnimationFrame(tick)
+})
+
+watch([stageW, stageHeight], () => {
+  if (typeof window === 'undefined') return
+  rebuildCanvas()
+})
+
+onBeforeUnmount(() => {
+  if (rafId !== null) cancelAnimationFrame(rafId)
+  rafId = null
+  ctx = null
+  ballSprite = null
+  ballsArr.length = 0
+  pegHitUntil.clear()
+})
+
+function makeBallSprite(size: number) {
+  const c = document.createElement('canvas')
+  const s = size
+  c.width = s
+  c.height = s
+  const g = c.getContext('2d')
+  if (!g) return c
+  const r = s / 2
+  const grad = g.createRadialGradient(r * 0.65, r * 0.55, r * 0.1, r, r, r)
+  grad.addColorStop(0, 'rgba(255,255,255,.98)')
+  grad.addColorStop(1, 'rgba(255,178,74,.95)')
+  g.fillStyle = grad
+  g.beginPath()
+  g.arc(r, r, r - 0.5, 0, Math.PI * 2)
+  g.fill()
+  g.globalAlpha = 0.85
+  const hl = g.createRadialGradient(r * 0.55, r * 0.5, 0, r * 0.55, r * 0.5, r)
+  hl.addColorStop(0, 'rgba(255,255,255,.55)')
+  hl.addColorStop(0.55, 'rgba(255,255,255,0)')
+  g.fillStyle = hl
+  g.beginPath()
+  g.arc(r, r, r - 0.5, 0, Math.PI * 2)
+  g.fill()
+  g.globalAlpha = 1
+  return c
+}
+
+function nowMs() {
+  return performance.now()
+}
+
+function addPegHit(key: string, until: number) {
+  pegHitUntil.set(key, until)
+}
+
+function maybePlayHitSfx(t: number) {
+  if (t - lastHitSfxAt < 55) return
+  lastHitSfxAt = t
+  try { sfx('plinko_hit') } catch { try { sfx('plinko_tick') } catch {} }
+}
+
+function allocBall(): BallState {
+  const b = pool.pop()
+  if (b) return b
+  return {
+    id: 0,
+    seed: 0,
+    bet: 0,
+    win: 0,
+    net: 0,
+    rights: [],
+    landing: 0,
+    msg: '',
+    startAt: 0,
+    segments: [],
+    x: 0,
+    y: 0,
+    scale: 1,
+    rot: 0,
+    rot0: 0,
+    rotAmp: 0,
+    rotSpeed: 0,
+    wobbleX: 0,
+    wobbleY: 0,
+    wobbleSpeed: 0,
+    bumpUntil: 0,
+    lastPegKey: null,
+    finishedAt: null,
+    removedAt: null,
+    didLand: false,
+  }
+}
+
+function releaseBall(b: BallState) {
+  b.rights = []
+  b.segments = []
+  b.msg = ''
+  b.lastPegKey = null
+  b.finishedAt = null
+  b.removedAt = null
+  b.didLand = false
+  pool.push(b)
+}
+
+function buildSegments(seed: number, rights: boolean[]) {
+  const segs: Segment[] = []
+  const startX = W.value / 2 + jitterSigned(seed * 0.000001, pegGapX.value * 0.12)
+  const startY = 42 + jitterSigned(seed * 0.000002, 3)
+  let t = 0
+  let idx = 0
+  let fromX = startX
+  let fromY = startY
+
+  for (let r = 0; r < rows.value; r++) {
+    const hit = pegPos(r, idx)
+    const sx = jitterSigned(seed * 0.0003 + r * 1.31, 1.8)
+    const sy = jitterSigned(seed * 0.0005 + r * 2.17, 0.9)
+    const d1 = 82 + jitter01(seed * 0.00001 + r * 2.07) * 45
+    segs.push({
+      x0: fromX,
+      y0: fromY,
+      x1: hit.x + sx,
+      y1: hit.y - 10 + sy,
+      t0: t,
+      ms: d1,
+      arc: 8,
+      pegKey: `${r}-${idx}`,
+    })
+    t += d1
+    fromX = hit.x + sx
+    fromY = hit.y - 10 + sy
+
+    if (rights[r]) idx += 1
+
+    if (r < rows.value - 1) {
+      const next = pegPos(r + 1, idx)
+      const nx = jitterSigned(seed * 0.0007 + r * 3.11, 1.5)
+      const ny = jitterSigned(seed * 0.0009 + r * 4.07, 0.8)
+      const d2 = 98 + jitter01(seed * 0.00002 + r * 1.33) * 55
+      segs.push({ x0: fromX, y0: fromY, x1: next.x + nx, y1: next.y - 10 + ny, t0: t, ms: d2, arc: 10 })
+      t += d2
+      fromX = next.x + nx
+      fromY = next.y - 10 + ny
+    }
+  }
+
+  const b = bins.value[idx]
+  segs.push({ x0: fromX, y0: fromY, x1: b.x, y1: b.y - 18, t0: t, ms: 150, arc: 12 })
+  t += 150
+  return { segs, landing: idx, totalMs: t, startX, startY }
+}
+
+function updateBall(b: BallState, tNow: number) {
+  const t = tNow - b.startAt
+  const segs = b.segments
+  if (!segs.length) return
+  const last = segs[segs.length - 1]
+
+  if (t >= last.t0 + last.ms) {
+    b.x = last.x1
+    b.y = last.y1
+    if (!b.didLand) {
+      b.didLand = true
+      b.finishedAt = tNow
+      b.bumpUntil = tNow + 120
+      setGlow(b.landing)
+      const mult = table.value[b.landing] ?? 0
+      if (b.win > 0) {
+        try { sfx('win') } catch {}
+        b.msg = `x${mult} → +${fmt(b.win, 2)}`
+        bigwinStore.maybeShow(b.win, b.bet)
+      } else {
+        try { sfx('lose') } catch {}
+        b.msg = `x${mult} → 0`
+      }
+      b.removedAt = tNow + 260
+
+      inFlightStake.value -= b.bet
+      pendingWinTotal.value -= b.win
+      localBalance.value += b.win
+      ui.setBalanceOverride(localBalance.value)
+      landedSinceSync.value += 1
+      void maybeSyncBalance()
+
+      if (b.net > 0) message.value = `Профит +${fmt(b.net, 2)}`
+      else if (b.net < 0) message.value = `Минус ${fmt(-b.net, 2)}`
+      else message.value = 'В ноль'
+    }
+    return
+  }
+
+  let seg: Segment | null = null
+  for (let i = 0; i < segs.length; i++) {
+    const s = segs[i]
+    if (t >= s.t0 && t < s.t0 + s.ms) { seg = s; break }
+  }
+  if (!seg) seg = segs[0]
+  const p = Math.max(0, Math.min(1, (t - seg.t0) / Math.max(1, seg.ms)))
+  const k = easeInOutCubic(p)
+  const lift = seg.arc > 0 ? Math.sin(Math.PI * k) * seg.arc : 0
+  const x = seg.x0 + (seg.x1 - seg.x0) * k
+  const y = seg.y0 + (seg.y1 - seg.y0) * k - lift
+
+  if (seg.pegKey && p >= 0.92 && b.lastPegKey !== seg.pegKey) {
+    b.lastPegKey = seg.pegKey
+    b.bumpUntil = tNow + 120
+    addPegHit(seg.pegKey, tNow + 90)
+    maybePlayHitSfx(tNow)
+  }
+
+  const tsec = tNow * 0.001
+  const wob = Math.sin(tsec * b.wobbleSpeed + b.seed)
+  b.x = x + wob * b.wobbleX
+  b.y = y + Math.cos(tsec * b.wobbleSpeed + b.seed) * b.wobbleY
+  b.rot = b.rot0 + Math.sin(tsec * b.rotSpeed + b.seed) * b.rotAmp
+
+  if (tNow < b.bumpUntil) {
+    const pb = 1 - (b.bumpUntil - tNow) / 120
+    b.scale = 1 + 0.12 * Math.sin(Math.PI * pb)
+  } else {
+    b.scale = 1
+  }
+}
+
+function drawScene(tNow: number) {
+  if (!ctx || !canvasEl.value) return
+  const w = stageW.value
+  const h = stageHeight.value
+  ctx.clearRect(0, 0, w, h)
+
+  const pr = 3
+  const hr = 5.5
+  for (const p of pegs.value) {
+    const until = pegHitUntil.get(p.key) || 0
+    const hit = until > tNow
+    ctx.save()
+    if (hit) {
+      ctx.shadowColor = 'rgba(255,178,74,.28)'
+      ctx.shadowBlur = 18
+      ctx.fillStyle = 'rgba(255,255,255,.92)'
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, hr, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.shadowBlur = 0
+    } else {
+      ctx.fillStyle = 'rgba(255,255,255,.92)'
+      ctx.beginPath()
+      ctx.arc(p.x, p.y, pr, 0, Math.PI * 2)
+      ctx.fill()
+    }
+    ctx.restore()
+  }
+
+  if (ballSprite) {
+    for (const b of ballsArr) {
+      if (b.removedAt && tNow >= b.removedAt) continue
+      ctx.save()
+      ctx.translate(b.x, b.y)
+      ctx.rotate((b.rot * Math.PI) / 180)
+      ctx.scale(b.scale, b.scale)
+      ctx.drawImage(ballSprite, -ballSprite.width / 2, -ballSprite.height / 2)
+      ctx.restore()
+    }
+  }
+}
+
+function tick() {
+  const tNow = nowMs()
+  for (let i = ballsArr.length - 1; i >= 0; i--) {
+    const b = ballsArr[i]
+    updateBall(b, tNow)
+    if (b.removedAt && tNow >= b.removedAt) {
+      ballsArr.splice(i, 1)
+      releaseBall(b)
+    }
+  }
+  activeBalls.value = ballsArr.length
+
+  const cutoff = tNow - 500
+  for (const [k, until] of pegHitUntil) {
+    if (until < cutoff) pegHitUntil.delete(k)
+  }
+
+  drawScene(tNow)
+  rafId = requestAnimationFrame(tick)
+}
+
 type ApiTrace = { win: number; mask: number }
 type ApiPlay = { total: number; traces: ApiTrace[] }
 
 type BallResult = {
-  rights: boolean[]      // rows-length
-  landing: number        // 0..rows
+  rights: boolean[]
+  landing: number
   payout: number
   multiplier: number
 }
@@ -345,71 +635,6 @@ function traceToBallResult(trace: ApiTrace): BallResult {
   const payout = Number(trace.win) || 0
   const multiplier = table.value[landing] ?? 0
   return { rights, landing, payout, multiplier }
-}
-
-
-async function dropBall(ball: Ball, result: BallResult) {
-  ball.visible = true
-  ball.landing = null
-  ball.msg = ''
-  ball.scale = 1
-
-  ball.x = W.value / 2 + jitterSigned(ball.seed * 0.000001, pegGapX.value * 0.12)
-  ball.y = 42 + jitterSigned(ball.seed * 0.000002, 3)
-
-  let idx = 0
-  for (let r = 0; r < rows.value; r++) {
-    const hit = pegPos(r, idx)
-
-    const sx = jitterSigned(ball.seed * 0.0003 + r * 1.31, 1.8)
-    const sy = jitterSigned(ball.seed * 0.0005 + r * 2.17, 0.9)
-
-    // glide into peg (smooth)
-    const d1 = 82 + jitter01(ball.seed * 0.00001 + r * 2.07) * 45
-    await tweenTo(ball, hit.x + sx, hit.y - 10 + sy, d1, 8)
-
-    // visual + audio "thud"
-    void flashPeg(r, idx)
-    try { sfx('plinko_hit') } catch { try { sfx('plinko_tick') } catch {} }
-    await bump(ball, 5)
-
-    if (result.rights[r]) idx += 1
-
-    if (r < rows.value - 1) {
-      const next = pegPos(r + 1, idx)
-      const nx = jitterSigned(ball.seed * 0.0007 + r * 3.11, 1.5)
-      const ny = jitterSigned(ball.seed * 0.0009 + r * 4.07, 0.8)
-      const d2 = 98 + jitter01(ball.seed * 0.00002 + r * 1.33) * 55
-      await tweenTo(ball, next.x + nx, next.y - 10 + ny, d2, 10)
-    }
-  }
-
-  // idx = final slot
-  const b = bins.value[idx]
-  // approach bin
-  await tweenTo(ball, b.x, b.y - 18, 150, 12)
-
-  await bump(ball, 6)
-
-  ball.landing = idx
-  setGlow(idx)
-
-  const mult = table.value[idx] ?? result.multiplier ?? 0
-  const win = Math.round((Number(result.payout) || 0) * 100) / 100
-
-  if (win > 0) {
-    try { sfx('win') } catch {}
-    ball.msg = `x${mult} → +${fmt(win, 2)}`
-
-    // big/mega/super overlay (global)
-    bigwinStore.maybeShow(win, bet.value)
-  } else {
-    try { sfx('lose') } catch {}
-    ball.msg = `x${mult} → 0`
-  }
-
-  await sleep(260)
-  ball.visible = false
 }
 
 
@@ -439,7 +664,7 @@ function availableBalance() {
 }
 
 function activeBallCount() {
-  return balls.value.filter(b => b.visible || b.landing == null).length
+  return activeBalls.value
 }
 
 async function dropInternal(count: number) {
@@ -463,8 +688,6 @@ async function dropInternal(count: number) {
   ui.setBalanceOverride(localBalance.value)
   inFlightStake.value += totalCost
   activeRequests.value += 1
-
-  if (hitKeys.value.size > 500) hitKeys.value = new Set()
 
   sfx('plinko_drop')
 
@@ -493,53 +716,45 @@ async function dropInternal(count: number) {
   const winsSum = traces.slice(0, n).reduce((acc, t) => acc + (Number((t as any)?.win) || 0), 0)
   pendingWinTotal.value += winsSum
 
+  const baseNow = nowMs()
   for (let i = 0; i < n; i++) {
-    const t = traces[i]
-    const win = Number((t as any)?.win) || 0
+    const tr = traces[i]
+    const win = Number((tr as any)?.win) || 0
     const net = Math.round((win - bet.value) * 100) / 100
-    const result: BallResult = t
-      ? traceToBallResult(t)
+    const result: BallResult = tr
+      ? traceToBallResult(tr)
       : { rights: Array(rows.value).fill(false), landing: 0, payout: 0, multiplier: table.value[0] ?? 0 }
 
-    const ball = reactive<Ball>({
-      id: Date.now() + Math.floor(Math.random() * 100000) + i,
-      seed: Math.floor(Math.random() * 1_000_000_000),
-      bet: bet.value,
-      win,
-      net,
-      x: W.value / 2,
-      y: 42,
-      visible: false,
-      landing: null,
-      msg: '',
-      scale: 1,
-      rot: 0,
-      rot0: jitterSigned(Math.random() * 9999, 180),
-      rotAmp: 6 + Math.random() * 16,
-      rotSpeed: 3 + Math.random() * 6,
-      wobbleX: 0.25 + Math.random() * 0.8,
-      wobbleY: 0.1 + Math.random() * 0.45,
-      wobbleSpeed: 5 + Math.random() * 6
-    })
-    balls.value = [...balls.value, ball]
-
-    void (async () => {
-      const stagger = Math.floor(jitter01(ball.seed) * 120) + i * 35
-      if (stagger > 0) await sleep(stagger)
-      await dropBall(ball, result)
-
-      inFlightStake.value -= ball.bet
-      pendingWinTotal.value -= ball.win
-      localBalance.value += ball.win
-      ui.setBalanceOverride(localBalance.value)
-      landedSinceSync.value += 1
-      void maybeSyncBalance()
-
-      bigwinStore.maybeShow(ball.win, ball.bet)
-      if (ball.net > 0) message.value = `Профит +${fmt(ball.net, 2)}`
-      else if (ball.net < 0) message.value = `Минус ${fmt(-ball.net, 2)}`
-      else message.value = 'В ноль'
-    })()
+    const ball = allocBall()
+    const seed = Math.floor(Math.random() * 1_000_000_000)
+    const built = buildSegments(seed, result.rights)
+    const stagger = Math.floor(jitter01(seed) * 120) + i * 35
+    ball.id = Date.now() + Math.floor(Math.random() * 100000) + i
+    ball.seed = seed
+    ball.bet = bet.value
+    ball.win = Math.round((Number(result.payout) || win) * 100) / 100
+    ball.net = net
+    ball.rights = result.rights
+    ball.landing = built.landing
+    ball.msg = ''
+    ball.startAt = baseNow + stagger
+    ball.segments = built.segs
+    ball.x = built.startX
+    ball.y = built.startY
+    ball.scale = 1
+    ball.rot = 0
+    ball.rot0 = jitterSigned(Math.random() * 9999, 180)
+    ball.rotAmp = 6 + Math.random() * 16
+    ball.rotSpeed = 3 + Math.random() * 6
+    ball.wobbleX = 0.25 + Math.random() * 0.8
+    ball.wobbleY = 0.1 + Math.random() * 0.45
+    ball.wobbleSpeed = 5 + Math.random() * 6
+    ball.bumpUntil = 0
+    ball.lastPegKey = null
+    ball.finishedAt = null
+    ball.removedAt = null
+    ball.didLand = false
+    ballsArr.push(ball)
   }
 }
 
@@ -560,11 +775,6 @@ function binGradient(mult: number) {
   const c2 = `hsl(${Math.max(0, hue - 8)} 85% 38% / .9)`
   return `linear-gradient(180deg, ${c1}, ${c2})`
 }
-// dev helper
-if (typeof window !== 'undefined') {
-  ;(window as any).__testBigWin = (mult: number, amount: number) => bigwinStore.show(mult, amount)
-}
-
 </script>
 
 
@@ -616,26 +826,7 @@ if (typeof window !== 'undefined') {
 
     <div class="plinko-stage" ref="stageEl" :style="{ height: stageHeight + 'px' }">
 
-      <div class="pegs">
-            <div
-              v-for="p in pegs"
-              :key="p.key"
-              class="peg"
-              :class="{ hit: hitKeys.has(p.key) }"
-              :style="{ left: p.x+'px', top: p.y+'px' }"
-            />
-          </div>
-
-          <!-- Avoid v-if + v-for on the same element (Vue 3 evaluates v-if first) -->
-          <div class="balls">
-            <div
-              v-for="b in safeBalls"
-              :key="b.id"
-              class="ball"
-              v-show="b.visible"
-              :style="{ left: b.x + 'px', top: b.y + 'px', transform: `translate(-50%, -50%) scale(${b.scale || 1}) rotate(${b.rot || 0}deg)` }"
-            />
-          </div>
+      <canvas class="plinko-canvas" ref="canvasEl" />
 
           <div
             class="bins-grid"
@@ -707,45 +898,12 @@ if (typeof window !== 'undefined') {
   position: relative;
   overflow: hidden;
 }
-.pegs{ position:absolute; inset:0; }
-.peg{
+.plinko-canvas{
   position:absolute;
-  width: 6px; height: 6px;
-  border-radius: 999px;
-  background: rgba(255,255,255,.92);
-  transform: translate(-50%, -50%);
-  box-shadow:
-    inset 0 0 0 1px rgba(0,0,0,.22),
-    0 0 12px rgba(255,255,255,.10),
-    0 0 18px rgba(255,122,24,.08);
-  transition: transform .08s ease, box-shadow .08s ease, filter .08s ease;
-}
-.peg.hit{
-  transform: translate(-50%,-50%) scale(1.85);
-  box-shadow:
-    inset 0 0 0 1px rgba(0,0,0,.22),
-    0 0 18px rgba(255,178,74,.26),
-    0 0 38px rgba(255,122,24,.18);
-  filter: brightness(1.15);
-}
-.balls{ position:absolute; inset:0; }
-.ball{
-  position:absolute;
-  width: 14px; height: 14px;
-  border-radius: 999px;
-  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.98), rgba(255,178,74,.95));
-  box-shadow: 0 0 18px rgba(255,122,24,.22), 0 18px 40px rgba(0,0,0,.35);
-  transform: translate(-50%, -50%);
-  transition: none;
-  z-index: 5;
-}
-.ball::after{
-  content:'';
-  position:absolute;
-  inset: 0;
-  border-radius: 999px;
-  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.55), rgba(255,255,255,0) 55%);
-  opacity: .85;
+  inset:0;
+  width:100%;
+  height:100%;
+  z-index: 3;
 }
 .bins-grid{
   position:absolute;
@@ -757,6 +915,7 @@ if (typeof window !== 'undefined') {
   justify-content: space-between;
   align-items: center;
   gap: 0;
+  z-index: 4;
 }
 .bin{
   width: var(--bin, 56px);
