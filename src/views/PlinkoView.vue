@@ -30,7 +30,7 @@ const lastSyncAt = ref(0)
 const SYNC_INTERVAL_MS = 30_000
 const SYNC_EVERY_N_LANDED = 6
 const activeRequests = ref(0)
-const MAX_ACTIVE_BALLS = 150
+const MAX_ACTIVE_BALLS = 11150
 const message = ref('')
 const messageType = ref<'info' | 'success' | 'error'>('info')
 
