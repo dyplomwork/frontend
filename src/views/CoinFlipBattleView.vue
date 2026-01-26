@@ -19,6 +19,10 @@ const loading = ref(false)
 const error = ref('')
 const battle = ref<BattleDTO | null>(null)
 
+const joinBusy = ref(false)
+const readyBusy = ref(false)
+const cancelBusy = ref(false)
+
 const pollMs = 700
 let pollTimer: number | null = null
 
@@ -138,6 +142,8 @@ function stopPolling() {
 async function join() {
   if (!battle.value) return
   error.value = ''
+  if (joinBusy.value) return
+  joinBusy.value = true
   try {
     sfx('click')
     await battlesJoin(battle.value.id)
@@ -145,24 +151,32 @@ async function join() {
     await fetchBattle()
   } catch (e: any) {
     error.value = e?.message || 'Ошибка'
+  } finally {
+    joinBusy.value = false
   }
 }
 
 async function ready() {
   if (!battle.value) return
   error.value = ''
+  if (readyBusy.value) return
+  readyBusy.value = true
   try {
     sfx('click')
     battle.value = await battlesReady(battle.value.id)
     await fetchBattle()
   } catch (e: any) {
     error.value = e?.message || 'Ошибка'
+  } finally {
+    readyBusy.value = false
   }
 }
 
 async function cancel() {
   if (!battle.value) return
   error.value = ''
+  if (cancelBusy.value) return
+  cancelBusy.value = true
   try {
     sfx('click')
     await battlesCancel(battle.value.id)
@@ -170,6 +184,8 @@ async function cancel() {
     await router.push({ name: 'coinflip' })
   } catch (e: any) {
     error.value = e?.message || 'Ошибка'
+  } finally {
+    cancelBusy.value = false
   }
 }
 
@@ -253,7 +269,23 @@ onBeforeUnmount(() => {
         <div class="muted small">{{ error }}</div>
       </div>
 
-      <div class="arena">
+      <div v-if="battle.status === 'CANCELLED'" class="state-box cancelled">
+        <div class="state-title">{{ $t('ui.s_cf_cancelled') }}</div>
+        <div class="muted small">{{ $t('ui.s_cf_cancelled_desc') }}</div>
+        <div class="state-actions">
+          <button class="btn btn-ghost" @click="router.push({ name: 'coinflip' })">{{ $t('ui.s_cf_back_lobby') }}</button>
+        </div>
+      </div>
+
+      <div v-else-if="battle.status === 'ABANDONED'" class="state-box abandoned">
+        <div class="state-title">{{ $t('ui.s_cf_abandoned') }}</div>
+        <div class="muted small">{{ $t('ui.s_cf_abandoned_desc') }}</div>
+        <div class="state-actions">
+          <button class="btn btn-ghost" @click="router.push({ name: 'coinflip' })">{{ $t('ui.s_cf_back_lobby') }}</button>
+        </div>
+      </div>
+
+      <div class="arena" v-if="battle.status !== 'CANCELLED' && battle.status !== 'ABANDONED'">
         <div class="player left">
           <div class="nick">{{ isParticipant ? myNick : battle.creatorNick }}</div>
           <div class="meta">
@@ -293,9 +325,9 @@ onBeforeUnmount(() => {
 
       <div class="actions">
         <button class="btn" @click="fetchBattle" :disabled="loading">↻ {{ $t('ui.s_cf_sync') }}</button>
-        <button class="btn btn-blue" v-if="canJoin" @click="join">{{ $t('ui.s_cf_join') }}</button>
-        <button class="btn btn-primary" v-if="canReady" @click="ready">✅ {{ $t('ui.s_cf_approve') }}</button>
-        <button class="btn btn-ghost" v-if="canCancel" @click="cancel">{{ $t('ui.s_cf_cancel') }}</button>
+        <button class="btn btn-blue" v-if="canJoin" :disabled="joinBusy" @click="join">{{ joinBusy ? $t('ui.s_cf_loading') : $t('ui.s_cf_join') }}</button>
+        <button class="btn btn-primary" v-if="canReady" :disabled="readyBusy" @click="ready">✅ {{ readyBusy ? $t('ui.s_cf_loading') : $t('ui.s_cf_approve') }}</button>
+        <button class="btn btn-ghost" v-if="canCancel" :disabled="cancelBusy" @click="cancel">{{ cancelBusy ? $t('ui.s_cf_loading') : $t('ui.s_cf_cancel') }}</button>
         <button class="btn btn-ghost" @click="router.push({ name: 'coinflip' })">{{ $t('ui.s_cf_battles') }}</button>
       </div>
 
@@ -317,6 +349,12 @@ onBeforeUnmount(() => {
 .title{ font-weight: 1000; letter-spacing: .2px; }
 .small{ font-size: 12px; }
 .pad{ padding: 14px; }
+
+.state-box{ border: 1px solid rgba(255,255,255,.10); background: rgba(0,0,0,.18); border-radius: 16px; padding: 14px; margin-bottom: 14px; display:flex; flex-direction:column; gap: 8px; }
+.state-title{ font-weight: 1000; }
+.state-actions{ display:flex; gap: 10px; margin-top: 6px; }
+.state-box.cancelled{ border-color: rgba(255,85,85,.18); box-shadow: 0 0 0 4px rgba(255,85,85,.08); }
+.state-box.abandoned{ border-color: rgba(255,210,80,.18); box-shadow: 0 0 0 4px rgba(255,210,80,.08); }
 
 .arena{ display:grid; grid-template-columns: 1fr 360px 1fr; gap: 16px; align-items:center; }
 @media (max-width: 980px){ .arena{ grid-template-columns: 1fr; } }

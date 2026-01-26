@@ -4,7 +4,6 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import GamePageLayout from '../components/GamePageLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
-import Modal from '../components/Modal.vue'
 import { useAuthStore } from '../stores/auth'
 import { formatNumber } from '../utils/format'
 import { sfx } from '../utils/sfx'
@@ -18,9 +17,10 @@ const loading = ref(false)
 const error = ref('')
 const list = ref<BattleDTO[]>([])
 
-const createOpen = ref(false)
 const amount = ref(0)
 const side = ref<CoinSide | ''>('')
+const createBusy = ref(false)
+const joiningId = ref<string>('')
 
 const isAuthed = computed(() => !!auth.user)
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
@@ -46,13 +46,6 @@ async function refreshList() {
   }
 }
 
-function openCreate() {
-  sfx('click')
-  amount.value = 0
-  side.value = ''
-  createOpen.value = true
-}
-
 async function createBattle() {
   if (!auth.user) {
     error.value = t('ui.s_need_login')
@@ -63,13 +56,17 @@ async function createBattle() {
   if (auth.user.balance < a) return (error.value = t('ui.s_insufficient_balance'))
 
   error.value = ''
+  if (createBusy.value) return
+  createBusy.value = true
   try {
+    sfx('click')
     const b = await battlesCreate({ amount: a, side: side.value ? (side.value as CoinSide) : null })
-    createOpen.value = false
     await auth.fetchBalance({ force: true }).catch(() => {})
     await router.push({ name: 'coinflip-battle', params: { id: b.id } })
   } catch (e: any) {
     error.value = e?.message || 'Ошибка'
+  } finally {
+    createBusy.value = false
   }
 }
 
@@ -78,6 +75,8 @@ async function joinBattle(b: BattleDTO) {
   if (auth.user.balance < Number(b.amount || 0)) return (error.value = t('ui.s_insufficient_balance'))
 
   error.value = ''
+  if (joiningId.value) return
+  joiningId.value = b.id
   try {
     sfx('click')
     await battlesJoin(b.id)
@@ -85,6 +84,8 @@ async function joinBattle(b: BattleDTO) {
     await router.push({ name: 'coinflip-battle', params: { id: b.id } })
   } catch (e: any) {
     error.value = e?.message || 'Ошибка'
+  } finally {
+    joiningId.value = ''
   }
 }
 
@@ -98,13 +99,29 @@ onMounted(() => {
     <template #panel>
       <GamePanel
         v-model="amount"
-        :disabled="loading"
+        :disabled="loading || createBusy"
         :message="error"
         :play-text="$t('ui.s_cf_create')"
-        @play="openCreate"
+        @play="createBattle"
         @half="amount = Math.max(0, (Number(amount) || 0) / 2)"
         @double="amount = (Number(amount) || 0) * 2"
       >
+        <div class="form-inline">
+          <div class="lbl">{{ $t('ui.s_cf_side_optional') }}</div>
+          <div class="pick">
+            <button class="pill" :class="{ on: side === 'heads' }" :disabled="createBusy" @click="side = side === 'heads' ? '' : 'heads'">
+              {{ $t('ui.s_cf_heads') }}
+            </button>
+            <button class="pill" :class="{ on: side === 'tails' }" :disabled="createBusy" @click="side = side === 'tails' ? '' : 'tails'">
+              {{ $t('ui.s_cf_tails') }}
+            </button>
+            <button class="pill" :class="{ on: side === '' }" :disabled="createBusy" @click="side = ''">
+              {{ $t('ui.s_cf_random') }}
+            </button>
+          </div>
+          <div class="muted small">{{ $t('ui.s_cf_hint_side') }}</div>
+        </div>
+
         <template #summary>
           <div class="summary">
             <div class="row-between">
@@ -118,12 +135,9 @@ onMounted(() => {
           </div>
         </template>
 
-        <template #below>
-          <div class="panel-actions">
-            <button class="btn btn-ghost" :disabled="loading" @click="refreshList">🔄 {{ $t('ui.s_cf_refresh') }}</button>
-            <button class="btn btn-primary" :disabled="!isAuthed" @click="openCreate">🪙 {{ $t('ui.s_cf_create_battle') }}</button>
-          </div>
-        </template>
+        <div class="panel-actions">
+          <button class="btn btn-ghost" :disabled="loading" @click="refreshList">🔄 {{ $t('ui.s_cf_refresh') }}</button>
+        </div>
       </GamePanel>
     </template>
 
@@ -150,32 +164,10 @@ onMounted(() => {
         </div>
         <div class="b-bottom">
           <span class="muted small">{{ $t('ui.s_cf_creator') }}: {{ sideText(b.creatorSide) }}</span>
-          <button class="btn btn-blue" :disabled="!isAuthed" @click="joinBattle(b)">{{ $t('ui.s_cf_join') }}</button>
+          <button class="btn btn-blue" :disabled="!isAuthed || !!joiningId" @click="joinBattle(b)">{{ joiningId === b.id ? $t('ui.s_cf_loading') : $t('ui.s_cf_join') }}</button>
         </div>
       </div>
     </div>
-
-    <Modal v-if="createOpen" :open="createOpen" @close="createOpen = false">
-      <div class="modal-title">{{ $t('ui.s_cf_create_title') }}</div>
-      <div class="modal-body">
-        <div class="form">
-          <label class="lbl">{{ $t('ui.s_cf_amount') }}</label>
-          <input class="input" type="number" min="0" step="0.01" v-model.number="amount" placeholder="10" />
-
-          <label class="lbl">{{ $t('ui.s_cf_side_optional') }}</label>
-          <div class="pick">
-            <button class="pill" :class="{ on: side === 'heads' }" @click="side = side === 'heads' ? '' : 'heads'">{{ $t('ui.s_cf_heads') }}</button>
-            <button class="pill" :class="{ on: side === 'tails' }" @click="side = side === 'tails' ? '' : 'tails'">{{ $t('ui.s_cf_tails') }}</button>
-            <button class="pill" :class="{ on: side === '' }" @click="side = ''">{{ $t('ui.s_cf_random') }}</button>
-          </div>
-          <div class="muted small">{{ $t('ui.s_cf_hint_side') }}</div>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" @click="createOpen = false">{{ $t('ui.s_cf_cancel') }}</button>
-        <button class="btn btn-primary" @click="createBattle">{{ $t('ui.s_cf_create') }}</button>
-      </div>
-    </Modal>
   </GamePageLayout>
 </template>
 
@@ -186,6 +178,12 @@ onMounted(() => {
 .small{ font-size: 12px; }
 .pad{ padding: 10px; }
 .panel-actions{ display:flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+
+.form-inline{ margin-top: 12px; display:flex; flex-direction:column; gap: 8px; }
+.lbl{ font-size: 12px; opacity: .8; }
+.pick{ display:flex; gap: 8px; flex-wrap: wrap; }
+.pill{ padding: 8px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,.12); background: rgba(0,0,0,.16); color: inherit; font-weight: 900; }
+.pill.on{ background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.22); }
 
 .cf-lobby{ width: min(980px, 100%); margin: 0 auto; padding: 14px; }
 .lobby-head{ display:flex; flex-direction:column; gap: 2px; margin-bottom: 10px; }
