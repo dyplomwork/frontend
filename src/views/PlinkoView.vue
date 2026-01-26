@@ -209,6 +209,7 @@ type Segment = {
 type BallState = {
   id: number
   seed: number
+  speedMul: number
   bet: number
   win: number
   net: number
@@ -391,6 +392,7 @@ function allocBall(): BallState {
   return {
     id: 0,
     seed: 0,
+    speedMul: 1,
     bet: 0,
     win: 0,
     net: 0,
@@ -425,13 +427,14 @@ function releaseBall(b: BallState) {
   b.finishedAt = null
   b.removedAt = null
   b.didLand = false
+  b.speedMul = 1
   pool.push(b)
 }
 
-function buildSegments(seed: number, rights: boolean[]) {
+function buildSegments(seed: number, rights: boolean[], speedMul: number) {
   const segs: Segment[] = []
-  const startX = W.value / 2 + jitterSigned(seed * 0.000001, pegGapX.value * 0.12)
-  const startY = 42 + jitterSigned(seed * 0.000002, 3)
+  const startX = W.value / 2 + jitterSigned(seed * 0.000001, pegGapX.value * 0.18)
+  const startY = 42 + jitterSigned(seed * 0.000002, 4)
   let t = 0
   let idx = 0
   let fromX = startX
@@ -439,9 +442,10 @@ function buildSegments(seed: number, rights: boolean[]) {
 
   for (let r = 0; r < rows.value; r++) {
     const hit = pegPos(r, idx)
-    const sx = jitterSigned(seed * 0.0003 + r * 1.31, 1.8)
-    const sy = jitterSigned(seed * 0.0005 + r * 2.17, 0.9)
-    const d1 = 82 + jitter01(seed * 0.00001 + r * 2.07) * 45
+    const sx = jitterSigned(seed * 0.0003 + r * 1.31, 2.6)
+    const sy = jitterSigned(seed * 0.0005 + r * 2.17, 1.3)
+    const d1 = (82 + jitter01(seed * 0.00001 + r * 2.07) * 45) * speedMul
+    const arc1 = 8 + jitterSigned(seed * 0.000013 + r * 0.77, 4.2)
     segs.push({
       x0: fromX,
       y0: fromY,
@@ -449,7 +453,7 @@ function buildSegments(seed: number, rights: boolean[]) {
       y1: hit.y - 10 + sy,
       t0: t,
       ms: d1,
-      arc: 8,
+      arc: arc1,
       pegKey: `${r}-${idx}`,
     })
     t += d1
@@ -460,10 +464,11 @@ function buildSegments(seed: number, rights: boolean[]) {
 
     if (r < rows.value - 1) {
       const next = pegPos(r + 1, idx)
-      const nx = jitterSigned(seed * 0.0007 + r * 3.11, 1.5)
-      const ny = jitterSigned(seed * 0.0009 + r * 4.07, 0.8)
-      const d2 = 98 + jitter01(seed * 0.00002 + r * 1.33) * 55
-      segs.push({ x0: fromX, y0: fromY, x1: next.x + nx, y1: next.y - 10 + ny, t0: t, ms: d2, arc: 10 })
+      const nx = jitterSigned(seed * 0.0007 + r * 3.11, 2.1)
+      const ny = jitterSigned(seed * 0.0009 + r * 4.07, 1.1)
+      const d2 = (98 + jitter01(seed * 0.00002 + r * 1.33) * 55) * speedMul
+      const arc2 = 10 + jitterSigned(seed * 0.000021 + r * 0.93, 5)
+      segs.push({ x0: fromX, y0: fromY, x1: next.x + nx, y1: next.y - 10 + ny, t0: t, ms: d2, arc: arc2 })
       t += d2
       fromX = next.x + nx
       fromY = next.y - 10 + ny
@@ -471,8 +476,10 @@ function buildSegments(seed: number, rights: boolean[]) {
   }
 
   const b = bins.value[idx]
-  segs.push({ x0: fromX, y0: fromY, x1: b.x, y1: b.y - 18, t0: t, ms: 150, arc: 12 })
-  t += 150
+  const d3 = 150 * speedMul
+  const arc3 = 12 + jitterSigned(seed * 0.000031, 6)
+  segs.push({ x0: fromX, y0: fromY, x1: b.x, y1: b.y - 18, t0: t, ms: d3, arc: arc3 })
+  t += d3
   return { segs, landing: idx, totalMs: t, startX, startY }
 }
 
@@ -516,18 +523,21 @@ function updateBall(b: BallState, tNow: number) {
   }
 
   let seg: Segment | null = null
+  let segIndex = 0
   for (let i = 0; i < segs.length; i++) {
     const s = segs[i]
-    if (t >= s.t0 && t < s.t0 + s.ms) { seg = s; break }
+    if (t >= s.t0 && t < s.t0 + s.ms) { seg = s; segIndex = i; break }
   }
   if (!seg) seg = segs[0]
   const p = Math.max(0, Math.min(1, (t - seg.t0) / Math.max(1, seg.ms)))
-  const k = easeInOutCubic(p)
+  const j = Math.sin((tNow * 0.012) + b.seed * 0.000003 + segIndex * 1.7) * 0.014
+  const k = Math.max(0, Math.min(1, easeInOutCubic(p) + j))
   const lift = seg.arc > 0 ? Math.sin(Math.PI * k) * seg.arc : 0
   const x = seg.x0 + (seg.x1 - seg.x0) * k
   const y = seg.y0 + (seg.y1 - seg.y0) * k - lift
 
-  if (seg.pegKey && p >= 0.92 && b.lastPegKey !== seg.pegKey) {
+  const pegTrigger = 0.88 + jitter01(b.seed * 0.000009 + segIndex * 1.13) * 0.1
+  if (seg.pegKey && p >= pegTrigger && b.lastPegKey !== seg.pegKey) {
     b.lastPegKey = seg.pegKey
     b.bumpUntil = tNow + 120
     addPegHit(seg.pegKey, tNow + 90)
@@ -536,8 +546,9 @@ function updateBall(b: BallState, tNow: number) {
 
   const tsec = tNow * 0.001
   const wob = Math.sin(tsec * b.wobbleSpeed + b.seed)
-  b.x = x + wob * b.wobbleX
-  b.y = y + Math.cos(tsec * b.wobbleSpeed + b.seed) * b.wobbleY
+  const wob2 = Math.sin(tsec * (b.wobbleSpeed * 0.62) + b.seed * 0.31)
+  b.x = x + wob * b.wobbleX + wob2 * (b.wobbleX * 0.45)
+  b.y = y + Math.cos(tsec * b.wobbleSpeed + b.seed) * b.wobbleY + Math.cos(tsec * (b.wobbleSpeed * 0.7) + b.seed * 0.17) * (b.wobbleY * 0.35)
   b.rot = b.rot0 + Math.sin(tsec * b.rotSpeed + b.seed) * b.rotAmp
 
   if (tNow < b.bumpUntil) {
@@ -727,10 +738,12 @@ async function dropInternal(count: number) {
 
     const ball = allocBall()
     const seed = Math.floor(Math.random() * 1_000_000_000)
-    const built = buildSegments(seed, result.rights)
+    const speedMul = 1.1 * (0.95 + Math.random() * 0.10)
+    const built = buildSegments(seed, result.rights, speedMul)
     const stagger = Math.floor(jitter01(seed) * 120) + i * 35
     ball.id = Date.now() + Math.floor(Math.random() * 100000) + i
     ball.seed = seed
+    ball.speedMul = speedMul
     ball.bet = bet.value
     ball.win = Math.round((Number(result.payout) || win) * 100) / 100
     ball.net = net
@@ -744,11 +757,11 @@ async function dropInternal(count: number) {
     ball.scale = 1
     ball.rot = 0
     ball.rot0 = jitterSigned(Math.random() * 9999, 180)
-    ball.rotAmp = 6 + Math.random() * 16
-    ball.rotSpeed = 3 + Math.random() * 6
-    ball.wobbleX = 0.25 + Math.random() * 0.8
-    ball.wobbleY = 0.1 + Math.random() * 0.45
-    ball.wobbleSpeed = 5 + Math.random() * 6
+    ball.rotAmp = 7 + Math.random() * 20
+    ball.rotSpeed = 2.5 + Math.random() * 7
+    ball.wobbleX = 0.35 + Math.random() * 1.05
+    ball.wobbleY = 0.15 + Math.random() * 0.65
+    ball.wobbleSpeed = 4.5 + Math.random() * 7.5
     ball.bumpUntil = 0
     ball.lastPegKey = null
     ball.finishedAt = null
