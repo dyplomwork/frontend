@@ -11,7 +11,8 @@ const MinesView = () => import('../views/MinesView.vue')
 const CasesView = () => import('../views/CasesView.vue')
 const CaseDetailView = () => import('../views/CaseDetailView.vue')
 const DiceView = () => import('../views/DiceView.vue')
-const CoinFlipView = () => import('../views/CoinFlipView.vue')
+const CoinFlipLobbyView = () => import('../views/CoinFlipLobbyView.vue')
+const CoinFlipBattleView = () => import('../views/CoinFlipBattleView.vue')
 const ProfileView = () => import('../views/ProfileView.vue')
 const AdminView = () => import('../views/AdminView.vue')
 
@@ -89,11 +90,21 @@ export const routes = [
   {
     path: '/coinflip',
     name: 'coinflip',
-    component: CoinFlipView,
+    component: CoinFlipLobbyView,
     meta: {
       public: true,
       title: 'SCXDROP — Coin Flip',
-      description: 'Coin flip battles: create, join and approve the result.',
+      description: 'Coin flip battles: create and join open battles.',
+    },
+  },
+  {
+    path: '/coinflip/:id',
+    name: 'coinflip-battle',
+    component: CoinFlipBattleView,
+    meta: {
+      public: true,
+      title: 'SCXDROP — Coin Flip Battle',
+      description: 'Coin flip battle lobby and match.',
     },
   },
   {

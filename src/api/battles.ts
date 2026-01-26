@@ -1,7 +1,7 @@
 import { api } from '../utils/api'
 
 export type CoinSide = 'heads' | 'tails'
-export type BattleStatus = 'OPEN' | 'FULL' | 'APPROVING' | 'FINISHED' | 'CANCELLED'
+export type BattleStatus = 'OPEN' | 'FULL' | 'COUNTDOWN' | 'RUNNING' | 'FINISHED' | 'CANCELLED' | 'ABANDONED'
 
 export type BattleDTO = {
   id: string
@@ -10,18 +10,20 @@ export type BattleDTO = {
   creatorId: string
   creatorNick: string
   creatorSide?: CoinSide | null
+  creatorReady?: boolean
   joinerId?: string | null
   joinerNick?: string | null
   joinerSide?: CoinSide | null
-  approvals?: Record<string, boolean> | null
+  joinerReady?: boolean
+  countdownStartedAt?: string | null
   winnerId?: string | null
   winnerSide?: CoinSide | null
   resultSide?: CoinSide | null
   createdAt?: string | null
+  updatedAt?: string | null
 }
 
 export type CreateBattleRequest = { amount: number; side?: CoinSide | null }
-export type ApproveBattleRequest = { side?: CoinSide | null }
 
 export async function battlesList(): Promise<BattleDTO[]> {
   return await api<BattleDTO[]>('/api/v1/battles', { method: 'GET' })
@@ -43,6 +45,10 @@ export async function battlesCancel(id: string): Promise<void> {
   await api<void>(`/api/v1/battles/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }
 
-export async function battlesApprove(id: string, req: ApproveBattleRequest): Promise<BattleDTO> {
-  return await api<BattleDTO>(`/api/v1/battles/${encodeURIComponent(id)}/approvals`, { method: 'POST', json: true, body: req })
+export async function battlesReady(id: string): Promise<BattleDTO> {
+  return await api<BattleDTO>(`/api/v1/battles/${encodeURIComponent(id)}/ready`, { method: 'POST' })
+}
+
+export async function battlesLeave(id: string): Promise<BattleDTO> {
+  return await api<BattleDTO>(`/api/v1/battles/${encodeURIComponent(id)}/leave`, { method: 'POST' })
 }
