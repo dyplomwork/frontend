@@ -313,10 +313,19 @@ type Impact = {
   x: number
   y: number
   kind: 'win' | 'lose' | 'zero'
+  mult: number
+  hue: number
   at: number
 }
 
 const impacts: Impact[] = []
+
+function multHue(mult: number) {
+  const maxM = Math.max(1, ...table.value)
+  const t = Math.max(0, Math.min(1, Math.log(mult + 1) / Math.log(maxM + 1)))
+  return 140 + 180 * t
+}
+
 
 function rebuildCanvas() {
   const el = canvasEl.value
@@ -506,16 +515,18 @@ function updateBall(b: BallState, tNow: number) {
       b.finishedAt = tNow
       b.bumpUntil = tNow + 120
       setGlow(b.landing)
+      const mult = table.value[b.landing] ?? 0
       const bin = bins.value[b.landing]
       if (bin) {
         impacts.push({
           x: bin.x,
           y: bin.y - 4,
           kind: b.win > 0 ? 'win' : b.win < 0 ? 'lose' : 'zero',
+          mult,
+          hue: multHue(mult),
           at: tNow,
         })
       }
-      const mult = table.value[b.landing] ?? 0
       if (b.win > 0) {
         try { sfx('win') } catch {}
         b.msg = `x${mult} → +${fmt(b.win, 2)}`
@@ -619,16 +630,12 @@ function drawScene(tNow: number) {
     const r2 = r1 + 18
     const alpha = (1 - p) * 0.9
     const g = ctx.createRadialGradient(imp.x, imp.y, r1 * 0.25, imp.x, imp.y, r2)
-    if (imp.kind === 'win') {
-      g.addColorStop(0, `rgba(0,231,1,${0.22 * alpha})`)
-      g.addColorStop(1, `rgba(0,231,1,0)`)
-    } else if (imp.kind === 'lose') {
-      g.addColorStop(0, `rgba(255,64,87,${0.20 * alpha})`)
-      g.addColorStop(1, `rgba(255,64,87,0)`)
-    } else {
-      g.addColorStop(0, `rgba(255,255,255,${0.16 * alpha})`)
-      g.addColorStop(1, `rgba(255,255,255,0)`)
-    }
+    const base = imp.kind === 'lose' ? 0.75 : imp.kind === 'win' ? 1 : 0.6
+    const h = imp.kind === 'lose' ? (340 + (imp.hue - 140) * 0.18) : imp.hue
+    const a0 = (imp.kind === 'win' ? 0.24 : imp.kind === 'lose' ? 0.22 : 0.18) * alpha
+    g.addColorStop(0, `hsla(${h}, 100%, 62%, ${a0 * base})`)
+    g.addColorStop(1, `hsla(${h}, 100%, 62%, 0)`)
+
     ctx.save()
     ctx.globalAlpha = 1
     ctx.fillStyle = g
@@ -636,7 +643,7 @@ function drawScene(tNow: number) {
     ctx.arc(imp.x, imp.y, r2, 0, Math.PI * 2)
     ctx.fill()
     ctx.globalAlpha = alpha
-    ctx.strokeStyle = imp.kind === 'win' ? 'rgba(0,231,1,.55)' : imp.kind === 'lose' ? 'rgba(255,64,87,.55)' : 'rgba(255,255,255,.45)'
+    ctx.strokeStyle = `hsla(${h}, 100%, 62%, ${imp.kind === 'lose' ? 0.66 : 0.62})`
     ctx.lineWidth = 2
     ctx.beginPath()
     ctx.arc(imp.x, imp.y, r1, 0, Math.PI * 2)

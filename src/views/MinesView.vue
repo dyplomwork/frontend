@@ -405,8 +405,9 @@ buildGrid()
             </div>
           </div>
 
-          <button class="btn btn-primary" :class="{ 'cash-pulse': cashPulse }" @click="cashOut" :disabled="!(inGame && safePicks > 0)">
-            {{ $t('ui.s_cashout') }} ({{ fmt(payoutAmount, 2) }}K)
+          <button class="btn btn-primary cash-btn" :class="{ 'cash-pulse': cashPulse }" @click="cashOut" :disabled="!(inGame && safePicks > 0)">
+            <span class="cash-btn-txt">{{ $t('ui.s_cashout') }} ({{ fmt(payoutAmount, 2) }}K)</span>
+            <span v-if="cashPulse" class="cash-btn-pop" :key="`cbp-${cashFxTick}`">+{{ fmt(totalNetGain, 2) }}K</span>
           </button>
 
         </template>
@@ -415,9 +416,6 @@ buildGrid()
 
     <div class="board">
       <div class="board-fx" :key="`bf-${boardFlashTick}`" :class="boardFlash" aria-hidden="true"></div>
-      <div v-if="cashPulse" class="cash-fx" :key="`cf-${cashFxTick}`" aria-hidden="true">
-        <div class="cash-pop">+{{ fmt(totalNetGain, 2) }}K</div>
-      </div>
       <div class="grid5" :class="{ shake: boardShake }">
         <button
           v-for="cell in grid"
@@ -504,27 +502,30 @@ buildGrid()
   100%{ opacity:0; transform: scale(1.03); }
 }
 
-.cash-fx{
-  position:absolute;
-  inset:0;
-  display:grid;
-  place-items:center;
-  pointer-events:none;
-  z-index: 2;
+
+.cash-btn{
+  position: relative;
+  overflow: hidden;
 }
-.cash-pop{
-  padding: 10px 14px;
-  border-radius: 999px;
-  background: rgba(0,0,0,.35);
-  border: 1px solid rgba(255,255,255,.10);
+.cash-btn-pop{
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(61,255,157,.14);
+  color: rgba(255,255,255,.98);
+  letter-spacing: .3px;
   font-weight: 1000;
-  box-shadow: 0 18px 48px rgba(0,0,0,.45), 0 0 26px rgba(61,255,157,.18);
+  box-shadow: 0 14px 40px rgba(0,0,0,.45), 0 0 26px rgba(61,255,157,.18);
   animation: cashPop 620ms cubic-bezier(.2,.9,.2,1) both;
+  pointer-events:none;
 }
+
 @keyframes cashPop{
-  0%{ opacity:0; transform: translateY(10px) scale(.88); }
-  22%{ opacity:1; transform: translateY(0) scale(1.03); }
-  100%{ opacity:0; transform: translateY(-12px) scale(.98); }
+  0%{ opacity:0; transform: translate(-50%,-50%) translateY(10px) scale(.88); }
+  22%{ opacity:1; transform: translate(-50%,-50%) translateY(0) scale(1.03); }
+  100%{ opacity:0; transform: translate(-50%,-50%) translateY(-12px) scale(.98); }
 }
 
 .grid5 {
@@ -549,39 +550,42 @@ buildGrid()
   100% { transform: translate(0,0); }
 }
 .tile {
-  width: 92px;
-  height: 92px;
+  width: 104px;
+  height: 104px;
   border-radius: 10px;
   border: 0;
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  background: transparent;
+  box-shadow: none;
   display: grid;
   place-items: center;
   color: rgba(255, 255, 255, 0.92);
   font-size: 22px;
-  transition: transform 120ms ease, background 120ms ease;
-  perspective: 800px;
+  transition: transform 120ms ease;
+  perspective: 900px;
   position: relative;
+  --tile-bg: rgba(255, 255, 255, 0.08);
+  --tile-border: rgba(255, 255, 255, 0.06);
+  --tile-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
 }
 .tile:hover {
   transform: translateY(-1px);
 }
 
 /* Subtle green hover outline (only if not revealed) */
-.tile:not(.revealed):hover {
+.tile:not(.revealed):hover .face.front {
   box-shadow:
     inset 0 0 0 1px rgba(0, 231, 1, 0.55),
     inset 0 0 0 2px rgba(0, 231, 1, 0.10),
-    0 10px 24px rgba(0, 0, 0, 0.28);
+    var(--tile-shadow);
 }
 .tile.revealed {
-  background: rgba(255, 255, 255, 0.05);
+  --tile-bg: rgba(255, 255, 255, 0.05);
 }
 .tile.mine {
-  background: rgba(248, 81, 73, 0.18);
+  --tile-bg: rgba(248, 81, 73, 0.18);
 }
 .tile.gem {
-  background: rgba(34, 197, 94, 0.14);
+  --tile-bg: rgba(34, 197, 94, 0.14);
 }
 
 .tile-inner {
@@ -590,6 +594,7 @@ buildGrid()
   position: relative;
   transform-style: preserve-3d;
   transform: rotateY(0deg) translateZ(0.1px);
+  border-radius: 10px;
 }
 .tile-inner::after{
   content: '';
@@ -628,13 +633,16 @@ buildGrid()
   display: grid;
   place-items: center;
   backface-visibility: hidden;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px var(--tile-border), var(--tile-shadow);
 }
 .face.front {
   transform: rotateY(0deg);
-  background: radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0) 65%);
+  background: radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0) 65%), var(--tile-bg);
 }
 .face.back {
   transform: rotateY(180deg);
+  background: var(--tile-bg);
 }
 
 .reveal-ic{

@@ -950,12 +950,12 @@ onBeforeUnmount(() => stopAnim())
 .scan::before{ content:''; position:absolute; top:-40%; left:-30%; width: 40%; height: 180%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.16), rgba(61,255,157,.24), rgba(255,255,255,.14), transparent); transform: rotate(18deg) translateX(-140%); filter: blur(1px); }
 .scan.on{ opacity:1; }
 .scan.on::before{ animation: scanSweep 900ms linear infinite; }
- scanSweep{ 0%{ transform: rotate(18deg) translateX(-140%); } 100%{ transform: rotate(18deg) translateX(360%); } }
+ @keyframes scanSweep{ 0%{ transform: rotate(18deg) translateX(-140%); } 100%{ transform: rotate(18deg) translateX(360%); } }
 
 .finish-fx{ position:absolute; inset:-6px; border-radius: 18px; pointer-events:none; opacity:0; }
 .finish-fx.win{ opacity:1; animation: finishFlash 620ms ease-out both; background: radial-gradient(circle at 50% 50%, rgba(61,255,157,.26), rgba(61,255,157,0) 62%); filter: blur(0.2px); }
 .finish-fx.lose{ opacity:1; animation: finishFlash 620ms ease-out both; background: radial-gradient(circle at 50% 50%, rgba(248,81,73,.22), rgba(248,81,73,0) 62%); filter: blur(0.2px); }
- finishFlash{ 0%{ transform: scale(.94); opacity:0; } 20%{ opacity:1; } 100%{ transform: scale(1.06); opacity:0; } }
+ @keyframes finishFlash{ 0%{ transform: scale(.94); opacity:0; } 20%{ opacity:1; } 100%{ transform: scale(1.06); opacity:0; } }
 
 </style>
 
