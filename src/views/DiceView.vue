@@ -382,9 +382,14 @@ onBeforeUnmount(() => stopAnim())
           :style="{ '--ro': rollOver + '%', '--needle': needle + '%' }"
         >
           <div class="track" aria-hidden="true">
+            <div class="zone lose"></div>
+            <div class="zone win"></div>
             <div class="track-inner"></div>
             <div class="track-ticks"></div>
             <div class="track-cut" :class="{ pulse: linePulse }"></div>
+            <div class="threshold">
+              <span class="thr">{{ fmt(rollOver, 2) }}</span>
+            </div>
           </div>
 
           <input
@@ -549,6 +554,39 @@ onBeforeUnmount(() => stopAnim())
     inset 0 0 0 1px rgba(255, 255, 255, 0.07),
     inset 0 10px 18px rgba(0, 0, 0, 0.26);
 }
+
+.zone{
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  pointer-events: none;
+  opacity: .22;
+  filter: blur(0.2px);
+}
+.zone.lose{
+  left: 0;
+  width: var(--ro);
+  background: linear-gradient(180deg, rgba(255,64,87,.38), rgba(255,64,87,0));
+}
+.zone.win{
+  left: var(--ro);
+  right: 0;
+  background: linear-gradient(180deg, rgba(0,231,1,.32), rgba(0,231,1,0));
+}
+
+.threshold{
+  position: absolute;
+  top: -22px;
+  left: var(--ro);
+  transform: translateX(-50%);
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.28);
+  box-shadow: 0 10px 24px rgba(0,0,0,.35);
+  backdrop-filter: blur(8px);
+}
+.thr{ font-size: 12px; font-weight: 1000; letter-spacing: .2px; }
 
 .track-inner {
   position: absolute;

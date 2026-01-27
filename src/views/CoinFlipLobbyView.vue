@@ -103,9 +103,28 @@ onMounted(() => {
         :message="error"
         :play-text="$t('ui.s_cf_create')"
         @play="createBattle"
-        @half="amount = Math.max(0, (Number(amount) || 0) / 2)"
-        @double="amount = (Number(amount) || 0) * 2"
       >
+        <template #mult>
+          <button
+            class="btn btn-ghost cf-side"
+            :class="{ on: side === 'heads' }"
+            :disabled="createBusy"
+            type="button"
+            @click="side = side === 'heads' ? '' : 'heads'"
+          >
+            {{ $t('ui.s_cf_heads') }}
+          </button>
+          <button
+            class="btn btn-ghost cf-side"
+            :class="{ on: side === 'tails' }"
+            :disabled="createBusy"
+            type="button"
+            @click="side = side === 'tails' ? '' : 'tails'"
+          >
+            {{ $t('ui.s_cf_tails') }}
+          </button>
+        </template>
+
         <div class="form-inline">
           <div class="lbl">{{ $t('ui.s_cf_side_optional') }}</div>
           <div class="pick">
@@ -135,16 +154,23 @@ onMounted(() => {
           </div>
         </template>
 
-        <div class="panel-actions">
-          <button class="btn btn-ghost" :disabled="loading" @click="refreshList">🔄 {{ $t('ui.s_cf_refresh') }}</button>
-        </div>
       </GamePanel>
     </template>
 
     <div class="cf-lobby panel">
       <div class="lobby-head">
-        <div class="title">{{ $t('ui.s_cf_battles') }}</div>
-        <div class="muted small">{{ $t('ui.s_cf_subtitle') }}</div>
+        <div class="lobby-left">
+          <div class="title">{{ $t('ui.s_cf_battles') }}</div>
+          <div class="muted small">{{ $t('ui.s_cf_subtitle') }}</div>
+        </div>
+        <button class="icon-btn cf-refresh" :disabled="loading" type="button" :aria-label="$t('ui.s_cf_refresh')" @click="refreshList">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M20 12a8 8 0 0 1-14.9 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M4 12a8 8 0 0 1 14.9-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M5 20v-5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M19 4v5h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
       </div>
 
       <div v-if="loading" class="muted small pad">{{ $t('ui.s_cf_loading') }}</div>
@@ -177,7 +203,9 @@ onMounted(() => {
 .num{ font-weight: 1000; }
 .small{ font-size: 12px; }
 .pad{ padding: 10px; }
-.panel-actions{ display:flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+
+.cf-side{ height: 42px; border-radius: 14px; font-weight: 1000; }
+.cf-side.on{ background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.22); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
 
 .form-inline{ margin-top: 12px; display:flex; flex-direction:column; gap: 8px; }
 .lbl{ font-size: 12px; opacity: .8; }
@@ -186,7 +214,9 @@ onMounted(() => {
 .pill.on{ background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.22); }
 
 .cf-lobby{ width: min(980px, 100%); margin: 0 auto; padding: 14px; }
-.lobby-head{ display:flex; flex-direction:column; gap: 2px; margin-bottom: 10px; }
+.lobby-head{ display:flex; align-items:center; justify-content:space-between; gap: 12px; margin-bottom: 10px; }
+.lobby-left{ display:flex; flex-direction:column; gap: 2px; }
+.cf-refresh{ width: 44px; height: 44px; border-radius: 14px; }
 .title{ font-weight: 1000; letter-spacing: .2px; }
 
 .battle{ width: 100%; border-radius: 14px; border: 1px solid rgba(255,255,255,.08); background: rgba(0,0,0,.18); padding: 12px; margin-top: 10px; color: inherit; }

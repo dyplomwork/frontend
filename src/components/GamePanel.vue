@@ -70,8 +70,10 @@ function onPlay() {
         <div class="coin">{{ currency }}</div>
       </div>
       <div v-if="showMultButtons" class="btn-row">
-        <button class="btn btn-ghost" :disabled="disabled" @click="onHalf">½</button>
-        <button class="btn btn-ghost" :disabled="disabled" @click="onDouble">2×</button>
+        <slot name="mult">
+          <button class="btn btn-ghost" :disabled="disabled" @click="onHalf">½</button>
+          <button class="btn btn-ghost" :disabled="disabled" @click="onDouble">2×</button>
+        </slot>
       </div>
     </div>
 

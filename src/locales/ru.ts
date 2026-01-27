@@ -54,6 +54,8 @@ export default {
   "s_cashout": "Забрать",
   "s_create_ticket": "Создать тикет",
   "s_refresh": "Обновить",
+  "s_case_open": "Открыть кейс",
+  "s_case_opening": "Открываем...",
   "s_ticket_deposit": "Пополнение",
   "s_ticket_withdraw": "Вывод",
   "s_ticket_amount": "Сумма",

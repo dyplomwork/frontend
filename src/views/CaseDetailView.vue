@@ -342,7 +342,7 @@ watch(quickOpen, (v) => {
 
         <div class="btn-row">
           <button class="primary" :disabled="opening" @click="openOne">
-            {{ opening ? 'Opening...' : 'Open case' }}
+            {{ opening ? $t('ui.s_case_opening') : $t('ui.s_case_open') }}
           </button>
         </div>
 

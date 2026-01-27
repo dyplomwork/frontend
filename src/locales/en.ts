@@ -54,6 +54,8 @@ export default {
     "s_cashout": "Cashout",
     "s_create_ticket": "Create ticket",
     "s_refresh": "Refresh",
+    "s_case_open": "Open case",
+    "s_case_opening": "Opening...",
     "s_ticket_deposit": "Deposit",
     "s_ticket_withdraw": "Withdraw",
     "s_ticket_amount": "Amount",

@@ -309,6 +309,15 @@ let dpr = 1
 
 let ballSprite: HTMLCanvasElement | null = null
 
+type Impact = {
+  x: number
+  y: number
+  kind: 'win' | 'lose' | 'zero'
+  at: number
+}
+
+const impacts: Impact[] = []
+
 function rebuildCanvas() {
   const el = canvasEl.value
   if (!el) return
@@ -497,6 +506,15 @@ function updateBall(b: BallState, tNow: number) {
       b.finishedAt = tNow
       b.bumpUntil = tNow + 120
       setGlow(b.landing)
+      const bin = bins.value[b.landing]
+      if (bin) {
+        impacts.push({
+          x: bin.x,
+          y: bin.y - 4,
+          kind: b.win > 0 ? 'win' : b.win < 0 ? 'lose' : 'zero',
+          at: tNow,
+        })
+      }
       const mult = table.value[b.landing] ?? 0
       if (b.win > 0) {
         try { sfx('win') } catch {}
@@ -585,6 +603,44 @@ function drawScene(tNow: number) {
       ctx.arc(p.x, p.y, pr, 0, Math.PI * 2)
       ctx.fill()
     }
+    ctx.restore()
+  }
+
+  for (let i = impacts.length - 1; i >= 0; i--) {
+    const imp = impacts[i]
+    const age = tNow - imp.at
+    if (age > 520) {
+      impacts.splice(i, 1)
+      continue
+    }
+    const p = Math.max(0, Math.min(1, age / 520))
+    const k = 1 - Math.pow(1 - p, 3)
+    const r1 = 10 + 46 * k
+    const r2 = r1 + 18
+    const alpha = (1 - p) * 0.9
+    const g = ctx.createRadialGradient(imp.x, imp.y, r1 * 0.25, imp.x, imp.y, r2)
+    if (imp.kind === 'win') {
+      g.addColorStop(0, `rgba(0,231,1,${0.22 * alpha})`)
+      g.addColorStop(1, `rgba(0,231,1,0)`)
+    } else if (imp.kind === 'lose') {
+      g.addColorStop(0, `rgba(255,64,87,${0.20 * alpha})`)
+      g.addColorStop(1, `rgba(255,64,87,0)`)
+    } else {
+      g.addColorStop(0, `rgba(255,255,255,${0.16 * alpha})`)
+      g.addColorStop(1, `rgba(255,255,255,0)`)
+    }
+    ctx.save()
+    ctx.globalAlpha = 1
+    ctx.fillStyle = g
+    ctx.beginPath()
+    ctx.arc(imp.x, imp.y, r2, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.globalAlpha = alpha
+    ctx.strokeStyle = imp.kind === 'win' ? 'rgba(0,231,1,.55)' : imp.kind === 'lose' ? 'rgba(255,64,87,.55)' : 'rgba(255,255,255,.45)'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    ctx.arc(imp.x, imp.y, r1, 0, Math.PI * 2)
+    ctx.stroke()
     ctx.restore()
   }
 
@@ -933,17 +989,59 @@ function binGradient(mult: number) {
 .bin{
   width: var(--bin, 56px);
   height: var(--bin, 56px);
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.12);
   color: rgba(255,255,255,.92);
   font-size: 11px;
   display:grid;
   place-items:center;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.08),
+    inset 0 18px 24px rgba(0,0,0,.32),
+    0 18px 40px rgba(0,0,0,.26);
+}
+
+.bin::before{
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255,255,255,.38), rgba(255,255,255,0) 52%),
+    radial-gradient(circle at 50% 65%, rgba(0,0,0,.55), rgba(0,0,0,0) 60%);
+  opacity: .22;
+  pointer-events: none;
+}
+
+.bin::after{
+  content: '';
+  position: absolute;
+  inset: 7px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(0,0,0,.0), rgba(0,0,0,.46) 66%, rgba(0,0,0,.72)),
+    radial-gradient(circle at 50% 80%, rgba(0,0,0,.65), rgba(0,0,0,.0) 70%);
+  box-shadow:
+    inset 0 2px 10px rgba(0,0,0,.65),
+    inset 0 -10px 24px rgba(0,0,0,.55);
+  opacity: .72;
+  pointer-events: none;
 }
 
 .bin.glow{
   animation: binGlow 420ms ease-out;
+}
+
+.bin.glow::before{
+  animation: binRipple 420ms ease-out;
+}
+
+@keyframes binRipple{
+  0%{ opacity: .12; transform: scale(.85); }
+  35%{ opacity: .55; transform: scale(1.08); }
+  100%{ opacity: .18; transform: scale(1.0); }
 }
 
 @keyframes binGlow{
@@ -953,6 +1051,6 @@ function binGradient(mult: number) {
 }
 
 
-.bin-mult{ font-weight: 900; }
+.bin-mult{ font-weight: 1000; position: relative; z-index: 2; text-shadow: 0 8px 20px rgba(0,0,0,.55); }
 
 </style>
