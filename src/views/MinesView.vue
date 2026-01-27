@@ -54,6 +54,19 @@ function setError(e: unknown, fallback = 'Ошибка') {
 const explodingId = ref<number | null>(null)
 const boardShake = ref(false)
 const cashPulse = ref(false)
+const boardFlash = ref<'mine' | 'cash' | ''>('')
+const boardFlashTick = ref(0)
+const cashFxTick = ref(0)
+
+function triggerBoardFlash(kind: 'mine' | 'cash') {
+  boardFlash.value = kind
+  boardFlashTick.value += 1
+  window.setTimeout(() => {
+    if (boardFlash.value == kind) boardFlash.value = ''
+  }, 620)
+}
+
+
 
 const roundId = ref(0)
 const timeouts: number[] = []
@@ -245,6 +258,7 @@ async function revealInternal(cell: Cell) {
       cell.hasMine = true
       explodingId.value = cell.id
       boardShake.value = true
+      triggerBoardFlash('mine')
       const ridShake = roundId.value
       setSafeTimeout(() => {
         if (ridShake !== roundId.value) return
@@ -311,6 +325,8 @@ async function cashOutInternal() {
 
     // green pulse on win
     cashPulse.value = true
+    triggerBoardFlash('cash')
+    cashFxTick.value += 1
     setTimeout(() => (cashPulse.value = false), 520)
 
     const win = Number(res.win)
@@ -398,6 +414,10 @@ buildGrid()
     </template>
 
     <div class="board">
+      <div class="board-fx" :key="`bf-${boardFlashTick}`" :class="boardFlash" aria-hidden="true"></div>
+      <div v-if="cashPulse" class="cash-fx" :key="`cf-${cashFxTick}`" aria-hidden="true">
+        <div class="cash-pop">+{{ fmt(totalNetGain, 2) }}K</div>
+      </div>
       <div class="grid5" :class="{ shake: boardShake }">
         <button
           v-for="cell in grid"
@@ -458,6 +478,53 @@ buildGrid()
 <style scoped>
 .board {
   padding: 18px;
+  position: relative;
+}
+
+.board-fx{
+  position:absolute;
+  inset:-18px;
+  border-radius: 18px;
+  pointer-events:none;
+  opacity:0;
+  z-index: 1;
+}
+.board-fx.mine{ opacity:1; animation: boardMine 720ms ease-out both; }
+.board-fx.cash{ opacity:1; animation: boardCash 720ms ease-out both; }
+
+@keyframes boardMine{
+  0%{ opacity:0; background: radial-gradient(circle at 50% 50%, rgba(248,81,73,.0), rgba(0,0,0,0) 60%); }
+  18%{ opacity:1; background: radial-gradient(circle at 50% 50%, rgba(248,81,73,.22), rgba(0,0,0,0) 60%), radial-gradient(circle at 50% 50%, rgba(0,0,0,.75), rgba(0,0,0,0) 72%); }
+  100%{ opacity:0; background: radial-gradient(circle at 50% 50%, rgba(248,81,73,.0), rgba(0,0,0,0) 60%); }
+}
+
+@keyframes boardCash{
+  0%{ opacity:0; transform: scale(.98); }
+  18%{ opacity:1; transform: scale(1.01); background: radial-gradient(circle at 50% 50%, rgba(61,255,157,.22), rgba(0,0,0,0) 62%), radial-gradient(circle at 50% 50%, rgba(255,178,74,.16), rgba(0,0,0,0) 70%); }
+  100%{ opacity:0; transform: scale(1.03); }
+}
+
+.cash-fx{
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  pointer-events:none;
+  z-index: 2;
+}
+.cash-pop{
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.35);
+  border: 1px solid rgba(255,255,255,.10);
+  font-weight: 1000;
+  box-shadow: 0 18px 48px rgba(0,0,0,.45), 0 0 26px rgba(61,255,157,.18);
+  animation: cashPop 620ms cubic-bezier(.2,.9,.2,1) both;
+}
+@keyframes cashPop{
+  0%{ opacity:0; transform: translateY(10px) scale(.88); }
+  22%{ opacity:1; transform: translateY(0) scale(1.03); }
+  100%{ opacity:0; transform: translateY(-12px) scale(.98); }
 }
 
 .grid5 {
@@ -466,6 +533,8 @@ buildGrid()
   gap: 14px;
   justify-content: center;
   padding: 8px 0;
+  position: relative;
+  z-index: 3;
 }
 
 .grid5.shake {
@@ -520,10 +589,37 @@ buildGrid()
   height: 100%;
   position: relative;
   transform-style: preserve-3d;
-  transition: transform 380ms ease;
+  transform: rotateY(0deg) translateZ(0.1px);
+}
+.tile-inner::after{
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 14px;
+  background: radial-gradient(circle at 50% 65%, rgba(0,0,0,.55), rgba(0,0,0,0) 64%);
+  opacity: 0;
+  transform: translateZ(-1px);
+  pointer-events: none;
 }
 .tile.revealed .tile-inner {
   transform: rotateY(180deg);
+  animation: flipReal 520ms cubic-bezier(.2,.9,.2,1) both;
+}
+.tile.revealed .tile-inner::after{
+  animation: flipShadow 520ms cubic-bezier(.2,.9,.2,1) both;
+}
+
+@keyframes flipReal{
+  0%{ transform: rotateY(0deg) translateZ(0.1px); }
+  45%{ transform: rotateY(92deg) translateZ(6px); }
+  70%{ transform: rotateY(165deg) translateZ(2px); }
+  100%{ transform: rotateY(180deg) translateZ(0.1px); }
+}
+
+@keyframes flipShadow{
+  0%{ opacity: 0; filter: blur(6px); }
+  45%{ opacity: .55; filter: blur(9px); }
+  100%{ opacity: 0; filter: blur(6px); }
 }
 
 .face {

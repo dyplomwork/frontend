@@ -27,6 +27,14 @@ const result = ref<string | null>(null)
 const resultAmount = ref<number | null>(null)
 const winIndexRef = ref<number | null>(null)
 
+const jackpotFxTick = ref(0)
+const jackpotKind = ref<'legendary' | 'epic' | 'rare' | 'common'>('common')
+function triggerJackpotFx(amount: number) {
+  jackpotKind.value = rarity(amount) as any
+  jackpotFxTick.value += 1
+}
+
+
 const reelEl = ref<HTMLElement | null>(null)
 const stripEl = ref<HTMLElement | null>(null)
 
@@ -258,6 +266,8 @@ async function openOne(){
 
   pushHistory({ ts: Date.now(), label: wLabel, amount: wAmount })
 
+  if (wAmount >= 350) triggerJackpotFx(wAmount)
+
   const winItem: ReelItem = { label: wLabel, amount: wAmount, icon: lootIcon(wAmount) }
 
   if(quickOpen.value){
@@ -272,6 +282,7 @@ async function openOne(){
     sfx('win')
     result.value = wLabel
     resultAmount.value = wAmount
+    if (wAmount >= 120) triggerJackpotFx(wAmount)
     opening.value = false
     return
   }
@@ -296,6 +307,7 @@ async function openOne(){
 
   result.value = wLabel
   resultAmount.value = wAmount
+  if (wAmount >= 120) triggerJackpotFx(wAmount)
   opening.value = false
 }
 
@@ -377,6 +389,10 @@ watch(quickOpen, (v) => {
           <div class="reel" ref="reelEl">
             <div class="window"></div>
             <div class="shine" v-if="opening && !quickOpen"></div>
+            <div v-if="jackpotFxTick && !opening" class="jackpot-fx" :key="`jf-${jackpotFxTick}`" :class="jackpotKind" aria-hidden="true">
+              <div class="jf-rays"></div>
+              <div class="jf-burst"></div>
+            </div>
 
             <div class="strip" ref="stripEl">
               <div class="slot" v-for="(it, idx) in items" :key="idx">
@@ -708,6 +724,70 @@ watch(quickOpen, (v) => {
   0%{ transform: translateX(-30%) rotate(12deg); opacity:.0;}
   15%{opacity:.6}
   100%{ transform: translateX(30%) rotate(12deg); opacity:0;}
+}
+
+
+.jackpot-fx{
+  position:absolute;
+  inset:-40px;
+  pointer-events:none;
+  z-index: 4;
+  opacity: 0;
+  mix-blend-mode: screen;
+}
+.jackpot-fx.epic{ opacity:1; animation: jfIn 1100ms ease-out both; }
+.jackpot-fx.legendary{ opacity:1; animation: jfIn 1400ms ease-out both; }
+.jf-rays{
+  position:absolute;
+  inset:0;
+  background: conic-gradient(from 90deg, transparent, rgba(255,208,90,.18), transparent, rgba(61,255,157,.14), transparent);
+  filter: blur(0.4px);
+  animation: jfRays 1200ms linear infinite;
+  opacity: .85;
+}
+.jackpot-fx.epic .jf-rays{ background: conic-gradient(from 90deg, transparent, rgba(255,115,220,.20), transparent, rgba(120,120,255,.16), transparent); }
+.jf-burst{
+  position:absolute;
+  inset:0;
+  background: radial-gradient(circle at 50% 50%, rgba(255,255,255,.24), rgba(255,255,255,0) 62%), radial-gradient(circle at 50% 50%, rgba(255,208,90,.22), rgba(255,208,90,0) 72%);
+  opacity: .0;
+  animation: jfBurst 900ms ease-out both;
+}
+.jackpot-fx.epic .jf-burst{ background: radial-gradient(circle at 50% 50%, rgba(255,255,255,.22), rgba(255,255,255,0) 62%), radial-gradient(circle at 50% 50%, rgba(255,115,220,.22), rgba(255,115,220,0) 72%); }
+
+@keyframes jfIn{
+  0%{ opacity:0; transform: scale(.98); }
+  15%{ opacity:1; transform: scale(1.01); }
+  100%{ opacity:0; transform: scale(1.04); }
+}
+@keyframes jfRays{
+  0%{ transform: rotate(0deg); }
+  100%{ transform: rotate(360deg); }
+}
+@keyframes jfBurst{
+  0%{ opacity:0; transform: scale(.92); }
+  20%{ opacity:1; }
+  100%{ opacity:0; transform: scale(1.06); }
+}
+
+.loot-row.legendary{
+  position: relative;
+  overflow: hidden;
+}
+.loot-row.legendary::after{
+  content:'';
+  position:absolute;
+  inset:-40% -60%;
+  background: linear-gradient(120deg, transparent 40%, rgba(255,208,90,.18) 52%, transparent 64%);
+  transform: translateX(-20%) rotate(10deg);
+  opacity:.0;
+  animation: lootShine 2600ms ease-in-out infinite;
+}
+@keyframes lootShine{
+  0%{ transform: translateX(-30%) rotate(10deg); opacity:0; }
+  12%{ opacity:.55; }
+  28%{ opacity:0; }
+  100%{ transform: translateX(30%) rotate(10deg); opacity:0; }
 }
 
 </style>

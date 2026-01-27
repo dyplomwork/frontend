@@ -844,6 +844,30 @@ function binGradient(mult: number) {
   const c2 = `hsl(${Math.max(0, hue - 8)} 85% 38% / .9)`
   return `linear-gradient(180deg, ${c1}, ${c2})`
 }
+
+
+
+
+function binGlowColor(mult: number) {
+  if (mult >= 50) return 'rgba(170, 255, 255, .95)'
+  if (mult >= 12) return 'rgba(255, 178, 74, .95)'
+  if (mult >= 3) return 'rgba(61, 255, 157, .95)'
+  return 'rgba(168, 185, 255, .95)'
+}
+
+function binRippleMs(mult: number) {
+  if (mult >= 50) return 520
+  if (mult >= 12) return 620
+  if (mult >= 3) return 720
+  return 860
+}
+
+function binRippleScale(mult: number) {
+  if (mult >= 50) return 1.28
+  if (mult >= 12) return 1.18
+  if (mult >= 3) return 1.12
+  return 1.06
+}
 </script>
 
 
@@ -906,7 +930,7 @@ function binGradient(mult: number) {
               :key="bin.i"
               class="bin"
               :class="{ glow: glowBin === bin.i }"
-              :style="{ background: binGradient(bin.mult) }"
+              :style="{ background: binGradient(bin.mult), '--g': binGlowColor(bin.mult), '--r': binRippleMs(bin.mult) + 'ms', '--rs': String(binRippleScale(bin.mult)) }"
             >
               <span class="bin-mult">{{ bin.mult }}x</span>
             </div>
@@ -990,43 +1014,43 @@ function binGradient(mult: number) {
   width: var(--bin, 56px);
   height: var(--bin, 56px);
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.10);
   color: rgba(255,255,255,.92);
   font-size: 11px;
   display:grid;
   place-items:center;
   position: relative;
   overflow: hidden;
+  background: rgba(0,0,0,.14);
   box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,.08),
-    inset 0 18px 24px rgba(0,0,0,.32),
-    0 18px 40px rgba(0,0,0,.26);
+    inset 0 0 0 1px rgba(255,255,255,.06),
+    0 10px 30px rgba(0,0,0,.28),
+    0 0 0 rgba(0,0,0,0);
 }
 
 .bin::before{
   content: '';
   position: absolute;
-  inset: 0;
+  inset: -2px;
   border-radius: 999px;
-  background:
-    radial-gradient(circle at 50% 30%, rgba(255,255,255,.38), rgba(255,255,255,0) 52%),
-    radial-gradient(circle at 50% 65%, rgba(0,0,0,.55), rgba(0,0,0,0) 60%);
-  opacity: .22;
+  background: radial-gradient(circle at 50% 45%, var(--g, rgba(61,255,157,.85)), rgba(0,0,0,0) 64%);
+  opacity: .20;
+  filter: blur(1px);
   pointer-events: none;
 }
 
 .bin::after{
   content: '';
   position: absolute;
-  inset: 7px;
+  inset: 2px;
   border-radius: 999px;
   background:
-    radial-gradient(circle at 50% 35%, rgba(0,0,0,.0), rgba(0,0,0,.46) 66%, rgba(0,0,0,.72)),
-    radial-gradient(circle at 50% 80%, rgba(0,0,0,.65), rgba(0,0,0,.0) 70%);
+    radial-gradient(circle at 50% 32%, rgba(255,255,255,.24), rgba(255,255,255,0) 55%),
+    radial-gradient(circle at 50% 80%, rgba(0,0,0,.55), rgba(0,0,0,0) 60%);
   box-shadow:
-    inset 0 2px 10px rgba(0,0,0,.65),
-    inset 0 -10px 24px rgba(0,0,0,.55);
-  opacity: .72;
+    inset 0 0 0 1px rgba(255,255,255,.08),
+    inset 0 -10px 18px rgba(0,0,0,.38);
+  opacity: .85;
   pointer-events: none;
 }
 
@@ -1035,19 +1059,19 @@ function binGradient(mult: number) {
 }
 
 .bin.glow::before{
-  animation: binRipple 420ms ease-out;
+  animation: binRipple var(--r, 720ms) ease-out;
 }
 
 @keyframes binRipple{
-  0%{ opacity: .12; transform: scale(.85); }
-  35%{ opacity: .55; transform: scale(1.08); }
+  0%{ opacity: .10; transform: scale(.84); }
+  40%{ opacity: .62; transform: scale(var(--rs, 1.12)); }
   100%{ opacity: .18; transform: scale(1.0); }
 }
 
 @keyframes binGlow{
-  0%{ filter: brightness(1.0); box-shadow: inset 0 0 0 1px rgba(255,255,255,.10), 0 0 0 rgba(255,208,90,0); }
-  20%{ filter: brightness(1.25); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 0 22px rgba(255,208,90,.38), 0 0 46px rgba(255,208,90,.20); }
-  100%{ filter: brightness(1.0); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08), 0 0 0 rgba(255,208,90,0); }
+  0%{ filter: brightness(1.0); box-shadow: inset 0 0 0 1px rgba(255,255,255,.10), 0 0 0 rgba(0,0,0,0); }
+  20%{ filter: brightness(1.20); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 0 20px color-mix(in srgb, var(--g, rgba(61,255,157,.95)) 55%, transparent), 0 0 44px color-mix(in srgb, var(--g, rgba(61,255,157,.95)) 30%, transparent); }
+  100%{ filter: brightness(1.0); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08), 0 0 0 rgba(0,0,0,0); }
 }
 
 

@@ -125,22 +125,6 @@ onMounted(() => {
           </button>
         </template>
 
-        <div class="form-inline">
-          <div class="lbl">{{ $t('ui.s_cf_side_optional') }}</div>
-          <div class="pick">
-            <button class="pill" :class="{ on: side === 'heads' }" :disabled="createBusy" @click="side = side === 'heads' ? '' : 'heads'">
-              {{ $t('ui.s_cf_heads') }}
-            </button>
-            <button class="pill" :class="{ on: side === 'tails' }" :disabled="createBusy" @click="side = side === 'tails' ? '' : 'tails'">
-              {{ $t('ui.s_cf_tails') }}
-            </button>
-            <button class="pill" :class="{ on: side === '' }" :disabled="createBusy" @click="side = ''">
-              {{ $t('ui.s_cf_random') }}
-            </button>
-          </div>
-          <div class="muted small">{{ $t('ui.s_cf_hint_side') }}</div>
-        </div>
-
         <template #summary>
           <div class="summary">
             <div class="row-between">
@@ -207,11 +191,6 @@ onMounted(() => {
 .cf-side{ height: 42px; border-radius: 14px; font-weight: 1000; }
 .cf-side.on{ background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.22); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
 
-.form-inline{ margin-top: 12px; display:flex; flex-direction:column; gap: 8px; }
-.lbl{ font-size: 12px; opacity: .8; }
-.pick{ display:flex; gap: 8px; flex-wrap: wrap; }
-.pill{ padding: 8px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,.12); background: rgba(0,0,0,.16); color: inherit; font-weight: 900; }
-.pill.on{ background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.22); }
 
 .cf-lobby{ width: min(980px, 100%); margin: 0 auto; padding: 14px; }
 .lobby-head{ display:flex; align-items:center; justify-content:space-between; gap: 12px; margin-bottom: 10px; }
