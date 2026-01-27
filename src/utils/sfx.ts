@@ -173,9 +173,9 @@ export function sfx(kind: SfxKey | string) {
       const list = (plinkoBounceUrls || []).filter(Boolean)
       if(list.length){
         const idx = Math.floor(Math.random() * list.length)
-        playFile(list[idx], 0.2)
+        playFile(list[idx], 0.01)
       } else {
-        playFile('/sfx/plinko_bounce.mp3', 0.2)
+        playFile('/sfx/plinko_bounce.mp3', 0.01)
       }
       break
     }
