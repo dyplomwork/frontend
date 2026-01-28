@@ -3,7 +3,8 @@ export function getEnv(key: string, fallback = ''): string {
 }
 
 export function getApiBaseUrl(): string {
-  const mock = getEnv('VITE_MOCK_API') === '1'
+  const v = (getEnv('VITE_MOCK_API') || '').toLowerCase()
+  const mock = v === '1' || v === 'true' || v === 'yes' || v === 'on'
   if (mock) return ''
   return getEnv('VITE_API_BASE_URL') || 'https://api.scxdrop.online'
 }

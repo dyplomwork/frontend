@@ -21,7 +21,10 @@ export const createApp = ViteSSG(
   App,
   { routes, base: import.meta.env.BASE_URL },
   async ({ app, router, isClient }) => {
-    if (isClient && import.meta.env.VITE_MOCK_API === '1') {
+    if (isClient) {
+      const v = String((import.meta as any).env?.VITE_MOCK_API ?? '').toLowerCase()
+      const mock = v === '1' || v === 'true' || v === 'yes' || v === 'on'
+      if (mock) {
       try {
         const { worker } = await import('./mocks/browser')
         const swUrl = `${import.meta.env.BASE_URL}mockServiceWorker.js`
@@ -31,6 +34,7 @@ export const createApp = ViteSSG(
         })
       } catch (e) {
         console.warn('MSW start failed', e)
+      }
       }
     }
 
