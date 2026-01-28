@@ -15,7 +15,7 @@ export const handlers = [
     const nick = String(body?.login || body?.nickname || 'Tester')
     const u = { ...getOrCreateUser(), nickname: nick, discord: nick }
     setUser(u)
-    return json({ token: getMockToken(), user: u })
+    return json({ ok: true, token: getMockToken(), user: u })
   }),
 
   http.post(/\/api\/v1\/accounts\/auth\/register$/, async ({ request }) => {
@@ -23,16 +23,25 @@ export const handlers = [
     const nick = String(body?.nickname || body?.login || 'Tester')
     const u = { ...getOrCreateUser(), nickname: nick, discord: nick }
     setUser(u)
-    return json({ token: getMockToken(), user: u })
+    return json({ ok: true, token: getMockToken(), user: u })
   }),
 
   http.get(/\/api\/v1\/accounts\/users\/me$/, () => {
-    return json(meFromAuth())
+    return json({ ok: true, user: meFromAuth() })
   }),
 
   http.get(/\/api\/v1\/accounts\/users\/me\/balance$/, () => {
     const u = meFromAuth()
-    return json({ balance: u.balance })
+    return json({ ok: true, balance: u.balance })
+  }),
+
+  http.get(/\/api\/me$/, () => {
+    return json({ ok: true, user: meFromAuth() })
+  }),
+
+  http.post(/\/api\/v1\/accounts\/logout$/, () => {
+    clearUser()
+    return json({ ok: true })
   }),
 
   http.post(/\/api\/balance\/apply$/, async ({ request }) => {
@@ -71,9 +80,12 @@ export const handlers = [
     const url = new URL(request.url)
     const m = url.pathname.match(/\/api\/v1\/battles\/([^/]+)\/join$/)
     const id = m ? decodeURIComponent(m[1]) : ''
+    const before = getBattle(id)
     const b = joinBattle(id, me)
     if (!b) return json({ message: 'Not found' }, 404)
-    applyBalanceDelta(-Number(b.amount || 0))
+    if (before && before.status === 'OPEN' && before.creatorId !== me.id && b.joinerId === me.id && b.status === 'FULL') {
+      applyBalanceDelta(-Number(b.amount || 0))
+    }
     return json(b)
   }),
 
@@ -82,10 +94,11 @@ export const handlers = [
     const url = new URL(request.url)
     const m = url.pathname.match(/\/api\/v1\/battles\/([^/]+)\/leave$/)
     const id = m ? decodeURIComponent(m[1]) : ''
+    const before = getBattle(id)
     const b = leaveBattle(id, me)
     if (!b) return json({ message: 'Not found' }, 404)
-    if (me.id === b.joinerId || me.id === b.creatorId) {
-      applyBalanceDelta(Number(b.amount || 0))
+    if (before && (me.id === before.joinerId || me.id === before.creatorId)) {
+      applyBalanceDelta(Number(before.amount || 0))
     }
     return json(b)
   }),
@@ -105,9 +118,12 @@ export const handlers = [
     const url = new URL(request.url)
     const m = url.pathname.match(/\/api\/v1\/battles\/([^/]+)$/)
     const id = m ? decodeURIComponent(m[1]) : ''
+    const before = getBattle(id)
     const ok = cancelBattle(id, me)
     if (!ok) return json({ message: 'Forbidden' }, 403)
-    applyBalanceDelta(Number(getBattle(id)?.amount || 0))
+    if (before && before.creatorId === me.id) {
+      applyBalanceDelta(Number(before.amount || 0))
+    }
     return new HttpResponse(null, { status: 204 })
   }),
 ]

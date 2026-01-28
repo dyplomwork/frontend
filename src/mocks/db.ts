@@ -172,24 +172,42 @@ export function joinBattle(id: string, me: User): Battle | null {
 export function leaveBattle(id: string, me: User): Battle | null {
   const b = getBattle(id)
   if (!b) return null
-  if (b.status === 'RUNNING' || b.status === 'FINISHED') return b
-  if (b.creatorId === me.id) {
-    const nb: Battle = { ...b, status: 'CANCELLED', updatedAt: nowIso() }
+  if (b.status === 'FINISHED' || b.status === 'CANCELLED' || b.status === 'ABANDONED') return b
+
+  if (me.id === b.creatorId) {
+    if (b.status === 'OPEN') {
+      const nb: Battle = { ...b, status: 'CANCELLED', updatedAt: nowIso() }
+      battles[id] = nb
+      saveBattles(battles)
+      return nb
+    }
+    const nb: Battle = { ...b, status: 'ABANDONED', updatedAt: nowIso() }
     battles[id] = nb
     saveBattles(battles)
     return nb
   }
+
   if (b.joinerId !== me.id) return b
-  const nb: Battle = {
-    ...b,
-    status: 'OPEN',
-    joinerId: null,
-    joinerNick: null,
-    joinerSide: null,
-    joinerReady: false,
-    countdownStartedAt: null,
-    updatedAt: nowIso(),
+
+  if (b.status === 'OPEN') return b
+
+  if (b.status === 'FULL') {
+    const nb: Battle = {
+      ...b,
+      status: 'OPEN',
+      joinerId: null,
+      joinerNick: null,
+      joinerSide: null,
+      joinerReady: false,
+      countdownStartedAt: null,
+      updatedAt: nowIso(),
+    }
+    battles[id] = nb
+    saveBattles(battles)
+    return nb
   }
+
+  const nb: Battle = { ...b, status: 'ABANDONED', updatedAt: nowIso() }
   battles[id] = nb
   saveBattles(battles)
   return nb
