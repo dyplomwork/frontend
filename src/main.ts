@@ -21,6 +21,19 @@ export const createApp = ViteSSG(
   App,
   { routes, base: import.meta.env.BASE_URL },
   async ({ app, router, isClient }) => {
+    if (isClient && import.meta.env.VITE_MOCK_API === '1') {
+      try {
+        const { worker } = await import('./mocks/browser')
+        const swUrl = `${import.meta.env.BASE_URL}mockServiceWorker.js`
+        await worker.start({
+          onUnhandledRequest: 'bypass',
+          serviceWorker: { url: swUrl },
+        })
+      } catch (e) {
+        console.warn('MSW start failed', e)
+      }
+    }
+
     const pinia = createPinia()
     app.use(pinia)
 
