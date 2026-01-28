@@ -34,7 +34,6 @@ let countdownTimer: number | null = null
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 const myId = computed(() => String(auth.user?.id || ''))
-const isAuthed = computed(() => !!auth.user)
 
 const isCreator = computed(() => !!battle.value && battle.value.creatorId === myId.value)
 const isJoiner = computed(() => !!battle.value && String(battle.value.joinerId || '') === myId.value)

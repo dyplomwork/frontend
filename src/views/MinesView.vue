@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import GamePageLayout from '../components/GamePageLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
 import BaseSelect from '../components/BaseSelect.vue'
@@ -10,7 +11,7 @@ import { useUiStore } from '../stores/ui'
 import { useRequireAuthAction } from '../composables/useRequireAuthAction'
 import { sfx } from '../utils/sfx'
 import { formatNumber } from '../utils/format'
-import { normalizeError, reportError, userMessageForStatus } from '../utils/errors'
+import { normalizeError, reportError, userMessageForStatusI18n } from '../utils/errors'
 import { minesFinish, minesGetSession, minesMultiplier, minesStart, minesStep } from '../api/games'
 
 type Cell = { id: number; hasMine: boolean; revealed: boolean }
@@ -18,10 +19,11 @@ type Cell = { id: number; hasMine: boolean; revealed: boolean }
 const auth = useAuthStore()
 const bigwinStore = useBigWinStore()
 const ui = useUiStore()
+const { t } = useI18n()
 const { requireAuth } = useRequireAuthAction()
 
 const bet = ref(20)
-const mines = ref(3) // 1..24
+const mines = ref(3)
 
 const minesOptions = computed(() =>
   Array.from({ length: 24 }, (_, i) => {
@@ -29,7 +31,7 @@ const minesOptions = computed(() =>
     return { value: v, label: String(v) }
   })
 )
-const SIZE = 25 // 5x5
+const SIZE = 25
 
 const grid = ref<Cell[]>([])
 const inGame = ref(false)
@@ -40,9 +42,9 @@ const nextMultiplier = ref<number | null>(null)
 const message = ref('')
 const messageType = ref<'info' | 'success' | 'error'>('info')
 
-function setError(e: unknown, fallback = 'Ошибка') {
+function setError(e: unknown, fallback = t('ui.s_error')) {
   const n = normalizeError(e)
-  const text = userMessageForStatus(n.status, n.message || fallback)
+  const text = userMessageForStatusI18n(n.status, n.message || fallback, t)
   messageType.value = 'error'
   message.value = text
   if (n.status === 401) ui.toast(text, 'info')
@@ -50,7 +52,6 @@ function setError(e: unknown, fallback = 'Ошибка') {
   reportError(e)
 }
 
-// VFX
 const explodingId = ref<number | null>(null)
 const boardShake = ref(false)
 const cashPulse = ref(false)
@@ -168,7 +169,6 @@ async function refreshMultiplierFromServer() {
     const m = await minesMultiplier(Number(safePicks.value), Number(mines.value))
     multiplier.value = Number(m)
   } catch {
-    // keep previous
   }
 }
 
@@ -204,8 +204,6 @@ async function startInternal() {
     multiplier.value = 1
     nextMultiplier.value = null
 
-    // balance decreased on backend
-    // balance decreased on backend
     await auth.fetchBalance({ force: true })
 
     try {
@@ -215,7 +213,7 @@ async function startInternal() {
       await refreshNextMultiplierFromServer()
     } catch {}
   } catch (e: any) {
-    setError(e, 'Ошибка старта')
+    setError(e, t('ui.s_mines_error_start'))
     try {
       const s = await minesGetSession()
       bet.value = Number(s.bet)
@@ -281,7 +279,6 @@ async function revealInternal(cell: Cell) {
       return
     }
 
-    // Safe pick
     cell.revealed = true
     cell.hasMine = false
     safePicks.value += 1
@@ -297,7 +294,7 @@ async function revealInternal(cell: Cell) {
       await cashOut()
     }
   } catch (e: any) {
-    setError(e, 'Ошибка')
+    setError(e, t('ui.s_error'))
     try {
       const fin = await minesFinish()
       revealWholeField(fin.field)
@@ -323,7 +320,6 @@ async function cashOutInternal() {
     const res = await minesFinish()
     sfx('cashout')
 
-    // green pulse on win
     cashPulse.value = true
     triggerBoardFlash('cash')
     cashFxTick.value += 1
@@ -332,9 +328,8 @@ async function cashOutInternal() {
     const win = Number(res.win)
     const profit = Math.max(0, win - Number(bet.value))
     messageType.value = 'success'
-    message.value = `Кэш-аут: +${fmt(profit, 2)} (x${formatNumber(multiplier.value, 4)})`
-	    // BIG/MEGA/SUPER overlay (global)
-	    bigwinStore.maybeShow(win, bet.value)
+    message.value = t('ui.s_mines_cashout', { p: fmt(profit, 2), x: formatNumber(multiplier.value, 4) })
+    bigwinStore.maybeShow(win, bet.value)
 
     const rid = roundId.value
     setSafeTimeout(() => {
@@ -346,7 +341,7 @@ async function cashOutInternal() {
     lost.value = false
     await auth.fetchBalance({ force: true })
   } catch (e: any) {
-    setError(e, 'Ошибка вывода')
+    setError(e, t('ui.s_mines_error_cashout'))
   }
 }
 
@@ -354,7 +349,6 @@ function cashOut() {
   return requireAuth(() => cashOutInternal())
 }
 
-// initial
 buildGrid()
 </script>
 

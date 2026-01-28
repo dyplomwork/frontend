@@ -11,7 +11,7 @@ import { useRequireAuthAction } from '../composables/useRequireAuthAction'
 import { api } from '../utils/api'
 import { sfx } from '../utils/sfx'
 import { formatNumber } from '../utils/format'
-import { normalizeError, reportError, userMessageForStatus } from '../utils/errors'
+import { normalizeError, reportError, userMessageForStatusI18n } from '../utils/errors'
 import { useI18n } from 'vue-i18n'
 
 const auth = useAuthStore()
@@ -34,9 +34,9 @@ const MAX_ACTIVE_BALLS = 11150
 const message = ref('')
 const messageType = ref<'info' | 'success' | 'error'>('info')
 
-function setError(e: unknown, fallback = 'Ошибка') {
+function setError(e: unknown, fallback = t('ui.s_error')) {
   const n = normalizeError(e)
-  const text = userMessageForStatus(n.status, n.message || fallback)
+  const text = userMessageForStatusI18n(n.status, n.message || fallback, t)
   messageType.value = 'error'
   message.value = text
   if (n.status === 401) ui.toast(text, 'info')
@@ -298,8 +298,6 @@ function jitter01(seed: number){
 function jitterSigned(seed: number, amp = 1){
   return (jitter01(seed) * 2 - 1) * amp
 }
-
-function sleep(ms: number) { return new Promise<void>((r) => setTimeout(r, ms)) }
 
 let rafId: number | null = null
 let lastHitSfxAt = 0
@@ -777,7 +775,7 @@ async function dropInternal(count: number) {
       }),
     })
   } catch (e) {
-    setError(e, 'Ошибка игры (play)')
+    setError(e, t('ui.s_plinko_error_play'))
     localBalance.value += totalCost
     ui.setBalanceOverride(localBalance.value)
     inFlightStake.value -= totalCost

@@ -52,9 +52,9 @@ export const useGameStore = defineStore('game', {
       }
     },
 
-    async openCase(caseId: string): Promise<{ ok: boolean; message?: string; loot?: LootItem }> {
+    async openCase(caseId: string): Promise<{ ok: boolean; error?: 'need_login' | 'unknown'; message?: string; loot?: LootItem }> {
       const auth = useAuthStore()
-      if (!auth.user) return { ok: false, message: 'Нужен вход' }
+      if (!auth.user) return { ok: false, error: 'need_login' }
 
       try {
         const res = await casesPlay(caseId)
@@ -71,7 +71,7 @@ export const useGameStore = defineStore('game', {
           },
         }
       } catch (e: any) {
-        return { ok: false, message: e?.message ? String(e.message) : 'Ошибка' }
+        return { ok: false, error: 'unknown', message: e?.message ? String(e.message) : undefined }
       }
     },
   },

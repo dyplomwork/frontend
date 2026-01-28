@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import GamePageLayout from '../components/GamePageLayout.vue'
 import GameHowTo from '../components/GameHowTo.vue'
 import GameStatus from '../components/GameStatus.vue'
@@ -9,7 +10,7 @@ import { useUiStore } from '../stores/ui'
 import { useRequireAuthAction } from '../composables/useRequireAuthAction'
 import { sfx } from '../utils/sfx'
 import { formatNumber } from '../utils/format'
-import { normalizeError, reportError, userMessageForStatus } from '../utils/errors'
+import { normalizeError, reportError, userMessageForStatusI18n } from '../utils/errors'
 import { normalizeRouletteKey, roulettePlay } from '../api/games'
 
 type BetKey =
@@ -20,17 +21,18 @@ type BetKey =
   | 'odd'
   | 'low'
   | 'high'
-  | 'Диапазон1'
-  | 'Диапазон2'
-  | 'Диапазон3'
-  | 'Ряд1'
-  | 'Ряд2'
-  | 'Ряд3'
+  | 'doz1'
+  | 'doz2'
+  | 'doz3'
+  | 'col1'
+  | 'col2'
+  | 'col3'
 
 const auth = useAuthStore()
 const bigwinStore = useBigWinStore()
 const ui = useUiStore()
 const { requireAuth } = useRequireAuthAction()
+const { t } = useI18n()
 
 const TEMP_ALLOW_FREE_SPIN = false
 
@@ -49,9 +51,9 @@ const lastNumber = ref<number | null>(null)
 const message = ref('')
 const messageType = ref<'info' | 'success' | 'error'>('info')
 
-function setError(e: unknown, fallback = 'Ошибка') {
+function setError(e: unknown, fallback = t('ui.s_error')) {
   const n = normalizeError(e)
-  const text = userMessageForStatus(n.status, n.message || fallback)
+  const text = userMessageForStatusI18n(n.status, n.message || fallback, t)
   messageType.value = 'error'
   message.value = text
   if (n.status === 401) ui.toast(text, 'info')
@@ -100,17 +102,17 @@ function setHover(key: BetKey | '') {
 }
 function numbersForOutsideBet(key: BetKey): number[] {
   switch (key) {
-    case 'Диапазон1':
+    case 'doz1':
       return Array.from({ length: 12 }, (_, i) => i + 1)
-    case 'Диапазон2':
+    case 'doz2':
       return Array.from({ length: 12 }, (_, i) => i + 13)
-    case 'Диапазон3':
+    case 'doz3':
       return Array.from({ length: 12 }, (_, i) => i + 25)
-    case 'Ряд1':
+    case 'col1':
       return Array.from({ length: 12 }, (_, i) => (i + 1) * 3)
-    case 'Ряд2':
+    case 'col2':
       return Array.from({ length: 12 }, (_, i) => 2 + i * 3)
-    case 'Ряд3':
+    case 'col3':
       return Array.from({ length: 12 }, (_, i) => 1 + i * 3)
     case 'red':
       return Array.from(redSet)
@@ -151,14 +153,14 @@ function betBadgeClass(v: number) {
 }
 
 const CHIP_COLORS: Record<number, string> = {
-  1: '#ec4899', // pink
-  5: '#06b6d4', // cyan
-  10: '#6d28d9', // purple
-  50: '#f97316', // orange
-  100: '#facc15', // yellow
-  500: '#22c55e', // green
-  1000: '#1e40af', // navy
-  5000: '#7f1d1d', // maroon
+  1: '#ec4899',
+  5: '#06b6d4',
+  10: '#6d28d9',
+  50: '#f97316',
+  100: '#facc15',
+  500: '#22c55e',
+  1000: '#1e40af',
+  5000: '#7f1d1d',
 }
 const CHIP_DENOMS = Object.keys(CHIP_COLORS)
   .map(Number)
@@ -270,12 +272,12 @@ function payoutFor(key: BetKey, win: number) {
   if (key === 'odd') return win % 2 === 1 ? 2 : 0
   if (key === 'low') return win >= 1 && win <= 18 ? 2 : 0
   if (key === 'high') return win >= 19 && win <= 36 ? 2 : 0
-  if (key === 'Диапазон1') return win >= 1 && win <= 12 ? 3 : 0
-  if (key === 'Диапазон2') return win >= 13 && win <= 24 ? 3 : 0
-  if (key === 'Диапазон3') return win >= 25 && win <= 36 ? 3 : 0
-  if (key === 'Ряд1') return win !== 0 && win % 3 === 0 ? 3 : 0
-  if (key === 'Ряд2') return win !== 0 && (win - 2) % 3 === 0 ? 3 : 0
-  if (key === 'Ряд3') return win !== 0 && (win - 1) % 3 === 0 ? 3 : 0
+  if (key === 'doz1') return win >= 1 && win <= 12 ? 3 : 0
+  if (key === 'doz2') return win >= 13 && win <= 24 ? 3 : 0
+  if (key === 'doz3') return win >= 25 && win <= 36 ? 3 : 0
+  if (key === 'col1') return win !== 0 && win % 3 === 0 ? 3 : 0
+  if (key === 'col2') return win !== 0 && (win - 2) % 3 === 0 ? 3 : 0
+  if (key === 'col3') return win !== 0 && (win - 1) % 3 === 0 ? 3 : 0
   return 0
 }
 const wheelNumbers = [
@@ -328,7 +330,6 @@ function desiredWheelDegForNumber(n: number) {
   return normalizeDeg(-idx * SLICE_ANGLE.value)
 }
 
-/** 🔥 highlight winning slice for 1s */
 const highlightIdx = ref<number | null>(null)
 let highlightTimer: number | null = null
 function highlightNumber(n: number) {
@@ -341,12 +342,12 @@ function highlightNumber(n: number) {
 }
 
 const wheelDeg = ref(0)
+const wheelAnimating = ref(false)
 const idlePausedUntil = ref(0)
 function pauseIdle(ms = 10_000) {
   idlePausedUntil.value = Date.now() + ms
 }
 
-// Idle spin
 let rafId: number | null = null
 function startIdleSpin() {
   const tick = () => {
@@ -387,6 +388,7 @@ async function spinInternal() {
   if (spinning.value) return
 
   spinning.value = true
+  wheelAnimating.value = true
   message.value = ''
   messageType.value = 'info'
   lastNumber.value = null
@@ -405,17 +407,17 @@ async function spinInternal() {
     } else {
       if (!auth.user) {
         messageType.value = 'error'
-        message.value = 'Нужен вход'
+        message.value = t('ui.s_need_login')
         return
       }
       if (totalBet.value <= 0) {
         messageType.value = 'error'
-        message.value = 'Сделай ставку'
+        message.value = t('ui.s_roulette_make_bet')
         return
       }
       if (auth.user.balance < totalBet.value) {
         messageType.value = 'error'
-        message.value = 'Недостаточно баланса'
+        message.value = t('ui.s_insufficient_balance')
         return
       }
 
@@ -441,6 +443,8 @@ async function spinInternal() {
 
     await new Promise((r) => setTimeout(r, 3600))
     sfx('stop')
+    wheelAnimating.value = false
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
     wheelDeg.value = desiredWheelDegForNumber(win)
 
     lastNumber.value = win
@@ -453,11 +457,11 @@ async function spinInternal() {
     if (payout > 0) {
       const profit = Math.max(0, payout - Number(totalBet.value))
       messageType.value = 'success'
-      message.value = `Выпало ${win}. Выигрыш: +${fmt(profit, 2)}`
+      message.value = t('ui.s_roulette_win', { n: win, p: fmt(profit, 2) })
       bigwinStore.maybeShow(payout, totalBet.value)
     } else {
       messageType.value = 'info'
-      message.value = `Выпало ${win}`
+      message.value = t('ui.s_roulette_result', { n: win })
     }
 
     if (shouldRefreshBalance) {
@@ -468,9 +472,10 @@ async function spinInternal() {
       }
     }
   } catch (e: any) {
-    setError(e, 'Ошибка')
+    setError(e, t('ui.s_error'))
   } finally {
     spinning.value = false
+    wheelAnimating.value = false
   }
 }
 
@@ -539,7 +544,7 @@ function betOf(key: BetKey) {
 
           <div
             class="wheel-svg"
-            :class="{ spinning, flash: wheelFlash }"
+            :class="{ spinning: wheelAnimating, flash: wheelFlash }"
             :style="{ transform: `rotate(${wheelDeg}deg)` }"
           >
             <svg class="wheel-svg__el" viewBox="0 0 200 200" aria-hidden="true">
@@ -574,7 +579,7 @@ function betOf(key: BetKey) {
         </div>
 
         <div class="history-under" v-if="lastNumbers.length">
-          <div class="history-title">Last</div>
+          <div class="history-title">{{ $t('ui.s_last') }}</div>
           <div class="history-row">
             <span v-for="(n, idx) in lastNumbers" :key="idx" class="history-pill" :class="colorOf(n)">
               {{ n }}
@@ -637,58 +642,58 @@ function betOf(key: BetKey) {
             <div class="col-2to1">
               <button
                 class="cell out"
-                :class="{ win: isWinKey('Ряд1'), has: !!betOf('Ряд1'), tap: tappedKey === 'Ряд1' }"
-                @click="addBet('Ряд1')"
-                @contextmenu.prevent="onBetContext($event, 'Ряд1')"
-                @mouseenter="setHover('Ряд1')"
+                :class="{ win: isWinKey('col1'), has: !!betOf('col1'), tap: tappedKey === 'col1' }"
+                @click="addBet('col1')"
+                @contextmenu.prevent="onBetContext($event, 'col1')"
+                @mouseenter="setHover('col1')"
                 @mouseleave="setHover('')"
               >
                 2:1
                 <span
-                  v-if="betOf('Ряд1')"
+                  v-if="betOf('col1')"
                   class="chip-badge"
-                  :class="betBadgeClass(betOf('Ряд1'))"
-                  :style="betBadgeStyleByAmount(betOf('Ряд1'))"
+                  :class="betBadgeClass(betOf('col1'))"
+                  :style="betBadgeStyleByAmount(betOf('col1'))"
                 >
-                  {{ fmt(betOf('Ряд1'), 0) }}
+                  {{ fmt(betOf('col1'), 0) }}
                 </span>
               </button>
 
               <button
                 class="cell out"
-                :class="{ win: isWinKey('Ряд2'), has: !!betOf('Ряд2'), tap: tappedKey === 'Ряд2' }"
-                @click="addBet('Ряд2')"
-                @contextmenu.prevent="onBetContext($event, 'Ряд2')"
-                @mouseenter="setHover('Ряд2')"
+                :class="{ win: isWinKey('col2'), has: !!betOf('col2'), tap: tappedKey === 'col2' }"
+                @click="addBet('col2')"
+                @contextmenu.prevent="onBetContext($event, 'col2')"
+                @mouseenter="setHover('col2')"
                 @mouseleave="setHover('')"
               >
                 2:1
                 <span
-                  v-if="betOf('Ряд2')"
+                  v-if="betOf('col2')"
                   class="chip-badge"
-                  :class="betBadgeClass(betOf('Ряд2'))"
-                  :style="betBadgeStyleByAmount(betOf('Ряд2'))"
+                  :class="betBadgeClass(betOf('col2'))"
+                  :style="betBadgeStyleByAmount(betOf('col2'))"
                 >
-                  {{ fmt(betOf('Ряд2'), 0) }}
+                  {{ fmt(betOf('col2'), 0) }}
                 </span>
               </button>
 
               <button
                 class="cell out"
-                :class="{ win: isWinKey('Ряд3'), has: !!betOf('Ряд3'), tap: tappedKey === 'Ряд3' }"
-                @click="addBet('Ряд3')"
-                @contextmenu.prevent="onBetContext($event, 'Ряд3')"
-                @mouseenter="setHover('Ряд3')"
+                :class="{ win: isWinKey('col3'), has: !!betOf('col3'), tap: tappedKey === 'col3' }"
+                @click="addBet('col3')"
+                @contextmenu.prevent="onBetContext($event, 'col3')"
+                @mouseenter="setHover('col3')"
                 @mouseleave="setHover('')"
               >
                 2:1
                 <span
-                  v-if="betOf('Ряд3')"
+                  v-if="betOf('col3')"
                   class="chip-badge"
-                  :class="betBadgeClass(betOf('Ряд3'))"
-                  :style="betBadgeStyleByAmount(betOf('Ряд3'))"
+                  :class="betBadgeClass(betOf('col3'))"
+                  :style="betBadgeStyleByAmount(betOf('col3'))"
                 >
-                  {{ fmt(betOf('Ряд3'), 0) }}
+                  {{ fmt(betOf('col3'), 0) }}
                 </span>
               </button>
             </div>
@@ -697,58 +702,58 @@ function betOf(key: BetKey) {
           <div class="dozens-row">
             <button
               class="cell big"
-              :class="{ win: isWinKey('Диапазон1'), has: !!betOf('Диапазон1'), tap: tappedKey === 'Диапазон1' }"
-              @click="addBet('Диапазон1')"
-              @contextmenu.prevent="onBetContext($event, 'Диапазон1')"
-              @mouseenter="setHover('Диапазон1')"
+              :class="{ win: isWinKey('doz1'), has: !!betOf('doz1'), tap: tappedKey === 'doz1' }"
+              @click="addBet('doz1')"
+              @contextmenu.prevent="onBetContext($event, 'doz1')"
+              @mouseenter="setHover('doz1')"
               @mouseleave="setHover('')"
             >
               {{ $t('ui.s_1_to_12') }}
               <span
-                v-if="betOf('Диапазон1')"
+                v-if="betOf('doz1')"
                 class="chip-badge"
-                :class="betBadgeClass(betOf('Диапазон1'))"
-                :style="betBadgeStyleByAmount(betOf('Диапазон1'))"
+                :class="betBadgeClass(betOf('doz1'))"
+                :style="betBadgeStyleByAmount(betOf('doz1'))"
               >
-                {{ fmt(betOf('Диапазон1'), 0) }}
+                {{ fmt(betOf('doz1'), 0) }}
               </span>
             </button>
 
             <button
               class="cell big"
-              :class="{ win: isWinKey('Диапазон2'), has: !!betOf('Диапазон2'), tap: tappedKey === 'Диапазон2' }"
-              @click="addBet('Диапазон2')"
-              @contextmenu.prevent="onBetContext($event, 'Диапазон2')"
-              @mouseenter="setHover('Диапазон2')"
+              :class="{ win: isWinKey('doz2'), has: !!betOf('doz2'), tap: tappedKey === 'doz2' }"
+              @click="addBet('doz2')"
+              @contextmenu.prevent="onBetContext($event, 'doz2')"
+              @mouseenter="setHover('doz2')"
               @mouseleave="setHover('')"
             >
               {{ $t('ui.s_13_to_24') }}
               <span
-                v-if="betOf('Диапазон2')"
+                v-if="betOf('doz2')"
                 class="chip-badge"
-                :class="betBadgeClass(betOf('Диапазон2'))"
-                :style="betBadgeStyleByAmount(betOf('Диапазон2'))"
+                :class="betBadgeClass(betOf('doz2'))"
+                :style="betBadgeStyleByAmount(betOf('doz2'))"
               >
-                {{ fmt(betOf('Диапазон2'), 0) }}
+                {{ fmt(betOf('doz2'), 0) }}
               </span>
             </button>
 
             <button
               class="cell big"
-              :class="{ win: isWinKey('Диапазон3'), has: !!betOf('Диапазон3'), tap: tappedKey === 'Диапазон3' }"
-              @click="addBet('Диапазон3')"
-              @contextmenu.prevent="onBetContext($event, 'Диапазон3')"
-              @mouseenter="setHover('Диапазон3')"
+              :class="{ win: isWinKey('doz3'), has: !!betOf('doz3'), tap: tappedKey === 'doz3' }"
+              @click="addBet('doz3')"
+              @contextmenu.prevent="onBetContext($event, 'doz3')"
+              @mouseenter="setHover('doz3')"
               @mouseleave="setHover('')"
             >
               {{ $t('ui.s_25_to_36') }}
               <span
-                v-if="betOf('Диапазон3')"
+                v-if="betOf('doz3')"
                 class="chip-badge"
-                :class="betBadgeClass(betOf('Диапазон3'))"
-                :style="betBadgeStyleByAmount(betOf('Диапазон3'))"
+                :class="betBadgeClass(betOf('doz3'))"
+                :style="betBadgeStyleByAmount(betOf('doz3'))"
               >
-                {{ fmt(betOf('Диапазон3'), 0) }}
+                {{ fmt(betOf('doz3'), 0) }}
               </span>
             </button>
           </div>
@@ -936,7 +941,6 @@ function betOf(key: BetKey) {
   gap: 10px;
 }
 
-/* ===== Casino chip ===== */
 .chip {
   --c: var(--chip, #60a5fa);
   position: relative;
@@ -1283,9 +1287,11 @@ function betOf(key: BetKey) {
 .cell.hover {
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.1),
-    0 0 0 1px rgba(245, 197, 66, 0.35),
-    0 0 26px rgba(245, 197, 66, 0.12);
-  filter: brightness(1.08);
+    0 0 0 2px rgba(245, 197, 66, 0.55),
+    0 0 34px rgba(245, 197, 66, 0.26),
+    0 0 60px rgba(245, 197, 66, 0.14);
+  filter: brightness(1.14);
+  transform: translateY(-1px) scale(1.03);
 }
 .cell.win,
 .cell-zero.win {
@@ -1370,6 +1376,7 @@ function betOf(key: BetKey) {
     0 14px 60px rgba(0, 0, 0, 0.52);
   transition: none;
   transform-origin: 50% 50%;
+  will-change: transform;
   margin: 18px auto 0;
   position: relative;
 }
@@ -1388,7 +1395,7 @@ function betOf(key: BetKey) {
     0 0 36px rgba(245, 197, 66, 0.18);
 }
 .wheel-svg.spinning {
-  transition: transform 3.6s cubic-bezier(0.12, 0.88, 0.18, 1);
+  transition: transform 3.6s cubic-bezier(0.08, 0.92, 0.12, 1);
 }
 .wheel-svg__el {
   width: 100%;

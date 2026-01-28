@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import GamePageLayout from '../components/GamePageLayout.vue'
 import GamePanel from '../components/GamePanel.vue'
 import GameHowTo from '../components/GameHowTo.vue'
@@ -9,13 +10,14 @@ import { useUiStore } from '../stores/ui'
 import { useRequireAuthAction } from '../composables/useRequireAuthAction'
 import { sfx } from '../utils/sfx'
 import { formatNumber } from '../utils/format'
-import { normalizeError, reportError, userMessageForStatus } from '../utils/errors'
+import { normalizeError, reportError, userMessageForStatusI18n } from '../utils/errors'
 import { dicePlay } from '../api/games'
 
 const auth = useAuthStore()
 const bigwinStore = useBigWinStore()
 const ui = useUiStore()
 const { requireAuth } = useRequireAuthAction()
+const { t } = useI18n()
 
 const amount = ref(0)
 
@@ -26,9 +28,9 @@ const lastRoll = ref<number | null>(null)
 const message = ref('')
 const messageType = ref<'info' | 'success' | 'error'>('info')
 
-function setError(e: unknown, fallback = 'Ошибка') {
+function setError(e: unknown, fallback = t('ui.s_error')) {
   const n = normalizeError(e)
-  const text = userMessageForStatus(n.status, n.message || fallback)
+  const text = userMessageForStatusI18n(n.status, n.message || fallback, t)
   messageType.value = 'error'
   message.value = text
   if (n.status === 401) ui.toast(text, 'info')

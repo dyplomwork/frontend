@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
 import { useAuthStore } from '../stores/auth'
 import { useBigWinStore } from '../stores/bigwin'
@@ -14,6 +15,7 @@ const route = useRoute()
 const game = useGameStore()
 const auth = useAuthStore()
 const bigwinStore = useBigWinStore()
+const { t } = useI18n()
 
 const c = computed(() => game.cases.find(x => x.id === String(route.params.id)))
 
@@ -42,10 +44,9 @@ const CHIP_W = 120
 const GAP = 10
 const PAD = 40
 
-const animDurationSingle = Math.round(7800 * 1.15) // 8970ms
+const animDurationSingle = Math.round(7800 * 1.15)
 const animEasing = 'cubic-bezier(.15,.9,.2,1)'
 
-// Quick Open toggle (persist)
 const quickOpen = ref(false)
 const QUICK_KEY = 'cases_quick_open'
 
@@ -106,7 +107,7 @@ function lootIcon(amount: number){
 
 function pickLootWeighted(): ReelItem {
   const loot = c.value?.loot ?? []
-  if(!loot.length) return { label: '+0 credits', amount: 0, icon: '🪙' }
+  if (!loot.length) return { label: t('ui.s_case_zero_win'), amount: 0, icon: '🪙' }
 
   const sum = loot.reduce((a, x) => a + (x.chance ?? 0), 0) || 1
   let r = Math.random() * sum
@@ -140,10 +141,10 @@ function buildQuickStrip(winItem: ReelItem){
   const arr: ReelItem[] = []
 
   for(let i = 0; i < SIDE; i++) arr.push(pickLootWeighted())
-  arr.push(winItem) // центр
+  arr.push(winItem)
   for(let i = 0; i < SIDE; i++) arr.push(pickLootWeighted())
 
-  const winIndex = SIDE // 6
+  const winIndex = SIDE
 
   items.value = arr
   winIndexRef.value = winIndex
@@ -182,7 +183,6 @@ function hardResetStrip(){
   el.style.transition = 'none'
   el.style.transform = 'translate3d(0,0,0)'
 
-  // force reflow
   void el.offsetHeight
 
   el.style.willChange = 'transform'
@@ -241,28 +241,33 @@ async function openOne(){
   result.value = null
   resultAmount.value = null
 
-  if(!c.value){ message.value='Кейс не найден'; return }
-  if(!auth.user){ message.value='Нужен вход'; return }
-  if(auth.user.balance < c.value.price){
-    message.value = `Недостаточно кредитов (нужно ${c.value.price})`
+  if (!c.value) {
+    message.value = t('ui.s_case_not_found')
+    return
+  }
+  if (!auth.user) {
+    message.value = t('ui.s_need_login')
+    return
+  }
+  if (auth.user.balance < c.value.price) {
+    message.value = t('ui.s_insufficient_balance_need', { a: fmt(c.value.price, 0) })
     return
   }
 
   opening.value = true
 
-  // честный результат до анимации
   const res = await game.openCase(c.value.id)
-  if(!res.ok){
+  if (!res.ok) {
     opening.value = false
-    message.value = res.message || 'Ошибка'
+    if (res.error === 'need_login') message.value = t('ui.s_need_login')
+    else message.value = res.message || t('ui.s_error')
     return
   }
 
   const wLabel = res.loot?.label || '—'
   const wAmount = res.loot?.amount ?? 0
 
-	// BIG/MEGA/SUPER overlay (global)
-	bigwinStore.maybeShow(Number(wAmount) || 0, c.value.price)
+  bigwinStore.maybeShow(Number(wAmount) || 0, c.value.price)
 
   pushHistory({ ts: Date.now(), label: wLabel, amount: wAmount })
 
@@ -298,7 +303,6 @@ async function openOne(){
 
   sfx('case_spin')
 
-  // overshoot -> settle
   await animateToX(overshoot, Math.max(600, animDurationSingle - 420), animEasing)
   await animateToX(target, 420, 'cubic-bezier(.2,.9,.2,1)')
 
@@ -311,7 +315,6 @@ async function openOne(){
   opening.value = false
 }
 
-// init
 onMounted(() => {
   game.loadCases().catch(() => {})
   try{
@@ -320,7 +323,6 @@ onMounted(() => {
   loadHistory()
 })
 
-// persist toggle
 watch(quickOpen, (v) => {
   try{
     localStorage.setItem(QUICK_KEY, v ? '1' : '0')
@@ -359,7 +361,7 @@ watch(quickOpen, (v) => {
         </div>
 
         <div class="status">
-          <span v-if="result" class="pill ok">Выпало: {{ result }} (+{{ resultAmount }})</span>
+          <span v-if="result" class="pill ok">{{ $t('ui.s_case_dropped', { r: result, a: fmt(resultAmount ?? 0, 0) }) }}</span>
           <span v-else-if="message" class="pill err">{{ message }}</span>
           <span v-else class="pill muted">{{ $t('ui.s_bc3db5d2b8') }}</span>
         </div>

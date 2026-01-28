@@ -20,10 +20,19 @@ export function normalizeError(err: unknown): NormalizedError {
 }
 
 export function userMessageForStatus(status: number, fallback: string) {
-  if (status === 401) return 'Нужен вход в аккаунт'
-  if (status === 403) return 'Недостаточно прав'
-  if (status === 429) return 'Слишком много запросов. Попробуйте позже'
-  if (status >= 500) return 'Сервер временно недоступен'
+  return userMessageForStatusI18n(status, fallback)
+}
+
+export function userMessageForStatusI18n(
+  status: number,
+  fallback: string,
+  t?: (key: string, vars?: any) => string,
+) {
+  const tr = t ?? ((_: string) => fallback)
+  if (status === 401) return t ? tr('ui.s_need_login') : fallback
+  if (status === 403) return t ? tr('ui.s_forbidden') : fallback
+  if (status === 429) return t ? tr('ui.s_too_many_requests') : fallback
+  if (status >= 500) return t ? tr('ui.s_server_unavailable') : fallback
   return fallback
 }
 
