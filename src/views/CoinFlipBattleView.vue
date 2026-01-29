@@ -7,6 +7,7 @@ import { useAuthStore } from '../stores/auth'
 import { formatNumber } from '../utils/format'
 import { sfx } from '../utils/sfx'
 import { battlesCancel, battlesGet, battlesJoin, battlesLeave, battlesReady, type BattleDTO, type CoinSide } from '../api/battles'
+import { publishMockEvent, subscribeBattle } from '../utils/coinflipRealtime'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -23,8 +24,7 @@ const joinBusy = ref(false)
 const readyBusy = ref(false)
 const cancelBusy = ref(false)
 
-const pollMs = 700
-let pollTimer: number | null = null
+let unsub: (() => void) | null = null
 
 const coinState = ref<'idle' | 'countdown' | 'flipping' | 'result'>('idle')
 const coinResult = ref<CoinSide | ''>('')
@@ -126,17 +126,27 @@ async function fetchBattle() {
   }
 }
 
-function startPolling() {
-  stopPolling()
-  pollTimer = window.setInterval(() => {
-    void fetchBattle()
-  }, pollMs)
+function bindRealtime() {
+  if (unsub) {
+    try {
+      unsub()
+    } catch {
+    }
+    unsub = null
+  }
+  if (!id.value) return
+  unsub = subscribeBattle(id.value, (b) => {
+    battle.value = b as any
+  })
 }
 
-function stopPolling() {
-  if (pollTimer) window.clearInterval(pollTimer)
-  pollTimer = null
-}
+watch(
+  () => id.value,
+  async () => {
+    await fetchBattle()
+    bindRealtime()
+  },
+)
 
 async function join() {
   if (!battle.value) return
@@ -145,9 +155,11 @@ async function join() {
   joinBusy.value = true
   try {
     sfx('click')
-    await battlesJoin(battle.value.id)
+    const nb = await battlesJoin(battle.value.id)
+    publishMockEvent({ type: 'battle', battle: nb })
+    publishMockEvent({ type: 'battles' })
     await auth.fetchBalance({ force: true }).catch(() => {})
-    await fetchBattle()
+    battle.value = nb as any
   } catch (e: any) {
     error.value = e?.message || 'Ошибка'
   } finally {
@@ -162,8 +174,10 @@ async function ready() {
   readyBusy.value = true
   try {
     sfx('click')
-    battle.value = await battlesReady(battle.value.id)
-    await fetchBattle()
+    const nb = await battlesReady(battle.value.id)
+    publishMockEvent({ type: 'battle', battle: nb })
+    publishMockEvent({ type: 'battles' })
+    battle.value = nb as any
   } catch (e: any) {
     error.value = e?.message || 'Ошибка'
   } finally {
@@ -179,6 +193,8 @@ async function cancel() {
   try {
     sfx('click')
     await battlesCancel(battle.value.id)
+    publishMockEvent({ type: 'battle', battle: { id: battle.value.id, status: 'CANCELLED' } as any })
+    publishMockEvent({ type: 'battles' })
     await auth.fetchBalance({ force: true }).catch(() => {})
     await router.push({ name: 'coinflip' })
   } catch (e: any) {
@@ -194,7 +210,9 @@ async function leave() {
   if (!isParticipant.value) return
   if (b.status === 'FINISHED' || b.status === 'CANCELLED' || b.status === 'ABANDONED') return
   try {
-    await battlesLeave(b.id)
+    const nb = await battlesLeave(b.id)
+    publishMockEvent({ type: 'battle', battle: nb })
+    publishMockEvent({ type: 'battles' })
     await auth.fetchBalance({ force: true }).catch(() => {})
   } catch {
   }
@@ -244,7 +262,7 @@ watch(
 
 onMounted(async () => {
   await fetchBattle()
-  startPolling()
+  bindRealtime()
   window.addEventListener('beforeunload', leave)
 })
 
@@ -253,7 +271,13 @@ onBeforeRouteLeave(async () => {
 })
 
 onBeforeUnmount(() => {
-  stopPolling()
+  if (unsub) {
+    try {
+      unsub()
+    } catch {
+    }
+    unsub = null
+  }
   if (flipTimer) window.clearTimeout(flipTimer)
   if (countdownTimer) window.clearInterval(countdownTimer)
   window.removeEventListener('beforeunload', leave)

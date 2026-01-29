@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import GamePageLayout from '../components/GamePageLayout.vue'
@@ -8,6 +8,7 @@ import { useAuthStore } from '../stores/auth'
 import { formatNumber } from '../utils/format'
 import { sfx } from '../utils/sfx'
 import { battlesCreate, battlesJoin, battlesList, type BattleDTO, type CoinSide } from '../api/battles'
+import { publishMockEvent, subscribeBattles } from '../utils/coinflipRealtime'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -21,6 +22,7 @@ const amount = ref(0)
 const side = ref<CoinSide | ''>('')
 const createBusy = ref(false)
 const joiningId = ref<string>('')
+let unsubBattles: (() => void) | null = null
 
 const isAuthed = computed(() => !!auth.user)
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
@@ -61,6 +63,8 @@ async function createBattle() {
   try {
     sfx('click')
     const b = await battlesCreate({ amount: a, side: side.value ? (side.value as CoinSide) : null })
+    publishMockEvent({ type: 'battle', battle: b })
+    publishMockEvent({ type: 'battles' })
     await auth.fetchBalance({ force: true }).catch(() => {})
     await router.push({ name: 'coinflip-battle', params: { id: b.id } })
   } catch (e: any) {
@@ -79,7 +83,9 @@ async function joinBattle(b: BattleDTO) {
   joiningId.value = b.id
   try {
     sfx('click')
-    await battlesJoin(b.id)
+    const nb = await battlesJoin(b.id)
+    publishMockEvent({ type: 'battle', battle: nb })
+    publishMockEvent({ type: 'battles' })
     await auth.fetchBalance({ force: true }).catch(() => {})
     await router.push({ name: 'coinflip-battle', params: { id: b.id } })
   } catch (e: any) {
@@ -91,6 +97,18 @@ async function joinBattle(b: BattleDTO) {
 
 onMounted(() => {
   void refreshList()
+  unsubBattles = subscribeBattles(() => {
+    void refreshList()
+  })
+})
+
+onBeforeUnmount(() => {
+  if (!unsubBattles) return
+  try {
+    unsubBattles()
+  } catch {
+  }
+  unsubBattles = null
 })
 </script>
 

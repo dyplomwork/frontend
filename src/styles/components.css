@@ -240,6 +240,7 @@
 .game-page-container{ width: 100%; max-width: var(--page-max); margin: 0 auto; padding: 0 18px; box-sizing: border-box; }
 .game-page{ width: 100%; display: flex; flex-direction: column; gap: 16px; }
 .game-shell{ width: 100%; display: grid; grid-template-columns: 360px 1fr; gap: 16px; padding: 16px; }
+.game-shell.no-panel{ grid-template-columns: 1fr; }
 .game-left{ min-width: 0; }
 .game-main{ min-width: 0; }
 .game-below{ width: 100%; padding: 16px; }

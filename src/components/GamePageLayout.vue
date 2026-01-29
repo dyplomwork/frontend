@@ -13,13 +13,13 @@ const props = withDefaults(defineProps<Props>(), {
 <template>
   <div class="game-page-container">
     <GameLayout :min-height="props.minHeight">
-      <template #panel>
+      <template v-if="$slots.panel" #panel>
         <slot name="panel" />
       </template>
 
       <slot />
 
-      <template #below>
+      <template v-if="$slots.below" #below>
         <slot name="below" />
       </template>
     </GameLayout>
