@@ -13,6 +13,7 @@ const error = ref('')
 
 const canSubmit = computed(() => login.value.trim().length > 0 && password.value.length > 0 && !auth.loading)
 
+AsyncIterator([])
 async function submit() {
   error.value = ''
   try {
@@ -42,6 +43,7 @@ async function submit() {
           <span class="label">{{ $t('ui.s_634e4413b8') }}</span>
           <input v-model="login" type="text" autocomplete="username" :placeholder="$t('ui.s_873362e50a')" required />
         </label>
+
 
         <label class="field">
           <span class="label">{{ $t('ui.s_5ebe553e01') }}</span>
