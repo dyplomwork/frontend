@@ -1,25 +1,20 @@
+const express = require('express')
+const cors = require('cors')
 
-const express=require('express')
-const cors=require('cors')
-const app=express()
+const app = express()
+
 app.use(cors())
 app.use(express.json())
 
-let user={id:1,username:'test',balance:1000}
-app.post('/auth/login',(req,res)=>res.json({token:'fake',user}))
-app.post('/auth/register',(req,res)=>res.json({token:'fake',user}))
+app.use('/api/v1/accounts', require('./routes/auth'))
+app.use('/api/v1/games/dice/game', require('./routes/games/dice'))
+app.use('/api/v1/games/roulette/game', require('./routes/games/roulette'))
+app.use('/api/v1/games/mines/game', require('./routes/games/mines'))
+app.use('/api/v1/games/plinko/game', require('./routes/games/plinko'))
+app.use('/api/v1/games/cases', require('./routes/games/cases'))
+app.use('/api/v1/battles', require('./routes/battles'))
 
-app.get('/user',(req,res)=>res.json(user))
-
-app.post('/games/dice',(req,res)=>res.json({win:true,profit:10,balance:user.balance+=10}))
-app.post('/games/mines',(req,res)=>res.json({result:'continue'}))
-app.post('/games/plinko',(req,res)=>res.json({multiplier:2}))
-app.post('/games/roulette',(req,res)=>res.json({win:false}))
-app.post('/games/coinflip',(req,res)=>res.json({win:true}))
-
-app.get('/cases',(req,res)=>res.json([]))
-app.post('/cases/open',(req,res)=>res.json({items:[]}))
-
-app.get('/battles',(req,res)=>res.json([]))
-
-app.listen(3000,()=>console.log('server running'))
+const PORT = process.env.PORT || 3000
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`)
+})

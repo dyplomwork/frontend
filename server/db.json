@@ -1,0 +1,33 @@
+{
+  "users": [
+    {
+      "id": "ba686341-864e-4d5d-bdfc-b176895474f9",
+      "nickname": "123123123",
+      "discord": "123123123",
+      "password": "$2b$10$ecl4seK9kcpIYnEC5YE2vuOI8eMA4.RRBs.hWAUEoOsQk2/USfWSq",
+      "role": "user",
+      "balance": 996.43
+    }
+  ],
+  "battles": [
+    {
+      "id": "86ee8779-3fe5-412b-b4d6-12b8beb6ca00",
+      "amount": 2,
+      "status": "OPEN",
+      "creatorId": "ba686341-864e-4d5d-bdfc-b176895474f9",
+      "creatorNick": "123123123",
+      "creatorSide": "heads",
+      "creatorReady": false,
+      "joinerId": null,
+      "joinerNick": null,
+      "joinerSide": null,
+      "joinerReady": false,
+      "countdownStartedAt": null,
+      "winnerId": null,
+      "winnerSide": null,
+      "resultSide": null,
+      "createdAt": "2026-04-28T08:39:44.428Z",
+      "updatedAt": "2026-04-28T08:39:44.428Z"
+    }
+  ]
+}
