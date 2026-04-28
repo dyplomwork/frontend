@@ -20,7 +20,7 @@ const ui = useUiStore()
 const { locale } = useI18n()
 const LS_LOCALE = 'app_locale_v1'
 const toggleLang = () => {
-  locale.value = locale.value === 'ru' ? 'en' : 'ru'
+  locale.value = locale.value === 'ua' ? 'en' : 'ua'
   localStorage.setItem('app_locale_v1', locale.value)
 }
 
@@ -34,7 +34,7 @@ const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 
 onMounted(() => {
   const savedLocale = localStorage.getItem(LS_LOCALE)
-  if (savedLocale === 'ru' || savedLocale === 'en') locale.value = savedLocale
+  if (savedLocale === 'ua' || savedLocale === 'en') locale.value = savedLocale
 
   sidebarOpen.value = localStorage.getItem(LS_SIDEBAR) === '1'
 

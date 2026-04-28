@@ -3,7 +3,7 @@ import { ViteSSG } from 'vite-ssg'
 
 import App from './App.vue'
 import { createI18n } from 'vue-i18n'
-import ru from './locales/ru'
+import ru from './locales/ua'
 import en from './locales/en'
 import { routes, addAuthGuards } from './router'
 import { useAuthStore } from './stores/auth'

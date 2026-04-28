@@ -16,6 +16,6 @@ jobs:
 
       - name: Build and Push Docker Image
         run: |
-          IMAGE=ghcr.io/sopovcasino/frontend:latest
+          IMAGE=ghcr.io/scx/frontend:latest
           docker build -t $IMAGE .
           docker push $IMAGE
