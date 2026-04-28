@@ -265,7 +265,7 @@ async function revealInternal(cell: Cell) {
 
       lost.value = true
       inGame.value = false
-      message.value = 'Бомба! Проигрыш'
+      message.value = 'Бомба! Програш'
       sfx('lose')
 
       const rid = roundId.value

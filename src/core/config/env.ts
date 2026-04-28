@@ -6,5 +6,5 @@ export function getApiBaseUrl(): string {
   const v = (getEnv('VITE_MOCK_API') || '').toLowerCase()
   const mock = v === '1' || v === 'true' || v === 'yes' || v === 'on'
   if (mock) return ''
-  return getEnv('VITE_API_BASE_URL') || 'https://api.scxdrop.online'
+  return getEnv('VITE_API_BASE_URL') || 'http://localhost:3000'
 }

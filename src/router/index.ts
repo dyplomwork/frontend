@@ -23,7 +23,7 @@ export const routes = [
     component: HomeView,
     meta: {
       public: true,
-      title: 'SCXDROP — Casino Games',
+      title: 'SCXDROP — Mini Games',
       description: 'Casino-style games: Plinko, Roulette, Mines, Dice, Coin Flip and Cases.',
     },
   },

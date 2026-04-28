@@ -19,13 +19,13 @@ async function submit() {
   try {
     const res = await auth.login(login.value.trim(), password.value)
     if (!res.ok) {
-      error.value = (res as any).message || 'Не удалось войти'
+      error.value = (res as any).message || 'Не вдалось увійти'
       return
     }
     const next = (route.query.next as string | undefined) || '/profile'
     await router.replace(next)
   } catch (e: any) {
-    error.value = e?.message || 'Ошибка входа'
+    error.value = e?.message || 'Помилка входу'
   }
 }
 </script>
@@ -53,7 +53,7 @@ async function submit() {
         <div v-if="error" class="notice error" role="alert">{{ error }}</div>
 
         <button class="btn primary" type="submit" :disabled="!canSubmit">
-          {{ auth.loading ? 'Входим…' : 'Войти' }}
+          {{ auth.loading ? 'Входим…' : 'Ввійти' }}
         </button>
 
         <p class="hint">

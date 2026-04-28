@@ -166,7 +166,7 @@ async function loadUsers() {
     const res = await api<{ ok: boolean; users: AdminUser[] }>('/api/v1/admin/users', { method: 'GET' })
     users.value = Array.isArray(res.users) ? res.users : []
   } catch (e: any) {
-    err.value = e?.message || 'Не удалось загрузить пользователей'
+    err.value = e?.message || 'Не вдалось загрузити користувачів'
   } finally {
     loadingUsers.value = false
   }
@@ -190,7 +190,7 @@ async function loadTickets() {
       createdAt: t.createdAt ?? undefined,
     }))
   } catch (e: any) {
-    err.value = e?.message || 'Не удалось загрузить тикеты'
+    err.value = e?.message || 'Не вдалось загрузити тікети'
   } finally {
     loadingTickets.value = false
   }
@@ -206,12 +206,12 @@ async function saveUser(id: string) {
 
   const nickname = editNickname.value.trim()
   if (!nickname) {
-    err.value = 'Никнейм не может быть пустым'
+    err.value = 'Нікнейм не може бути порожнім'
     return
   }
   const balance = Number(editBalance.value)
   if (!Number.isFinite(balance)) {
-    err.value = 'Баланс должен быть числом'
+    err.value = 'Баланс повинен бути числом'
     return
   }
 
@@ -228,23 +228,23 @@ async function saveUser(id: string) {
     }
 
     editingId.value = null
-    msg.value = 'Пользователь обновлён'
+    msg.value = 'Користувач оновлений'
   } catch (e: any) {
-    err.value = e?.message || 'Не удалось сохранить'
+    err.value = e?.message || 'Не вдалось зберегти'
   }
 }
 
 async function deleteUser(id: string) {
   msg.value = ''
   err.value = ''
-  if (!confirm('Удалить пользователя? Это действие нельзя отменить.')) return
+  if (!confirm('Видалити користувача? Цю дію неможливо відмінити.')) return
   try {
     await api<{ ok: boolean }>(`/api/v1/admin/users/${id}`, { method: 'DELETE' })
     users.value = users.value.filter(u => u.id !== id)
-    msg.value = 'Пользователь удалён'
+    msg.value = 'Користувача видалено'
     if (editingId.value === id) editingId.value = null
   } catch (e: any) {
-    err.value = e?.message || 'Не удалось удалить'
+    err.value = e?.message || 'Не вдалось видалити користувача'
   }
 }
 
@@ -259,9 +259,9 @@ async function approveTicket(id: number) {
     const t = tickets.value.find(x => x.id === Number(id))
     if (t) t.status = 'APPROVED'
     await auth.fetchBalance({ force: true }).catch(() => {})
-    msg.value = 'Тикет подтверждён'
+    msg.value = 'Тікет підтверджено'
   } catch (e: any) {
-    err.value = e?.message || 'Не удалось подтвердить тикет'
+    err.value = e?.message || 'Не вдалось підтвердити тікет'
   }
 }
 
@@ -269,7 +269,7 @@ async function rejectTicket(id: number) {
   msg.value = ''
   err.value = ''
   try {
-    const note = prompt('Причина отклонения (необязательно):') ?? undefined
+    const note = prompt('Причина відмови(Необовязково:') ?? undefined
     await api<void>(`/api/v1/admin/tickets/${id}`, {
       method: 'PATCH',
       body: { status: 'REJECTED', note }
@@ -277,9 +277,9 @@ async function rejectTicket(id: number) {
     const t = tickets.value.find(x => x.id === Number(id))
     if (t) t.status = 'REJECTED'
     await auth.fetchBalance({ force: true }).catch(() => {})
-    msg.value = 'Тикет отклонён'
+    msg.value = 'Тікет відмовлено'
   } catch (e: any) {
-    err.value = e?.message || 'Не удалось отклонить тикет'
+    err.value = e?.message || 'Не вдалось відмовити тікет'
   }
 }
 

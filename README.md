@@ -7,27 +7,23 @@ npm install
 npm run dev
 ```
 
-## API домен
-Фронт использует `VITE_API_BASE_URL` (см. `.env.example`).
-Для продакшена нужно, чтобы запросы шли на:
-- `https://api.scxdrop.online`
+## API 
+Фронт використовує `VITE_API_BASE_URL` (див. `.env.example`).
+Для проду апі буде:
+- `https://`
 
-Пример `.env`:
+Приклад `.env`:
 ```bash
-VITE_API_BASE_URL=https://api.scxdrop.online
+VITE_API_BASE_URL=https://
 ```
 
-## Фоновая музыка
-Положи файл музыки в:
-- `public/audio/bgm.mp3`
-
-Музыка тихая и включена по умолчанию, но браузер может потребовать первый клик/нажатие клавиши для старта.
 
 
-## Страницы
-- `/` — главная
-- `/login` — вход
+
+## Сторінки
+- `/` — головна
+- `/login` — вхід
 - `/plinko` — Plinko
 - `/roulette` — Roulette
 - `/cases` — Cases
-- `/admin` — админка (если backend разрешает)
+- `/admin` — адмінка 

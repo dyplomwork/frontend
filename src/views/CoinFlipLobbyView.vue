@@ -42,7 +42,7 @@ async function refreshList() {
     const all = await battlesList()
     list.value = all.filter((b) => b.status === 'OPEN')
   } catch (e: any) {
-    error.value = e?.message || 'Ошибка загрузки'
+    error.value = e?.message || 'Помилка завантаження'
   } finally {
     loading.value = false
   }
@@ -68,7 +68,7 @@ async function createBattle() {
     await auth.fetchBalance({ force: true }).catch(() => {})
     await router.push({ name: 'coinflip-battle', params: { id: b.id } })
   } catch (e: any) {
-    error.value = e?.message || 'Ошибка'
+    error.value = e?.message || 'Помилка'
   } finally {
     createBusy.value = false
   }
@@ -89,7 +89,7 @@ async function joinBattle(b: BattleDTO) {
     await auth.fetchBalance({ force: true }).catch(() => {})
     await router.push({ name: 'coinflip-battle', params: { id: b.id } })
   } catch (e: any) {
-    error.value = e?.message || 'Ошибка'
+    error.value = e?.message || 'Помилка'
   } finally {
     joiningId.value = ''
   }

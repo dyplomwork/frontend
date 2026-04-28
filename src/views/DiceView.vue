@@ -157,11 +157,11 @@ async function playInternal() {
 
   if (bet.value <= 0) {
     messageType.value = 'error'
-    return (message.value = 'Укажи Amount')
+    return (message.value = 'Вкажи Amount')
   }
   if (auth.user?.balance != null && auth.user.balance < bet.value) {
     messageType.value = 'error'
-    return (message.value = 'Недостаточно баланса')
+    return (message.value = 'Недостатньо коштів')
   }
 
   running.value = true
@@ -175,7 +175,7 @@ async function playInternal() {
     res = await dicePlay({ bet: Number(bet.value), rollOver: ro })
   } catch (e: any) {
     running.value = false
-    setError(e, 'Ошибка запроса')
+    setError(e, 'Помилка запросу')
     return
   }
 

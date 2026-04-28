@@ -20,19 +20,19 @@ async function submit() {
   const nick = nickname.value.trim()
   const disc = discord.value.trim()
   if (password.value.length < 8) {
-    error.value = 'Пароль должен быть минимум 8 символов'
+    error.value = 'Пароль повинен мати як мінімум 8 символів'
     return
   }
 
   try {
     const res = await auth.register({ nickname: nick, discord: disc, password: password.value })
     if (!res.ok) {
-      error.value = (res as any).message || 'Не удалось зарегистрироваться'
+      error.value = (res as any).message || 'Не вдалось зареєструватися'
       return
     }
     await router.replace({ name: 'profile' })
   } catch (e: any) {
-    error.value = e?.message || 'Ошибка регистрации'
+    error.value = e?.message || 'Помилка реєстрації'
   }
 }
 </script>
@@ -60,14 +60,14 @@ async function submit() {
           <span class="label">{{ $t('ui.s_5ebe553e01') }}</span>
           <input v-model="password" type="password" autocomplete="new-password" :placeholder="$t('ui.s_c7665a90a1')" required />
           <span class="tiny" :class="{ bad: password.length > 0 && !passwordOk }">
-            {{ password.length === 0 ? 'Минимум 8 символов' : (passwordOk ? 'Ок' : 'Слишком короткий пароль') }}
+            {{ password.length === 0 ? 'Мінімум 8 символів' : (passwordOk ? 'Ок' : 'Занадто короткий пароль') }}
           </span>
         </label>
 
         <div v-if="error" class="notice error" role="alert">{{ error }}</div>
 
         <button class="btn primary" type="submit" :disabled="!canSubmit">
-          {{ auth.loading ? 'Создаём…' : 'Создать аккаунт' }}
+          {{ auth.loading ? 'Створюємо…' : 'Створити акаунт' }}
         </button>
 
         <p class="hint">

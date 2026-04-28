@@ -542,8 +542,8 @@ function updateBall(b: BallState, tNow: number) {
       landedSinceSync.value += 1
       void maybeSyncBalance()
 
-      if (b.net > 0) message.value = `Профит +${fmt(b.net, 2)}`
-      else if (b.net < 0) message.value = `Минус ${fmt(-b.net, 2)}`
+      if (b.net > 0) message.value = `Профіт +${fmt(b.net, 2)}`
+      else if (b.net < 0) message.value = `Мінус ${fmt(-b.net, 2)}`
       else message.value = 'В ноль'
     }
     return
