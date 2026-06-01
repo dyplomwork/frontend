@@ -284,6 +284,6 @@ export default {
     "s_bb70d8d3f5": "Sound: off",
 
     "s_656526b120":
-      "18+ only. Please play responsibly. Gambling can be addictive — set limits and take breaks. By using the site, you agree to the Terms and Privacy Policy."
+      " By using the site, you agree to the Terms and Privacy Policy."
   }
 }
