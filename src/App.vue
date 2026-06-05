@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter, RouterView, RouterLink } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { useUiStore } from './stores/ui'
@@ -78,8 +78,28 @@ function toggleSidebar() {
 
 const sfxOn = ref(isSfxOn())
 watch(sfxOn, (v) => setSfxOn(!!v), { immediate: true })
-function toggleSfx() {
-  sfxOn.value = !sfxOn.value
+function toggleSfx() { sfxOn.value = !sfxOn.value }
+
+// Recent drops ticker
+import { api } from './utils/api'
+type Drop = { nick: string; icon: string; name: string; nameUa: string; rarity: string; color: string; ts: number }
+const drops = ref<Drop[]>([])
+let dropsTimer: number | null = null
+async function fetchDrops() {
+  try {
+    const res = await api<Drop[]>('/api/v1/drops/recent', { noAuth: true })
+    if (Array.isArray(res)) drops.value = res
+  } catch {}
+}
+onMounted(() => {
+  void fetchDrops()
+  dropsTimer = window.setInterval(fetchDrops, 5000)
+})
+onUnmounted(() => { if (dropsTimer) clearInterval(dropsTimer) })
+
+function dropName(d: Drop) {
+  const l = locale.value
+  return l === 'ua' ? (d.nameUa || d.name) : d.name
 }
 
 function goLogin() {
@@ -117,6 +137,15 @@ function logout() {
         >
           <span class="side-ic"><img class="nav-ic" src="/icon/home.png" alt="Home" /></span>
           <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_8cf04a9734') }}</span>
+        </RouterLink>
+        <RouterLink
+          to="/clicker"
+          class="side-link"
+          :class="{ active: route.path.startsWith('/clicker') }"
+          :title="$t('ui.s_clicker')"
+        >
+          <span class="side-ic side-emoji">🪙</span>
+          <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_clicker') }}</span>
         </RouterLink>
         <RouterLink
           to="/roulette"
@@ -173,6 +202,24 @@ function logout() {
         >
           <span class="side-ic"><img class="nav-ic" src="/icon/cases.png" alt="Cases" /></span>
           <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_b1f0b866ff') }}</span>
+        </RouterLink>
+        <RouterLink
+          to="/inventory"
+          class="side-link"
+          :class="{ active: route.path.startsWith('/inventory') }"
+          :title="$t('ui.s_inventory')"
+        >
+          <span class="side-ic side-emoji">🎒</span>
+          <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_inventory') }}</span>
+        </RouterLink>
+        <RouterLink
+          to="/auction"
+          class="side-link"
+          :class="{ active: route.path.startsWith('/auction') }"
+          :title="$t('ui.s_auction')"
+        >
+          <span class="side-ic side-emoji">🏷️</span>
+          <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_auction') }}</span>
         </RouterLink>
         <RouterLink
           to="/profile"
@@ -253,6 +300,19 @@ function logout() {
           </template>
         </div>
       </header>
+
+      <!-- Recent drops ticker -->
+      <div v-if="drops.length" class="drops-ticker" aria-live="polite">
+        <div class="ticker-track">
+          <div class="ticker-inner">
+            <span v-for="(d, i) in [...drops, ...drops]" :key="i + '-' + d.ts" class="ticker-item">
+              <span class="ticker-icon">{{ d.icon }}</span>
+              <span class="ticker-nick">{{ d.nick }}</span>
+              <span class="ticker-name" :style="{ color: d.color }">{{ dropName(d) }}</span>
+            </span>
+          </div>
+        </div>
+      </div>
 
       <main class="app-content">
         <RouterView />

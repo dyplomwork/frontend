@@ -25,6 +25,10 @@ const readyBusy = ref(false)
 const cancelBusy = ref(false)
 
 let unsub: (() => void) | null = null
+let pollTimer: number | null = null    // fallback polling when SSE absent
+let nowTicker: number | null = null    // reactive clock for countdown display
+
+const now = ref(Date.now())            // reactive — drives countdownLeft
 
 const coinState = ref<'idle' | 'countdown' | 'flipping' | 'result'>('idle')
 const coinResult = ref<CoinSide | ''>('')
@@ -102,7 +106,7 @@ const countdownLeft = computed(() => {
   if (!b?.countdownStartedAt) return 0
   const start = new Date(b.countdownStartedAt).getTime()
   const end = start + 3000
-  const left = end - Date.now()
+  const left = end - now.value   // now.value is reactive — updates every 150ms
   return Math.max(0, Math.ceil(left / 1000))
 })
 
@@ -224,9 +228,10 @@ function playFlip(result: CoinSide) {
   coinSeed.value = Math.floor(Math.random() * 1e9)
   coinState.value = 'flipping'
   coinResult.value = ''
-  const spins = 10 + Math.floor(Math.random() * 7)
+  // Always use even base spins so front face (heads) = 0°, back face (tails) = 180°
+  const spinsBase = (10 + Math.floor(Math.random() * 5)) * 2  // 20,22,24,26,28
   const tilt = (Math.random() * 12 - 6).toFixed(2)
-  const rot = result === 'heads' ? spins * 180 : spins * 180 + 180
+  const rot = result === 'heads' ? spinsBase * 180 : spinsBase * 180 + 180
   const root = document.documentElement
   root.style.setProperty('--cf-tilt', `${tilt}deg`)
   root.style.setProperty('--cf-rot', `${rot}deg`)
@@ -260,9 +265,23 @@ watch(
   },
 )
 
+const TERMINAL = new Set(['FINISHED', 'CANCELLED', 'ABANDONED'])
+
+function startPoll() {
+  if (pollTimer) clearInterval(pollTimer)
+  pollTimer = window.setInterval(async () => {
+    if (battle.value && TERMINAL.has(battle.value.status)) {
+      clearInterval(pollTimer!); pollTimer = null; return
+    }
+    await fetchBattle()
+  }, 2000)
+}
+
 onMounted(async () => {
+  nowTicker = window.setInterval(() => { now.value = Date.now() }, 150)
   await fetchBattle()
   bindRealtime()
+  startPoll()
   window.addEventListener('beforeunload', leave)
 })
 
@@ -271,15 +290,11 @@ onBeforeRouteLeave(async () => {
 })
 
 onBeforeUnmount(() => {
-  if (unsub) {
-    try {
-      unsub()
-    } catch {
-    }
-    unsub = null
-  }
+  if (unsub) { try { unsub() } catch {} unsub = null }
   if (flipTimer) window.clearTimeout(flipTimer)
   if (countdownTimer) window.clearInterval(countdownTimer)
+  if (pollTimer) window.clearInterval(pollTimer)
+  if (nowTicker) window.clearInterval(nowTicker)
   window.removeEventListener('beforeunload', leave)
 })
 </script>

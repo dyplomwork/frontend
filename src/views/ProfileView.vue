@@ -2,170 +2,255 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '../stores/auth'
-import { useTicketsStore } from '../stores/tickets'
 import { formatNumber } from '../utils/format'
+import { api } from '../utils/api'
 
 const auth = useAuthStore()
-const tickets = useTicketsStore()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
-const amount = ref<number>(100)
-const amount2 = ref<number>(100)
-const message = ref('')
+const stats = ref<any>(null)
+const achievements = ref<any[]>([])
+const statsLoading = ref(false)
 
-const loading = computed(() => tickets.loading)
-const mineSafe = computed(() => tickets.mine ?? [])
-const pending = computed(() => mineSafe.value.filter(t => statusKey(t.status) === 'pending'))
+const RARITY_KEY: Record<string, string> = {
+  common: 's_rarity_common', uncommon: 's_rarity_uncommon',
+  rare: 's_rarity_rare', epic: 's_rarity_epic',
+  legendary: 's_rarity_legendary', mythic: 's_rarity_mythic',
+}
+const ACH_COLORS: Record<string, string> = {
+  common: '#9ca3af', uncommon: '#34d399', rare: '#3b82f6',
+  epic: '#a855f7', legendary: '#f59e0b', mythic: '#ec4899',
+}
+function achName(a: any) { return locale.value === 'ua' ? a.nameUa : a.name }
+function achDesc(a: any) { return locale.value === 'ua' ? a.descUa : a.desc }
+function rarityLabel(r: string) { return t(`ui.${RARITY_KEY[r] ?? 's_rarity_common'}`) }
+const editingNick = ref(false)
+const newNickname = ref('')
+const nickMsg = ref('')
+const nickLoading = ref(false)
+
+async function saveNickname() {
+  if (!newNickname.value.trim()) return
+  nickLoading.value = true
+  nickMsg.value = ''
+  try {
+    const res = await api<any>('/api/v1/accounts/users/me', {
+      method: 'PATCH', json: true, body: { nickname: newNickname.value.trim() }
+    })
+    auth.user = res.user
+    nickMsg.value = '✓'
+    editingNick.value = false
+  } catch (e: any) {
+    nickMsg.value = e?.message ?? t('ui.s_error')
+  } finally {
+    nickLoading.value = false
+  }
+}
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 
-function statusKey(v: any){
-  const s = String(v ?? '').toLowerCase()
-  if(s === 'approved') return 'approved'
-  if(s === 'rejected') return 'rejected'
-  return 'pending'
+const GAME_LABELS: Record<string,{ua:string,en:string}> = {
+  dice:     { ua: 'Кості', en: 'Dice' },
+  roulette: { ua: 'Рулетка', en: 'Roulette' },
+  mines:    { ua: 'Міни', en: 'Mines' },
+  plinko:   { ua: 'Плінко', en: 'Plinko' },
+  cases:    { ua: 'Кейси', en: 'Cases' },
+  battles:  { ua: 'Коїнфліп', en: 'CoinFlip' },
+}
+function gameLabel(key: string) {
+  const g = GAME_LABELS[key]
+  return g ? (locale.value === 'ua' ? g.ua : g.en) : key
 }
 
-function statusLabel(v: any){
-  const k = statusKey(v)
-  return t(`ui.s_ticket_status_${k}`)
+async function loadStats() {
+  if (!auth.user) return
+  statsLoading.value = true
+  try {
+    const res = await api<any>('/api/v1/stats/me', { method: 'GET' })
+    stats.value = res.stats
+    achievements.value = res.achievements ?? []
+  } catch {}
+  finally { statsLoading.value = false }
 }
 
-function shortId(v: any){
-  const s = String(v ?? '').trim()
-  if(!s) return '-'
-  return s.slice(0,6)
-}
-
-function safeAmount(v: any){
-  const n = Number(v)
-  return Number.isFinite(n) ? n : 0
-}
-
-
-async function loadMineSafe(){
-  if(!auth.isAuthed) return
-  try{
-    await tickets.fetchMine()
-  }catch{
-  }
-}
-
-onMounted(async () => {
-  await loadMineSafe()
-})
-
-watch(
-  () => auth.isAuthed,
-  async (v) => {
-    if(v) await loadMineSafe()
-  },
-  { immediate: true }
-)
-
-async function requestDeposit(){
-  message.value = ''
-  if(!auth.user){ message.value = t('ui.s_need_login'); return }
-  if(amount.value <= 0){ message.value = t('ui.s_amount_gt0'); return }
-  try{
-    await tickets.create('DEPOSIT', amount.value)
-    message.value = t('ui.s_ticket_deposit_sent')
-    await loadMineSafe()
-  }catch{
-    message.value = t('ui.s_ticket_create_failed')
-  }
-}
-
-async function requestWithdraw(){
-  message.value = ''
-  if(!auth.user){ message.value = t('ui.s_need_login'); return }
-  if(amount2.value <= 0){ message.value = t('ui.s_amount_gt0'); return }
-  try{
-    await tickets.create('WITHDRAW', amount2.value)
-    message.value = t('ui.s_ticket_withdraw_sent')
-    await loadMineSafe()
-  }catch{
-    message.value = t('ui.s_ticket_create_failed')
-  }
-}
-
-async function refreshAll(){
-  await loadMineSafe()
-  await (auth as any).fetchBalance?.().catch(() => {})
-}
+onMounted(loadStats)
+watch(() => auth.user?.id, (v) => { if (v) loadStats() })
 </script>
 
 <template>
   <div class="profile-grid">
-    <div class="card">
-      <div class="row-between">
-        <h2 class="profile-title">{{ $t('ui.s_a46c372347') }}</h2>
-      </div>
-
-      <p class="muted profile-hint">
-        {{ $t('ui.s_457727a7c0') }} <b>{{ $t('ui.s_30b0348a35') }}</b>{{ $t('ui.s_5e0aae9c74') }}
-      </p>
-
-      <div class="grid grid-2 profile-panels">
-        <div class="card2">
-          <b>{{ $t('ui.s_9edfcfc6ba') }}</b>
-          <div class="row" style="gap:10px; margin-top:10px; flex-wrap:wrap;">
-            <input class="input" type="number" v-model.number="amount" min="1" />
-            <button class="btn btn-primary" @click="requestDeposit" :disabled="loading">{{ $t('ui.s_create_ticket') }}</button>
-          </div>
-        </div>
-
-        <div class="card2">
-          <b>{{ $t('ui.s_79cabd47b2') }}</b>
-          <div class="row" style="gap:10px; margin-top:10px; flex-wrap:wrap;">
-            <input class="input" type="number" v-model.number="amount2" min="1" />
-            <button class="btn btn-primary" @click="requestWithdraw" :disabled="loading">{{ $t('ui.s_create_ticket') }}</button>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="message" class="badge" style="margin-top:12px; white-space:normal;">{{ message }}</div>
+    <div v-if="!auth.user" class="card muted" style="padding:24px; text-align:center;">
+      {{ $t('ui.s_profile_no_auth') }}
     </div>
 
-    <div class="card">
-      <div class="row-between">
-        <h3 style="margin:0;">{{ $t('ui.s_3f0a73cab1') }}</h3>
-        <button class="btn" @click="refreshAll" :disabled="loading">{{ $t('ui.s_refresh') }}</button>
-      </div>
-
-      <div v-if="loading" class="muted" style="margin-top:12px;">{{ $t('ui.s_43e40d49fd') }}</div>
-      <div v-else-if="mineSafe.length === 0" class="muted" style="margin-top:12px;">{{ $t('ui.s_c7a9d14173') }}</div>
-
-      <div v-else class="grid" style="gap:10px; margin-top:12px;">
-        <div v-for="t in mineSafe" :key="String(t.id)" class="card2 row-between" style="gap:12px;">
-          <div class="grid" style="gap:4px;">
-            <b>#{{ shortId(t.id) }} • {{ t.type === 'DEPOSIT' ? $t('ui.s_ticket_deposit') : $t('ui.s_ticket_withdraw') }}</b>
-            <span class="muted">{{ t.createdAt ? new Date(t.createdAt).toLocaleString() : '-' }}</span>
-            <span class="badge" :class="'st-' + statusKey(t.status)">{{ statusLabel(t.status) }}</span>
+    <template v-else>
+      <!-- User info card -->
+      <div class="card user-card">
+        <div class="user-head">
+          <div class="user-avatar">{{ auth.user.nickname.slice(0,2).toUpperCase() }}</div>
+          <div class="user-info">
+            <div class="user-nick-row">
+              <template v-if="editingNick">
+                <input class="input nick-input" v-model="newNickname" @keyup.enter="saveNickname" @keyup.esc="editingNick=false" maxlength="50" />
+                <button class="btn btn-primary btn-sm" @click="saveNickname" :disabled="nickLoading">✓</button>
+                <button class="btn btn-sm" @click="editingNick=false">✕</button>
+              </template>
+              <template v-else>
+                <div class="user-nick">{{ auth.user.nickname }}</div>
+                <button class="btn btn-sm edit-nick-btn" @click="() => { editingNick=true; newNickname=auth.user!.nickname }">✏️</button>
+              </template>
+            </div>
+            <div v-if="nickMsg" class="nick-msg muted small">{{ nickMsg }}</div>
+            <div class="user-discord muted">{{ auth.user.discord }}</div>
+            <div class="role-badge" :class="'role-' + auth.user.role">{{ auth.user.role }}</div>
           </div>
-          <div class="row" style="gap:8px;">
-            <span class="badge">{{ $t('ui.s_ticket_amount') }}: {{ fmt(safeAmount(t.amount), 2) }}</span>
+          <div class="balance-big">
+            <div class="muted small">{{ $t('ui.s_99a808d8d1') }}</div>
+            <div class="balance-val">{{ fmt(auth.user.balance) }} <span class="coin-unit">K</span></div>
           </div>
         </div>
       </div>
 
-      <div v-if="!loading && pending.length" class="muted" style="margin-top:10px;">
-        {{ $t('ui.s_ticket_pending', { n: pending.length }) }}
+      <!-- Stats card -->
+      <div class="card">
+        <div class="row-between">
+          <h3 style="margin:0">{{ $t('ui.s_stats') }}</h3>
+          <button class="btn" @click="loadStats" :disabled="statsLoading">↻</button>
+        </div>
+
+        <div v-if="statsLoading" class="muted" style="margin-top:12px;">{{ $t('ui.s_43e40d49fd') }}</div>
+        <div v-else-if="!stats || stats.totalGames === 0" class="muted" style="margin-top:12px;">{{ $t('ui.s_stats_none') }}</div>
+        <div v-else>
+          <div class="stats-grid">
+            <div class="stat-box">
+              <div class="stat-label muted">{{ $t('ui.s_stats_total_games') }}</div>
+              <div class="stat-num">{{ stats.totalGames }}</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label muted">{{ $t('ui.s_stats_wagered') }}</div>
+              <div class="stat-num">{{ fmt(stats.totalWagered) }} K</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label muted">{{ $t('ui.s_stats_won') }}</div>
+              <div class="stat-num">{{ fmt(stats.totalWon) }} K</div>
+            </div>
+            <div class="stat-box" :class="stats.netProfit >= 0 ? 'positive' : 'negative'">
+              <div class="stat-label muted">{{ $t('ui.s_stats_profit') }}</div>
+              <div class="stat-num">{{ stats.netProfit >= 0 ? '+' : '' }}{{ fmt(stats.netProfit) }} K</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label muted">{{ $t('ui.s_stats_biggest_win') }}</div>
+              <div class="stat-num gold">{{ fmt(stats.biggestWin) }} K</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label muted">{{ $t('ui.s_stats_favorite') }}</div>
+              <div class="stat-num">{{ stats.favoriteGame ? gameLabel(stats.favoriteGame) : '—' }}</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label muted">{{ $t('ui.s_stats_items') }}</div>
+              <div class="stat-num">{{ stats.totalItems }}</div>
+            </div>
+          </div>
+
+          <!-- Per-game breakdown -->
+          <div v-if="Object.keys(stats.byGame).length" style="margin-top:16px;">
+            <div class="section-title muted small">{{ $t('ui.s_stats_by_game') }}</div>
+            <div class="by-game-list">
+              <div v-for="(gs, key) in stats.byGame" :key="key" class="game-row">
+                <span class="game-name">{{ gameLabel(String(key)) }}</span>
+                <span class="game-detail muted small">{{ gs.gamesPlayed }} {{ $t('ui.s_stats_games') }}</span>
+                <span class="game-detail muted small">{{ fmt(gs.totalWagered) }} K</span>
+                <span class="game-best" :class="gs.biggestWin > 0 ? 'gold' : 'muted'">⭐ {{ fmt(gs.biggestWin) }} K</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+      <!-- Achievements -->
+      <div class="card" v-if="achievements.length > 0">
+        <h3 style="margin:0 0 14px">🏅 {{ $t('ui.s_stats') }}</h3>
+        <div class="ach-grid">
+          <div
+            v-for="a in achievements"
+            :key="a.id"
+            class="ach-card"
+            :style="{ '--ac': ACH_COLORS[a.rarity] ?? '#9ca3af' }"
+          >
+            <div class="ach-icon">{{ a.icon }}</div>
+            <div class="ach-info">
+              <div class="ach-name" :style="{ color: ACH_COLORS[a.rarity] }">{{ achName(a) }}</div>
+              <div class="ach-desc muted small">{{ achDesc(a) }}</div>
+              <div class="ach-rarity small" :style="{ color: ACH_COLORS[a.rarity] }">{{ rarityLabel(a.rarity) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
   </div>
 </template>
 
 <style scoped>
-.st-pending{ border-color: rgba(250,204,21,.45); background: rgba(250,204,21,.10); }
-.st-approved{ border-color: rgba(34,197,94,.45); background: rgba(34,197,94,.10); }
-.st-rejected{ border-color: rgba(248,81,73,.45); background: rgba(248,81,73,.10); }
+.profile-grid { display: grid; gap: 16px; max-width: 900px; margin: 0 auto; }
+.small { font-size: 12px; }
+.row-between { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 
+.user-card { border-radius: 18px; padding: 18px; }
+.user-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.user-avatar {
+  width: 60px; height: 60px; border-radius: 999px;
+  background: linear-gradient(135deg, rgba(255,178,74,.35), rgba(255,178,74,.15));
+  border: 2px solid rgba(255,178,74,.4);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 1200; font-size: 20px; letter-spacing: 1px;
+  flex-shrink: 0;
+}
+.user-info { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.user-nick-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.user-nick { font-weight: 1000; font-size: 18px; }
+.nick-input { height: 34px; border-radius: 10px; padding: 0 10px; font-size: 14px; }
+.btn-sm { height: 30px; padding: 0 10px; border-radius: 8px; font-size: 12px; }
+.edit-nick-btn { opacity: .6; }
+.edit-nick-btn:hover { opacity: 1; }
+.nick-msg { margin-top: 2px; }
+.user-discord { font-size: 13px; }
+.role-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .5px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.06); width: fit-content; }
+.role-admin { border-color: rgba(255,59,87,.4); background: rgba(255,59,87,.12); color: rgba(255,120,120,.9); }
+.balance-big { text-align: right; }
+.balance-val { font-size: 22px; font-weight: 1000; }
+.coin-unit { opacity: .85; }
 
-.profile-grid{ display:grid; gap:16px; max-width: 1180px; margin: 0 auto; }
-.profile-title{ margin:0; }
-.profile-hint{ margin-top: 8px; }
-.profile-panels{ margin-top: 12px; }
-.card2{ padding: 16px; border-radius: 16px; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-top: 14px; }
+.stat-box { border: 1px solid rgba(255,255,255,.06); background: rgba(0,0,0,.18); border-radius: 14px; padding: 12px; }
+.stat-box.positive { border-color: rgba(34,197,94,.25); background: rgba(34,197,94,.06); }
+.stat-box.negative { border-color: rgba(248,81,73,.25); background: rgba(248,81,73,.06); }
+.stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 6px; }
+.stat-num { font-weight: 1000; font-size: 17px; }
+.gold { color: #ffd700; }
 
+.section-title { text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+.by-game-list { display: flex; flex-direction: column; gap: 6px; }
+.game-row {
+  display: grid; grid-template-columns: 1fr auto auto auto;
+  align-items: center; gap: 12px;
+  border: 1px solid rgba(255,255,255,.06); border-radius: 12px; padding: 10px 12px;
+  background: rgba(0,0,0,.14);
+}
+.game-name { font-weight: 900; font-size: 14px; }
+.game-detail { white-space: nowrap; }
+.game-best { font-weight: 900; font-size: 13px; white-space: nowrap; }
+
+.ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.ach-card {
+  display: flex; align-items: center; gap: 14px;
+  border: 1px solid color-mix(in srgb, var(--ac) 25%, transparent);
+  background: color-mix(in srgb, var(--ac) 6%, rgba(0,0,0,.18));
+  border-radius: 14px; padding: 14px;
+  transition: transform 100ms;
+}
+.ach-card:hover { transform: translateY(-2px); }
+.ach-icon { font-size: 36px; flex-shrink: 0; filter: drop-shadow(0 3px 8px rgba(0,0,0,.5)); }
+.ach-info { display: flex; flex-direction: column; gap: 3px; }
+.ach-name { font-weight: 900; font-size: 14px; }
+.ach-desc { font-size: 12px; }
+.ach-rarity { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .4px; }
 </style>

@@ -92,16 +92,22 @@ async function waitFrames(n = 2){
 }
 
 function rarity(amount: number){
-  if(amount >= 1200) return 'legendary'
-  if(amount >= 350) return 'epic'
-  if(amount >= 120) return 'rare'
+  if(amount >= 2000000) return 'mythic'
+  if(amount >= 250000) return 'legendary'
+  if(amount >= 45000)  return 'epic'
+  if(amount >= 8000)   return 'rare'
+  if(amount >= 1200)   return 'uncommon'
   return 'common'
 }
-function lootIcon(amount: number){
-  if(amount >= 1200) return '💎'
-  if(amount >= 350) return '👑'
-  if(amount >= 120) return '🧪'
-  if(amount >= 50) return '🎁'
+function lootIcon(l: any){
+  // Use icon from item def if available, fallback to amount-based
+  if(l?.icon) return l.icon
+  const a = l?.amount ?? 0
+  if(a >= 2000000) return '✨'
+  if(a >= 250000)  return '⚜️'
+  if(a >= 45000)   return '🔮'
+  if(a >= 8000)    return '💎'
+  if(a >= 1200)    return '💚'
   return '🪙'
 }
 
@@ -420,7 +426,7 @@ watch(quickOpen, (v) => {
           <div class="loot-grid">
             <div class="loot-row" v-for="l in c.loot" :key="l.id" :class="rarity(l.amount)">
               <div class="l-left">
-                <div class="lic" aria-hidden="true">{{ lootIcon(l.amount) }}</div>
+                <div class="lic" aria-hidden="true">{{ lootIcon(l) }}</div>
                 <div class="label">{{ l.label }}</div>
               </div>
               <div class="meta">
@@ -691,9 +697,12 @@ watch(quickOpen, (v) => {
   padding: 10px 12px;
 }
 .loot-row.common{ border-color: rgba(255,255,255,.08); }
-.loot-row.rare{ border-color: rgba(61,255,157,.30); box-shadow: 0 0 0 1px rgba(61,255,157,.12); }
-.loot-row.epic{ border-color: rgba(255,115,220,.30); box-shadow: 0 0 0 1px rgba(255,115,220,.10); }
-.loot-row.legendary{ border-color: rgba(255,208,90,.32); box-shadow: 0 0 0 1px rgba(255,208,90,.12); }
+.loot-row.uncommon{ border-color: rgba(52,211,153,.28); box-shadow: 0 0 0 1px rgba(52,211,153,.10); }
+.loot-row.rare{ border-color: rgba(59,130,246,.35); box-shadow: 0 0 0 1px rgba(59,130,246,.14); }
+.loot-row.epic{ border-color: rgba(168,85,247,.35); box-shadow: 0 0 0 1px rgba(168,85,247,.14); }
+.loot-row.legendary{ border-color: rgba(245,158,11,.38); box-shadow: 0 0 0 1px rgba(245,158,11,.15); }
+.loot-row.mythic{ border-color: rgba(236,72,153,.40); box-shadow: 0 0 0 1px rgba(236,72,153,.18); animation: mythicPulse 2.5s ease-in-out infinite; }
+@keyframes mythicPulse{ 0%,100%{ box-shadow: 0 0 0 1px rgba(236,72,153,.18); } 50%{ box-shadow: 0 0 8px rgba(236,72,153,.35), 0 0 0 1px rgba(236,72,153,.30); } }
 
 .l-left{ display:flex; align-items:center; gap: 10px; }
 .lic{

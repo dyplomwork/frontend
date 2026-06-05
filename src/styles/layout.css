@@ -13,9 +13,10 @@
   top: 0;
   height: 100vh;
   padding: 14px 12px;
-  border-right: 1px solid rgba(255,178,74,.10);
-  background: linear-gradient(180deg, rgba(18,16,10,.76), rgba(10,10,7,.64));
-  backdrop-filter: blur(10px);
+  border-right: 1px solid rgba(255,178,74,.08);
+  background: linear-gradient(180deg, rgba(14,13,9,.85), rgba(8,8,6,.78));
+  backdrop-filter: blur(14px);
+  box-shadow: 2px 0 20px rgba(0,0,0,.25);
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -25,6 +26,41 @@
 .app-sidebar.open{ align-items:stretch; }
 
 .app-content{ min-width:0; display:flex; flex-direction:column; flex:1; }
+
+/* Drops ticker */
+.drops-ticker{
+  height: 32px;
+  background: rgba(0,0,0,.28);
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  overflow: hidden;
+  position: relative;
+  z-index: 9;
+}
+.ticker-track{ width: 100%; height: 100%; overflow: hidden; display:flex; align-items:center; }
+.ticker-inner{
+  display: flex;
+  align-items: center;
+  gap: 0;
+  white-space: nowrap;
+  animation: tickerScroll 40s linear infinite;
+  will-change: transform;
+}
+@keyframes tickerScroll{
+  0%{ transform: translateX(0); }
+  100%{ transform: translateX(-50%); }
+}
+.ticker-item{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 24px;
+  font-size: 12px;
+  border-right: 1px solid rgba(255,255,255,.06);
+  height: 32px;
+}
+.ticker-icon{ font-size: 15px; }
+.ticker-nick{ color: rgba(255,255,255,.55); }
+.ticker-name{ font-weight: 700; }
 
 
 .app-topbar{
@@ -109,24 +145,26 @@
   border-radius: 14px;
   border: 1px solid transparent;
   background: transparent;
-  color: rgba(255,255,255,.78);
+  color: rgba(255,255,255,.72);
   display:flex;
   align-items:center;
   gap: 12px;
   padding: 0 12px;
-  transition: transform .12s ease, background .12s ease, border-color .12s ease, color .12s ease;
+  transition: transform .12s ease, background .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
 }
 .side-ic{ width: 48px; height: 48px; display:grid; place-items:center; }
 .side-ic .nav-ic{ width: 43px; height: 43px; display:block; object-fit: contain; }
+.side-emoji{ font-size: 26px; line-height: 1; }
 .topbar-menu-ic{ width: 69px; height: 47px; display:block; object-fit: contain; }
 
 .side-top .icon-btn{ width: 48px; height: 48px; border-radius: 18px; }
 .side-txt{ font-weight: 900; letter-spacing: .2px; font-size: 13px; opacity: .92; }
-.side-link:hover{ transform: translateY(-1px); background: rgba(255,255,255,.05); border-color: var(--c-border); }
+.side-link:hover{ transform: translateY(-1px); background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.10); color: rgba(255,255,255,.92); box-shadow: 0 4px 12px rgba(0,0,0,.2); }
 .side-link.active{
-  background: var(--c-accent-soft);
-  border-color: rgba(255,178,74,.28);
-  color: rgba(255,255,255,.94);
+  background: linear-gradient(135deg, rgba(255,178,74,.16), rgba(255,120,20,.10));
+  border-color: rgba(255,178,74,.30);
+  box-shadow: 0 0 0 1px rgba(255,178,74,.10) inset, 0 4px 14px rgba(0,0,0,.2);
+  color: rgba(255,255,255,.96);
   box-shadow: 0 0 0 1px rgba(255,178,74,.12) inset;
 }
 

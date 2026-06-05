@@ -3,6 +3,9 @@ import { useAuthStore } from '../stores/auth'
 import { reportError } from '../utils/errors'
 
 const HomeView = () => import('../views/HomeView.vue')
+const ClickerView = () => import('../views/ClickerView.vue')
+const InventoryView = () => import('../views/InventoryView.vue')
+const AuctionView = () => import('../views/AuctionView.vue')
 const LoginView = () => import('../views/LoginView.vue')
 const RegisterView = () => import('../views/RegisterView.vue')
 const RouletteView = () => import('../views/RouletteView.vue')
@@ -21,11 +24,25 @@ export const routes = [
     path: '/',
     name: 'home',
     component: HomeView,
-    meta: {
-      public: true,
-      title: 'SCXDROP — Mini Games',
-      description: 'Casino-style games: Plinko, Roulette, Mines, Dice, Coin Flip and Cases.',
-    },
+    meta: { public: true, title: 'SCXDROP — Mini Games', description: 'Casino-style games.' },
+  },
+  {
+    path: '/clicker',
+    name: 'clicker',
+    component: ClickerView,
+    meta: { public: true, title: 'SCXDROP — Clicker', description: 'Click to earn coins.' },
+  },
+  {
+    path: '/inventory',
+    name: 'inventory',
+    component: InventoryView,
+    meta: { requiresAuth: true, title: 'SCXDROP — Inventory', description: 'Your items.' },
+  },
+  {
+    path: '/auction',
+    name: 'auction',
+    component: AuctionView,
+    meta: { public: true, title: 'SCXDROP — Auction', description: 'Buy and sell items.' },
   },
   {
     path: '/login',

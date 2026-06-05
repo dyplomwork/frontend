@@ -3,7 +3,7 @@ import { ViteSSG } from 'vite-ssg'
 
 import App from './App.vue'
 import { createI18n } from 'vue-i18n'
-import ru from './locales/ua'
+import ua from './locales/ua'
 import en from './locales/en'
 import { routes, addAuthGuards } from './router'
 import { useAuthStore } from './stores/auth'
@@ -12,9 +12,9 @@ import './styles/index.css'
 
 const i18n = createI18n({
   legacy: false,
-  locale: 'ru',
-  fallbackLocale: 'ru',
-  messages: { ru, en },
+  locale: 'ua',
+  fallbackLocale: 'ua',
+  messages: { ua, en },
 })
 
 export const createApp = ViteSSG(
@@ -44,7 +44,7 @@ export const createApp = ViteSSG(
     app.use(i18n)
     if (isClient) {
       const savedLocale = localStorage.getItem('app_locale_v1')
-      if (savedLocale === 'en' || savedLocale === 'ru') {
+      if (savedLocale === 'en' || savedLocale === 'ua') {
         i18n.global.locale.value = savedLocale
       }
     }

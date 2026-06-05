@@ -23,6 +23,7 @@ const side = ref<CoinSide | ''>('')
 const createBusy = ref(false)
 const joiningId = ref<string>('')
 let unsubBattles: (() => void) | null = null
+let listPollTimer: number | null = null
 
 const isAuthed = computed(() => !!auth.user)
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
@@ -97,18 +98,14 @@ async function joinBattle(b: BattleDTO) {
 
 onMounted(() => {
   void refreshList()
-  unsubBattles = subscribeBattles(() => {
-    void refreshList()
-  })
+  unsubBattles = subscribeBattles(() => { void refreshList() })
+  // Auto-refresh every 3s regardless of SSE (SSE only works in mock mode for lobby)
+  listPollTimer = window.setInterval(refreshList, 3000)
 })
 
 onBeforeUnmount(() => {
-  if (!unsubBattles) return
-  try {
-    unsubBattles()
-  } catch {
-  }
-  unsubBattles = null
+  if (unsubBattles) { try { unsubBattles() } catch {} unsubBattles = null }
+  if (listPollTimer) { clearInterval(listPollTimer); listPollTimer = null }
 })
 </script>
 

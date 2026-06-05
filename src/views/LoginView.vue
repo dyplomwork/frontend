@@ -13,7 +13,6 @@ const error = ref('')
 
 const canSubmit = computed(() => login.value.trim().length > 0 && password.value.length > 0 && !auth.loading)
 
-AsyncIterator([])
 async function submit() {
   error.value = ''
   try {
