@@ -1,5 +1,5 @@
 export function getEnv(key: string, fallback = ''): string {
-  return ((import.meta as any)?.env?.[key] as string | undefined) ?? fallback
+  return (import.meta.env[key] as string | undefined) ?? fallback
 }
 
 export function getApiBaseUrl(): string {
@@ -11,5 +11,9 @@ export function getApiBaseUrl(): string {
   // Vercel rewrites proxy /api/* to the correct Railway service.
   // In development: falls back to http://localhost (Docker backend).
   if (configured) return configured
-  return (import.meta as any).env?.DEV ? 'http://localhost' : ''
+  // Use import.meta.env.DEV directly — Vite statically replaces this with
+  // the literal `false` in production builds (including vite-ssg).
+  // The `(import.meta as any).env?.DEV` cast+optional-chain pattern is NOT
+  // replaced statically and evaluates to true in the Node.js SSG context.
+  return import.meta.env.DEV ? 'http://localhost' : ''
 }
