@@ -47,6 +47,38 @@ async function saveNickname() {
   }
 }
 
+// Avatar editing
+const editingAvatar = ref(false)
+const newAvatarUrl = ref('')
+const avatarMsg = ref('')
+const avatarLoading = ref(false)
+
+function startAvatarEdit() {
+  newAvatarUrl.value = auth.user?.avatar_url ?? ''
+  avatarMsg.value = ''
+  editingAvatar.value = true
+}
+
+async function saveAvatar() {
+  avatarLoading.value = true
+  avatarMsg.value = ''
+  try {
+    const res = await api<any>('/api/v1/accounts/users/me', {
+      method: 'PATCH', json: true, body: { avatar_url: newAvatarUrl.value.trim() || null }
+    })
+    auth.user = res.user
+    editingAvatar.value = false
+  } catch (e: any) {
+    avatarMsg.value = e?.message ?? 'Помилка'
+  } finally {
+    avatarLoading.value = false
+  }
+}
+
+function clearAvatar() {
+  newAvatarUrl.value = ''
+}
+
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 
 const GAME_LABELS: Record<string,{ua:string,en:string}> = {
@@ -87,7 +119,12 @@ watch(() => auth.user?.id, (v) => { if (v) loadStats() })
       <!-- User info card -->
       <div class="card user-card">
         <div class="user-head">
-          <div class="user-avatar">{{ auth.user.nickname.slice(0,2).toUpperCase() }}</div>
+          <div class="user-avatar" @click="startAvatarEdit" title="Змінити фото">
+            <img v-if="auth.user.avatar_url" :src="auth.user.avatar_url" class="avatar-img" alt="Avatar" @error="($event.target as HTMLImageElement).style.display='none'" />
+            <span v-else>{{ auth.user.nickname.slice(0,2).toUpperCase() }}</span>
+            <div class="avatar-edit-overlay">✏️</div>
+          </div>
+
           <div class="user-info">
             <div class="user-nick-row">
               <template v-if="editingNick">
@@ -106,6 +143,28 @@ watch(() => auth.user?.id, (v) => { if (v) loadStats() })
           <div class="balance-big">
             <div class="muted small">{{ $t('ui.s_99a808d8d1') }}</div>
             <div class="balance-val">{{ fmt(auth.user.balance) }} <span class="coin-unit">K</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Avatar edit modal (fixed overlay) -->
+      <div v-if="editingAvatar" class="avatar-modal-backdrop" @click.self="editingAvatar=false">
+        <div class="avatar-modal">
+          <div class="avatar-modal-title">Фото профілю</div>
+          <div class="avatar-preview-wrap">
+            <div class="avatar-preview">
+              <img v-if="newAvatarUrl" :src="newAvatarUrl" alt="Preview" class="avatar-img" @error="($event.target as HTMLImageElement).style.display='none'" />
+              <span v-else>{{ auth.user.nickname.slice(0,2).toUpperCase() }}</span>
+            </div>
+          </div>
+          <input class="input" v-model="newAvatarUrl" placeholder="Вставте URL зображення…" style="margin-top:12px;" />
+          <div v-if="avatarMsg" class="muted small" style="color:#f87171; margin-top:6px;">{{ avatarMsg }}</div>
+          <div class="avatar-modal-btns">
+            <button class="btn btn-sm" @click="clearAvatar">🗑 Видалити</button>
+            <button class="btn btn-sm" @click="editingAvatar=false">Скасувати</button>
+            <button class="btn btn-primary btn-sm" @click="saveAvatar" :disabled="avatarLoading">
+              {{ avatarLoading ? '…' : '✓ Зберегти' }}
+            </button>
           </div>
         </div>
       </div>
@@ -207,13 +266,47 @@ watch(() => auth.user?.id, (v) => { if (v) loadStats() })
 .user-card { border-radius: 18px; padding: 18px; }
 .user-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .user-avatar {
-  width: 60px; height: 60px; border-radius: 999px;
+  width: 64px; height: 64px; border-radius: 999px;
   background: linear-gradient(135deg, rgba(255,178,74,.35), rgba(255,178,74,.15));
   border: 2px solid rgba(255,178,74,.4);
   display: flex; align-items: center; justify-content: center;
-  font-weight: 1200; font-size: 20px; letter-spacing: 1px;
+  font-weight: 800; font-size: 20px; letter-spacing: 1px;
   flex-shrink: 0;
+  position: relative; overflow: hidden;
+  cursor: pointer; transition: border-color 150ms;
 }
+.user-avatar:hover { border-color: rgba(255,178,74,.8); }
+.user-avatar:hover .avatar-edit-overlay { opacity: 1; }
+.avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 999px; }
+.avatar-edit-overlay {
+  position: absolute; inset: 0; border-radius: 999px;
+  background: rgba(0,0,0,.55);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; opacity: 0; transition: opacity 150ms;
+}
+
+/* Avatar modal */
+.avatar-modal-backdrop {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,.65); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+}
+.avatar-modal {
+  background: #1a1a2e; border: 1px solid rgba(255,255,255,.12);
+  border-radius: 18px; padding: 24px; width: min(400px, 100%);
+  display: flex; flex-direction: column; gap: 0;
+}
+.avatar-modal-title { font-size: 16px; font-weight: 800; margin-bottom: 16px; }
+.avatar-preview-wrap { display: flex; justify-content: center; }
+.avatar-preview {
+  width: 96px; height: 96px; border-radius: 999px;
+  background: linear-gradient(135deg, rgba(255,178,74,.35), rgba(255,178,74,.15));
+  border: 2px solid rgba(255,178,74,.4);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; font-weight: 800; overflow: hidden;
+}
+.avatar-modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }
 .user-info { display: flex; flex-direction: column; gap: 4px; flex: 1; }
 .user-nick-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .user-nick { font-weight: 1000; font-size: 18px; }

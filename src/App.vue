@@ -311,7 +311,11 @@ function logout() {
 
         <div class="top-right">
           <template v-if="auth.user">
-            <div class="user-pill" :title="auth.user.nickname">
+            <div class="user-pill" :title="auth.user.nickname" @click="router.push('/profile')" style="cursor:pointer;">
+              <div class="topbar-avatar">
+                <img v-if="auth.user.avatar_url" :src="auth.user.avatar_url" class="topbar-avatar-img" alt="Avatar" @error="($event.target as HTMLImageElement).style.display='none'" />
+                <span v-else class="topbar-avatar-init">{{ auth.user.nickname.slice(0,2).toUpperCase() }}</span>
+              </div>
               <span class="nick">{{ auth.user.nickname }}</span>
             </div>
             <div class="balance-pill">

@@ -18,6 +18,7 @@ export type User = {
   nickname: string
   role: Role
   balance: number
+  avatar_url?: string | null
 }
 
 export const useAuthStore = defineStore('auth', {
