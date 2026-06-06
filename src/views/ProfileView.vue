@@ -52,6 +52,7 @@ const editingAvatar = ref(false)
 const newAvatarUrl = ref('')
 const avatarMsg = ref('')
 const avatarLoading = ref(false)
+const fileInputRef = ref<HTMLInputElement | null>(null)
 
 function startAvatarEdit() {
   newAvatarUrl.value = auth.user?.avatar_url ?? ''
@@ -77,6 +78,44 @@ async function saveAvatar() {
 
 function clearAvatar() {
   newAvatarUrl.value = ''
+}
+
+function pickFile() {
+  fileInputRef.value?.click()
+}
+
+function handleFileChange(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  if (!file.type.startsWith('image/')) {
+    avatarMsg.value = 'Оберіть зображення (jpg, png, webp…)'
+    return
+  }
+  avatarMsg.value = ''
+
+  const reader = new FileReader()
+  reader.onload = (ev) => {
+    const img = new Image()
+    img.onload = () => {
+      const MAX = 256
+      let { width, height } = img
+      if (width > height) {
+        if (width > MAX) { height = Math.round(height * MAX / width); width = MAX }
+      } else {
+        if (height > MAX) { width = Math.round(width * MAX / height); height = MAX }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+      newAvatarUrl.value = canvas.toDataURL('image/jpeg', 0.88)
+    }
+    img.src = ev.target!.result as string
+  }
+  reader.readAsDataURL(file)
+
+  // reset input so same file can be picked again
+  ;(e.target as HTMLInputElement).value = ''
 }
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
@@ -151,14 +190,35 @@ watch(() => auth.user?.id, (v) => { if (v) loadStats() })
       <div v-if="editingAvatar" class="avatar-modal-backdrop" @click.self="editingAvatar=false">
         <div class="avatar-modal">
           <div class="avatar-modal-title">Фото профілю</div>
+
+          <!-- Preview -->
           <div class="avatar-preview-wrap">
             <div class="avatar-preview">
               <img v-if="newAvatarUrl" :src="newAvatarUrl" alt="Preview" class="avatar-img" @error="($event.target as HTMLImageElement).style.display='none'" />
               <span v-else>{{ auth.user.nickname.slice(0,2).toUpperCase() }}</span>
             </div>
           </div>
-          <input class="input" v-model="newAvatarUrl" placeholder="Вставте URL зображення…" style="margin-top:12px;" />
+
+          <!-- Upload from PC -->
+          <button class="btn btn-upload" @click="pickFile" style="margin-top:14px; width:100%;">
+            📁 Завантажити з ПК
+          </button>
+          <input
+            ref="fileInputRef"
+            type="file"
+            accept="image/*"
+            style="display:none"
+            @change="handleFileChange"
+          />
+
+          <!-- OR divider -->
+          <div class="avatar-divider">або вставте URL</div>
+
+          <!-- URL input -->
+          <input class="input" v-model="newAvatarUrl" placeholder="https://example.com/photo.jpg" />
+
           <div v-if="avatarMsg" class="muted small" style="color:#f87171; margin-top:6px;">{{ avatarMsg }}</div>
+
           <div class="avatar-modal-btns">
             <button class="btn btn-sm" @click="clearAvatar">🗑 Видалити</button>
             <button class="btn btn-sm" @click="editingAvatar=false">Скасувати</button>
@@ -305,6 +365,21 @@ watch(() => auth.user?.id, (v) => { if (v) loadStats() })
   border: 2px solid rgba(255,178,74,.4);
   display: flex; align-items: center; justify-content: center;
   font-size: 28px; font-weight: 800; overflow: hidden;
+}
+.btn-upload {
+  border: 1px dashed rgba(255,255,255,.25);
+  background: rgba(255,255,255,.04);
+  border-radius: 12px; height: 40px;
+  font-size: 13px; font-weight: 700;
+  transition: background 120ms, border-color 120ms;
+}
+.btn-upload:hover { background: rgba(255,255,255,.09); border-color: rgba(255,255,255,.45); }
+.avatar-divider {
+  display: flex; align-items: center; gap: 10px;
+  color: var(--muted); font-size: 12px; margin: 10px 0 6px;
+}
+.avatar-divider::before, .avatar-divider::after {
+  content: ''; flex: 1; height: 1px; background: rgba(255,255,255,.1);
 }
 .avatar-modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }
 .user-info { display: flex; flex-direction: column; gap: 4px; flex: 1; }
