@@ -104,6 +104,20 @@ export const useAuthStore = defineStore('auth', {
       return { ok: true as const }
     },
 
+    async loginWithGoogle(idToken: string) {
+      if (!canUseStorage()) return { ok: false as const }
+      const res = await api<{ ok: boolean; token: string; user: User }>('/api/v1/accounts/auth/google', {
+        method: 'POST',
+        json: true,
+        body: { idToken },
+      })
+      setToken(res.token)
+      this.user = res.user
+      setCachedUser(res.user)
+      await this.fetchBalance().catch(reportError)
+      return { ok: true as const }
+    },
+
     async logout() {
       if (!canUseStorage()) {
         this.user = null

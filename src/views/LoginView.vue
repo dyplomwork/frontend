@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
@@ -10,6 +10,9 @@ const auth = useAuthStore()
 const login = ref('')
 const password = ref('')
 const error = ref('')
+const googleLoading = ref(false)
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
 
 const canSubmit = computed(() => login.value.trim().length > 0 && password.value.length > 0 && !auth.loading)
 
@@ -27,6 +30,31 @@ async function submit() {
     error.value = e?.message || 'Помилка входу'
   }
 }
+
+async function handleGoogleCredential(response: any) {
+  error.value = ''
+  googleLoading.value = true
+  try {
+    const res = await auth.loginWithGoogle(response.credential)
+    if (!res.ok) { error.value = 'Google sign-in failed'; return }
+    const next = (route.query.next as string | undefined) || '/profile'
+    await router.replace(next)
+  } catch (e: any) {
+    error.value = e?.message || 'Помилка Google входу'
+  } finally {
+    googleLoading.value = false
+  }
+}
+
+onMounted(() => {
+  if (!GOOGLE_CLIENT_ID) return
+  const g = (window as any).google
+  if (!g) return
+  g.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential })
+  g.accounts.id.renderButton(document.getElementById('google-btn-login'), {
+    theme: 'filled_black', size: 'large', text: 'signin_with', width: 340, locale: 'uk',
+  })
+})
 </script>
 
 <template>
@@ -54,6 +82,11 @@ async function submit() {
         <button class="btn primary" type="submit" :disabled="!canSubmit">
           {{ auth.loading ? 'Входим…' : 'Ввійти' }}
         </button>
+
+        <template v-if="GOOGLE_CLIENT_ID">
+          <div class="divider"><span>або</span></div>
+          <div id="google-btn-login" class="google-btn-wrap"></div>
+        </template>
 
         <p class="hint">
           {{ $t('ui.s_6b3744217d') }}
@@ -120,5 +153,12 @@ input:focus{ border-color: var(--border2); background: rgba(255,255,255,.06); }
   text-align: center;
 }
 .link{ color: var(--text); text-decoration: underline; }
-
+.divider{
+  display: flex; align-items: center; gap: 10px;
+  color: var(--muted); font-size: 12px; margin: 4px 0;
+}
+.divider::before, .divider::after{
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+.google-btn-wrap{ display: flex; justify-content: center; }
 </style>

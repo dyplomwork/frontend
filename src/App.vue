@@ -80,20 +80,14 @@ const sfxOn = ref(isSfxOn())
 watch(sfxOn, (v) => setSfxOn(!!v), { immediate: true })
 function toggleSfx() { sfxOn.value = !sfxOn.value }
 
-// Drops strip — queue-based, each new drop slides through exactly once;
-// when idle, cycles top-5 rarest recent drops
+// Drops strip — continuous marquee showing multiple items simultaneously
 import { api } from './utils/api'
 type Drop = { nick: string; icon: string; name: string; nameUa: string; rarity: string; color: string; ts: number }
 
 const RARITY_ORDER: Record<string, number> = { mythic: 5, legendary: 4, epic: 3, rare: 2, uncommon: 1, common: 0 }
 
+const tickerPool = ref<Drop[]>([])
 const seenDropTs = new Set<number>()
-const dropQueue: Drop[] = []
-const activeDrop = ref<Drop | null>(null)
-const isIdle = ref(false)
-const idleDrops = ref<Drop[]>([])
-let idleIdx = 0
-let dropKey = 0
 let tickerTimer: number | null = null
 let tickerInit = false
 
@@ -101,56 +95,31 @@ function dropName(d: Drop) {
   return locale.value === 'ua' ? (d.nameUa || d.name) : d.name
 }
 
-function showNextDrop() {
-  dropKey++
-  if (dropQueue.length > 0) {
-    isIdle.value = false
-    idleIdx = 0
-    activeDrop.value = dropQueue.shift()!
-    return
-  }
-  if (idleDrops.value.length > 0) {
-    isIdle.value = true
-    activeDrop.value = idleDrops.value[idleIdx % idleDrops.value.length]
-    idleIdx++
-    return
-  }
-  isIdle.value = false
-  activeDrop.value = null
-}
-
-function onDropAnimEnd() {
-  // Immediately show next — no gap between items
-  showNextDrop()
-}
-
-function mergeIdleDrops(newDrops: Drop[]) {
-  const merged = [...idleDrops.value, ...newDrops]
-  const seen = new Set<number>()
-  idleDrops.value = merged
-    .filter(d => { if (seen.has(d.ts)) return false; seen.add(d.ts); return true })
-    .sort((a, b) => (RARITY_ORDER[b.rarity] ?? 0) - (RARITY_ORDER[a.rarity] ?? 0))
-    .slice(0, 5)
-}
-
 async function fetchDrops() {
   try {
     const res = await api<Drop[]>('/api/v1/drops/recent', { noAuth: true })
-    if (!Array.isArray(res)) return
+    if (!Array.isArray(res) || res.length === 0) return
+
     if (!tickerInit) {
+      // First load: fill pool with top items by rarity (idle mode)
       for (const d of res) seenDropTs.add(d.ts)
-      mergeIdleDrops(res)
+      tickerPool.value = [...res]
+        .sort((a, b) => (RARITY_ORDER[b.rarity] ?? 0) - (RARITY_ORDER[a.rarity] ?? 0))
+        .slice(0, 10)
       tickerInit = true
-      if (!activeDrop.value) setTimeout(showNextDrop, 800)
       return
     }
-    const newDrops = res.filter(d => !seenDropTs.has(d.ts)).sort((a, b) => a.ts - b.ts)
-    for (const d of newDrops) {
-      seenDropTs.add(d.ts)
-      dropQueue.push(d)
+
+    // Subsequent loads: prepend truly new drops to pool
+    const newDrops = res
+      .filter(d => !seenDropTs.has(d.ts))
+      .sort((a, b) => a.ts - b.ts)
+
+    for (const d of newDrops) seenDropTs.add(d.ts)
+
+    if (newDrops.length > 0) {
+      tickerPool.value = [...newDrops, ...tickerPool.value].slice(0, 12)
     }
-    if (newDrops.length) mergeIdleDrops(newDrops)
-    if (!activeDrop.value && dropQueue.length > 0) showNextDrop()
   } catch {}
 }
 
@@ -368,21 +337,29 @@ function logout() {
         </div>
       </header>
 
-      <!-- Drops strip: always visible; new drops priority, idle cycles top-5 rarest -->
-      <div class="drops-strip" :class="{ 'strip-idle': isIdle }">
+      <!-- Drops strip: continuous marquee — multiple items visible simultaneously -->
+      <div class="drops-strip">
         <div class="strip-live">
-          <span v-if="!isIdle" class="strip-dot-pulse"></span>
-          <span v-else class="strip-dot-idle">★</span>
-          {{ isIdle ? 'ТОП' : 'LIVE' }}
+          <span class="strip-dot-pulse"></span>
+          LIVE
         </div>
         <div class="strip-scroll">
-          <div v-if="activeDrop" class="strip-item" @animationend="onDropAnimEnd" :key="dropKey">
-            <span class="strip-rarity-dot" :style="{ color: activeDrop.color }">⬤</span>
-            <span class="strip-nick">{{ activeDrop.nick }}</span>
-            <span class="strip-sep">{{ isIdle ? 'нещодавно виграв' : 'виграв' }}</span>
-            <span class="strip-icon">{{ activeDrop.icon }}</span>
-            <span class="strip-name" :style="{ color: activeDrop.color }">{{ dropName(activeDrop) }}</span>
-            <span class="strip-tag" :style="{ color: activeDrop.color }">{{ activeDrop.rarity }}</span>
+          <div v-if="tickerPool.length > 0" class="strip-track">
+            <!-- Render twice for seamless infinite loop (translate -50% = one full pass) -->
+            <template v-for="pass in 2" :key="pass">
+              <div
+                v-for="(d, idx) in tickerPool"
+                :key="`${pass}-${idx}`"
+                class="strip-item"
+              >
+                <span class="strip-rarity-dot" :style="{ color: d.color }">⬤</span>
+                <span class="strip-nick">{{ d.nick }}</span>
+                <span class="strip-sep">виграв</span>
+                <span class="strip-icon">{{ d.icon }}</span>
+                <span class="strip-name" :style="{ color: d.color }">{{ dropName(d) }}</span>
+                <span class="strip-tag" :style="{ color: d.color }">{{ d.rarity }}</span>
+              </div>
+            </template>
           </div>
         </div>
       </div>

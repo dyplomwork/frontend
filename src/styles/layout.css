@@ -4,6 +4,7 @@
   min-height: 100vh;
   display:grid;
   grid-template-columns: var(--sidebar-current) 1fr;
+  overflow-x: hidden; /* prevent ticker from causing horizontal scroll */
 }
 .app-shell.open{ --sidebar-current: var(--sidebar-w); }
 
@@ -27,7 +28,7 @@
 
 .app-content{ min-width:0; display:flex; flex-direction:column; flex:1; }
 
-/* Drops strip — single item slides through once, then disappears */
+/* Drops strip — continuous marquee, multiple items scroll simultaneously */
 .drops-strip{
   display: flex;
   align-items: center;
@@ -40,6 +41,7 @@
   margin-top: calc(var(--main-pad-y, 18px) * -1);
   z-index: 9;
   flex-shrink: 0;
+  overflow: hidden;
 }
 .strip-live{
   flex-shrink: 0;
@@ -55,6 +57,7 @@
   border-right: 1px solid rgba(255,255,255,.06);
   background: rgba(255,40,40,.05);
   text-transform: uppercase;
+  z-index: 2;
 }
 .strip-dot-pulse{
   width: 7px; height: 7px; border-radius: 50%;
@@ -68,36 +71,39 @@
 }
 .strip-scroll{
   flex: 1;
+  min-width: 0;          /* ← key: allows flex item to shrink below content size */
   overflow: hidden;
-  position: relative;
   height: 100%;
+  position: relative;
+}
+/* Marquee track — absolutely positioned so it never affects parent width */
+.strip-track{
+  position: absolute;   /* ← key: out of flow, won't stretch parent */
+  top: 0; left: 0;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  white-space: nowrap;
+  animation: marqueeScroll 32s linear infinite;
+}
+@keyframes marqueeScroll{
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
 .strip-item{
-  position: absolute;
-  top: 0; left: 0;
-  height: 100%;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 20px;
+  gap: 8px;
+  padding: 0 22px;
+  height: 100%;
   white-space: nowrap;
   font-size: 12.5px;
   font-weight: 700;
-  animation: dropScrollOnce 10.8s linear forwards;
+  border-right: 1px solid rgba(255,255,255,.07);
 }
-@keyframes dropScrollOnce{
-  0%   { transform: translateX(120vw); }
-  100% { transform: translateX(-120%); }
-}
-.drops-strip.strip-idle .strip-live{
-  color: rgba(255,200,80,.85);
-  background: rgba(255,180,40,.04);
-  border-right-color: rgba(255,200,80,.12);
-}
-.strip-dot-idle{ font-size: 9px; opacity: .7; }
-.strip-rarity-dot{ font-size: 9px; }
-.strip-nick{ color: rgba(255,255,255,.58); font-weight: 600; }
-.strip-sep{ color: rgba(255,255,255,.3); font-size: 11px; font-weight: 400; }
+.strip-rarity-dot{ font-size: 9px; flex-shrink: 0; }
+.strip-nick{ color: rgba(255,255,255,.55); font-weight: 600; }
+.strip-sep{ color: rgba(255,255,255,.28); font-size: 11px; font-weight: 400; }
 .strip-icon{ font-size: 15px; }
 .strip-name{ font-weight: 800; }
 .strip-tag{
@@ -130,6 +136,7 @@
   backdrop-filter: blur(10px);
   box-shadow: 0 14px 40px rgba(0,0,0,.35);
 }
+.top-left{ display:flex; align-items:center; gap: 10px; }
 .top-right{ display:flex; align-items:center; gap: 10px; }
 .bal{
   display:flex;

@@ -26,6 +26,37 @@ const sellBusy = ref(false)
 const msg = ref('')
 const msgType = ref<'success'|'error'>('success')
 
+// Vendor sell (50% of base value)
+const vendorItem = ref<InventoryItem | null>(null)
+const vendorBusy = ref(false)
+
+function vendorPrice(item: InventoryItem) { return Math.floor(item.value * 0.5) }
+
+function startVendorSell(item: InventoryItem) {
+  if (item.listingId) return // can't sell listed items
+  vendorItem.value = item
+  msg.value = ''
+}
+
+async function confirmVendorSell() {
+  if (!vendorItem.value) return
+  vendorBusy.value = true
+  msg.value = ''
+  try {
+    const res = await api<any>(`/api/v1/items/${vendorItem.value.id}/sell-vendor`, { method: 'POST' })
+    msg.value = `Продано скупщику за ${formatNumber(res.gained, 2)} K`
+    msgType.value = 'success'
+    if (auth.user) auth.user = { ...auth.user, balance: res.balance }
+    vendorItem.value = null
+    await load()
+  } catch (e: any) {
+    msg.value = e?.message ?? t('ui.s_error')
+    msgType.value = 'error'
+  } finally {
+    vendorBusy.value = false
+  }
+}
+
 const RARITIES = ['common','uncommon','rare','epic','legendary','mythic']
 const RARITY_KEY: Record<string, string> = {
   common: 's_rarity_common', uncommon: 's_rarity_uncommon',
@@ -149,13 +180,36 @@ onMounted(load)
             {{ $t('ui.s_inventory_listed') }}
             <button class="btn btn-sm" @click="delist(item.listingId!)">{{ $t('ui.s_auction_delist') }}</button>
           </div>
-          <button
-            v-else
-            class="btn item-sell-btn"
-            @click="startSell(item)"
-          >
-            {{ $t('ui.s_inventory_sell') }}
-          </button>
+          <div v-else class="item-actions">
+            <button class="btn item-sell-btn" @click="startSell(item)" title="Виставити на аукціон">
+              🏷️ Аукціон
+            </button>
+            <button class="btn item-vendor-btn" @click="startVendorSell(item)" title="Продати скупщику за 50%">
+              🛒 {{ vendorPrice(item) > 0 ? formatNumber(vendorPrice(item), 0) + ' K' : 'Продати' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vendor sell modal -->
+      <div v-if="vendorItem" class="modal-backdrop" @click.self="vendorItem = null">
+        <div class="modal-box card">
+          <h3 style="margin:0 0 6px">🛒 Продати скупщику</h3>
+          <p class="muted small" style="margin:0 0 14px">Скупщик купує предмети за 50% від базової ціни.</p>
+          <div class="vendor-item-preview">
+            <span style="font-size:32px">{{ vendorItem.icon }}</span>
+            <div>
+              <div class="item-name" :style="{ color: vendorItem.color }">{{ itemName(vendorItem) }}</div>
+              <div class="muted small">Базова ціна: {{ fmt(vendorItem.value) }} K</div>
+              <div style="font-weight:900; font-size:16px; color:#4ade80">Ви отримаєте: {{ fmt(vendorPrice(vendorItem)) }} K</div>
+            </div>
+          </div>
+          <div class="row" style="gap:10px; margin-top:16px;">
+            <button class="btn btn-primary" @click="confirmVendorSell" :disabled="vendorBusy">
+              {{ vendorBusy ? 'Продаємо…' : 'Продати' }}
+            </button>
+            <button class="btn" @click="vendorItem = null">Скасувати</button>
+          </div>
         </div>
       </div>
 
@@ -209,8 +263,12 @@ onMounted(load)
 .item-name { font-weight: 900; font-size: 13px; }
 .item-value { font-size: 12px; }
 .item-listed { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; }
-.item-sell-btn { width: 100%; height: 34px; border-radius: 10px; font-size: 12px; margin-top: 4px; }
+.item-actions { display: flex; flex-direction: column; gap: 6px; width: 100%; margin-top: 4px; }
+.item-sell-btn { width: 100%; height: 32px; border-radius: 10px; font-size: 11px; }
+.item-vendor-btn { width: 100%; height: 32px; border-radius: 10px; font-size: 11px; background: rgba(74,222,128,.10); border-color: rgba(74,222,128,.25); color: #4ade80; }
+.item-vendor-btn:hover { background: rgba(74,222,128,.18); border-color: rgba(74,222,128,.45); }
 .btn-sm { height: 28px; padding: 0 10px; font-size: 11px; border-radius: 8px; }
+.vendor-item-preview { display: flex; align-items: center; gap: 14px; padding: 12px; border: 1px solid rgba(255,255,255,.08); border-radius: 14px; background: rgba(0,0,0,.18); }
 
 .field { display: flex; flex-direction: column; gap: 6px; }
 .label { font-size: 13px; color: var(--muted); }

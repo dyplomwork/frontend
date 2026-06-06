@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
@@ -9,6 +9,9 @@ const auth = useAuthStore()
 const nickname = ref('')
 const password = ref('')
 const error = ref('')
+const googleLoading = ref(false)
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string
 
 const passwordOk = computed(() => password.value.length >= 8)
 const canSubmit = computed(() => nickname.value.trim().length > 0 && passwordOk.value && !auth.loading)
@@ -33,6 +36,30 @@ async function submit() {
     error.value = e?.message || 'Помилка реєстрації'
   }
 }
+
+async function handleGoogleCredential(response: any) {
+  error.value = ''
+  googleLoading.value = true
+  try {
+    const res = await auth.loginWithGoogle(response.credential)
+    if (!res.ok) { error.value = 'Google sign-in failed'; return }
+    await router.replace({ name: 'profile' })
+  } catch (e: any) {
+    error.value = e?.message || 'Помилка Google реєстрації'
+  } finally {
+    googleLoading.value = false
+  }
+}
+
+onMounted(() => {
+  if (!GOOGLE_CLIENT_ID) return
+  const g = (window as any).google
+  if (!g) return
+  g.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential })
+  g.accounts.id.renderButton(document.getElementById('google-btn-register'), {
+    theme: 'filled_black', size: 'large', text: 'signup_with', width: 340, locale: 'uk',
+  })
+})
 </script>
 
 <template>
@@ -62,6 +89,11 @@ async function submit() {
         <button class="btn primary" type="submit" :disabled="!canSubmit">
           {{ auth.loading ? 'Створюємо…' : 'Створити акаунт' }}
         </button>
+
+        <template v-if="GOOGLE_CLIENT_ID">
+          <div class="divider"><span>або зареєструйтесь через</span></div>
+          <div id="google-btn-register" class="google-btn-wrap"></div>
+        </template>
 
         <p class="hint">
           {{ $t('ui.s_1411042379') }}
@@ -130,5 +162,12 @@ input:focus{ border-color: var(--border2); background: rgba(255,255,255,.06); }
   text-align: center;
 }
 .link{ color: var(--text); text-decoration: underline; }
-
+.divider{
+  display: flex; align-items: center; gap: 10px;
+  color: var(--muted); font-size: 12px; margin: 4px 0;
+}
+.divider::before, .divider::after{
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+.google-btn-wrap{ display: flex; justify-content: center; }
 </style>

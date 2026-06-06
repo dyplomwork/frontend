@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    { "source": "/api/v1/accounts/:path*",  "destination": "RAILWAY_AUTH_URL/api/v1/accounts/:path*" },
+    { "source": "/api/v1/admin/:path*",     "destination": "RAILWAY_AUTH_URL/api/v1/admin/:path*" },
+    { "source": "/api/v1/stats/:path*",     "destination": "RAILWAY_AUTH_URL/api/v1/stats/:path*" },
+    { "source": "/api/me",                  "destination": "RAILWAY_AUTH_URL/api/me" },
+    { "source": "/api/balance/:path*",      "destination": "RAILWAY_AUTH_URL/api/balance/:path*" },
+    { "source": "/api/v1/games/:path*",     "destination": "RAILWAY_GAMES_URL/api/v1/games/:path*" },
+    { "source": "/api/v1/items/:path*",     "destination": "RAILWAY_GAMES_URL/api/v1/items/:path*" },
+    { "source": "/api/v1/auction/:path*",   "destination": "RAILWAY_GAMES_URL/api/v1/auction/:path*" },
+    { "source": "/api/v1/drops/:path*",     "destination": "RAILWAY_GAMES_URL/api/v1/drops/:path*" },
+    { "source": "/api/v1/clicker/:path*",   "destination": "RAILWAY_GAMES_URL/api/v1/clicker/:path*" },
+    { "source": "/api/v1/battles/:path*",   "destination": "RAILWAY_GAMES_URL/api/v1/battles/:path*" },
+    { "source": "/(.*)",                    "destination": "/index.html" }
+  ]
+}
