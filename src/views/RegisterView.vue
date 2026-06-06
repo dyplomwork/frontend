@@ -51,8 +51,19 @@ async function handleGoogleCredential(response: any) {
   }
 }
 
-onMounted(() => {
+function loadGoogleGIS() {
+  return new Promise<void>((resolve) => {
+    if ((window as any).google?.accounts) { resolve(); return }
+    const script = document.createElement('script')
+    script.src = 'https://accounts.google.com/gsi/client'
+    script.onload = () => resolve()
+    document.head.appendChild(script)
+  })
+}
+
+onMounted(async () => {
   if (!GOOGLE_CLIENT_ID) return
+  await loadGoogleGIS()
   const g = (window as any).google
   if (!g) return
   g.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential })
