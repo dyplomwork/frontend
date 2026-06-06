@@ -9,7 +9,6 @@ import { sfx } from '../utils/sfx'
 import { formatNumber } from '../utils/format'
 
 type ReelItem = { label: string; amount: number; icon: string }
-type HistoryItem = { ts: number; label: string; amount: number }
 
 const route = useRoute()
 const game = useGameStore()
@@ -50,39 +49,6 @@ const animEasing = 'cubic-bezier(.15,.9,.2,1)'
 const quickOpen = ref(false)
 const QUICK_KEY = 'cases_quick_open'
 
-const HISTORY_LIMIT = 20
-const history = ref<HistoryItem[]>([])
-
-function historyKey(caseId: string){
-  return `case_history_${caseId}`
-}
-function loadHistory(){
-  const id = c.value?.id
-  if(!id) return
-  try{
-    const raw = localStorage.getItem(historyKey(id))
-    history.value = raw ? (JSON.parse(raw) as HistoryItem[]) : []
-  }catch{
-    history.value = []
-  }
-}
-function pushHistory(item: HistoryItem){
-  const id = c.value?.id
-  if(!id) return
-  const next = [item, ...history.value].slice(0, HISTORY_LIMIT)
-  history.value = next
-  try{
-    localStorage.setItem(historyKey(id), JSON.stringify(next))
-  }catch{}
-}
-function clearHistory(){
-  const id = c.value?.id
-  if(!id) return
-  history.value = []
-  localStorage.removeItem(historyKey(id))
-}
-
-watch(() => c.value?.id, () => loadHistory())
 
 function waitFrame(){
   return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
@@ -275,8 +241,6 @@ async function openOne(){
 
   bigwinStore.maybeShow(Number(wAmount) || 0, c.value.price)
 
-  pushHistory({ ts: Date.now(), label: wLabel, amount: wAmount })
-
   if (wAmount >= 350) triggerJackpotFx(wAmount)
 
   const winItem: ReelItem = { label: wLabel, amount: wAmount, icon: lootIcon(wAmount) }
@@ -326,7 +290,6 @@ onMounted(() => {
   try{
     quickOpen.value = localStorage.getItem(QUICK_KEY) === '1'
   }catch{}
-  loadHistory()
 })
 
 watch(quickOpen, (v) => {
@@ -372,24 +335,6 @@ watch(quickOpen, (v) => {
           <span v-else class="pill muted">{{ $t('ui.s_bc3db5d2b8') }}</span>
         </div>
 
-        <div class="hist">
-          <div class="hist-head">
-            <div class="muted"><b>{{ $t('ui.s_16d2b386b2') }}</b> <span class="small">({{ history.length }}/20)</span></div>
-            <button class="tiny" :disabled="opening || !history.length" @click="clearHistory">{{ $t('ui.s_clear') }}</button>
-          </div>
-
-          <div v-if="!history.length" class="hist-empty muted">{{ $t('ui.s_90a2dedaa8') }}</div>
-
-          <div v-else class="hist-list">
-            <div class="hist-row" v-for="h in history" :key="h.ts + '-' + h.amount">
-              <div class="h-left">
-                <div class="h-ic" aria-hidden="true">{{ lootIcon(h.amount) }}</div>
-                <div class="h-lab">{{ h.label }}</div>
-              </div>
-              <div class="h-amt">+{{ h.amount }}</div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <div class="main-panel">
@@ -563,53 +508,6 @@ watch(quickOpen, (v) => {
 .pill.err{ border-color: rgba(248,81,73,.45); background: rgba(248,81,73,.10); }
 .pill.muted{ opacity:.85; }
 
-.hist{
-  margin-top: 4px;
-  border: 1px solid rgba(255,255,255,.08);
-  background: rgba(255,255,255,.03);
-  border-radius: 16px;
-  padding: 12px;
-}
-.hist-head{
-  display:flex;
-  align-items:center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-.tiny{
-  border-radius: 10px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.04);
-  color: rgba(255,255,255,.85);
-  padding: 8px 10px;
-  font-weight: 900;
-  cursor:pointer;
-}
-.tiny:disabled{ opacity:.55; cursor:not-allowed; }
-
-.hist-empty{ padding: 8px 0; }
-.hist-list{ display:flex; flex-direction: column; gap: 8px; max-height: 260px; overflow:auto; padding-right: 4px; }
-.hist-row{
-  display:flex;
-  align-items:center;
-  justify-content: space-between;
-  gap: 10px;
-  border: 1px solid rgba(255,255,255,.08);
-  background: rgba(0,0,0,.12);
-  border-radius: 12px;
-  padding: 8px 10px;
-}
-.h-left{ display:flex; align-items:center; gap: 10px; }
-.h-ic{
-  width: 30px; height: 30px;
-  border-radius: 12px;
-  display:grid; place-items:center;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.04);
-}
-.h-lab{ font-weight: 900; color: rgba(255,255,255,.86); font-size: 13px; }
-.h-amt{ font-weight: 1000; color: rgba(234,243,255,.92); }
 
 .main-panel{ flex:1; padding: 18px; position: relative; }
 

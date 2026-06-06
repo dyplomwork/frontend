@@ -82,7 +82,7 @@ function toggleSfx() { sfxOn.value = !sfxOn.value }
 
 // Drops strip — continuous marquee showing multiple items simultaneously
 import { api } from './utils/api'
-type Drop = { nick: string; icon: string; name: string; nameUa: string; rarity: string; color: string; ts: number }
+type Drop = { nick: string; icon: string; name: string; nameUa: string; rarity: string; color: string; ts: number; type?: string; mult?: number; amount?: number }
 
 const RARITY_ORDER: Record<string, number> = { mythic: 5, legendary: 4, epic: 3, rare: 2, uncommon: 1, common: 0 }
 
@@ -355,13 +355,22 @@ function logout() {
                 v-for="(d, idx) in tickerPool"
                 :key="`${pass}-${idx}`"
                 class="strip-item"
+                :class="{ 'strip-bigwin': (d as any).type === 'bigwin' }"
               >
                 <span class="strip-rarity-dot" :style="{ color: d.color }">⬤</span>
                 <span class="strip-nick">{{ d.nick }}</span>
-                <span class="strip-sep">виграв</span>
-                <span class="strip-icon">{{ d.icon }}</span>
-                <span class="strip-name" :style="{ color: d.color }">{{ dropName(d) }}</span>
-                <span class="strip-tag" :style="{ color: d.color }">{{ d.rarity }}</span>
+                <template v-if="(d as any).type === 'bigwin'">
+                  <span class="strip-sep">отримав</span>
+                  <span class="strip-icon">{{ d.icon }}</span>
+                  <span class="strip-name" :style="{ color: d.color }">{{ dropName(d) }}</span>
+                  <span class="strip-tag strip-mult" :style="{ color: d.color }">×{{ (d as any).mult }}</span>
+                </template>
+                <template v-else>
+                  <span class="strip-sep">виграв</span>
+                  <span class="strip-icon">{{ d.icon }}</span>
+                  <span class="strip-name" :style="{ color: d.color }">{{ dropName(d) }}</span>
+                  <span class="strip-tag" :style="{ color: d.color }">{{ d.rarity }}</span>
+                </template>
               </div>
             </template>
           </div>

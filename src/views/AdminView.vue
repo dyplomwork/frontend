@@ -9,7 +9,7 @@ const { t, locale } = useI18n()
 const auth = useAuthStore()
 
 // ─── State ────────────────────────────────────────────────────────────
-const tab = ref<'dashboard' | 'users'>('dashboard')
+const tab = ref<'dashboard' | 'users' | 'battles'>('dashboard')
 const loading = ref(false)
 const globalMsg = ref('')
 const globalMsgType = ref<'ok'|'err'>('ok')
@@ -17,6 +17,8 @@ const globalMsgType = ref<'ok'|'err'>('ok')
 const dashboard = ref<any>(null)
 const users = ref<any[]>([])
 const meta = ref<{ achievements: any[]; items: any[] }>({ achievements: [], items: [] })
+const battles = ref<any[]>([])
+const battlesLoading = ref(false)
 
 const searchUsers = ref('')
 const expandedUser = ref<string | null>(null)
@@ -179,6 +181,15 @@ const filteredUsers = computed(() => {
   )
 })
 
+async function loadBattles() {
+  battlesLoading.value = true
+  try {
+    const res = await api<any[]>('/api/v1/battles/history?limit=100', { method: 'GET' })
+    battles.value = Array.isArray(res) ? res : []
+  } catch (e: any) { showMsg(e?.message ?? 'Error', 'err') }
+  finally { battlesLoading.value = false }
+}
+
 function rarityColor(r: string) {
   const m: Record<string,string> = { common:'#9ca3af', uncommon:'#34d399', rare:'#3b82f6', epic:'#a855f7', legendary:'#f59e0b', mythic:'#ec4899' }
   return m[r] ?? '#9ca3af'
@@ -200,6 +211,9 @@ function itemDef(id: string) { return meta.value.items.find(i => i.id === id) ??
       </button>
       <button class="nav-btn" :class="{ on: tab==='users' }" @click="tab='users'; loadUsers()">
         <span>👥</span> Users <span class="nav-badge">{{ users.length }}</span>
+      </button>
+      <button class="nav-btn" :class="{ on: tab==='battles' }" @click="tab='battles'; loadBattles()">
+        <span>🪙</span> CoinFlip History
       </button>
       <div class="nav-spacer" />
       <button class="nav-btn refresh-btn" @click="refreshAll" :disabled="loading">
@@ -429,6 +443,47 @@ function itemDef(id: string) { return meta.value.items.find(i => i.id === id) ??
         </div>
       </div>
 
+      <!-- ╔═ BATTLES HISTORY ═══════════════════════════════════════════╗ -->
+      <div v-if="tab === 'battles'">
+        <div class="dash-card" style="grid-column:unset">
+          <div class="row-between" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div class="dc-title">🪙 CoinFlip History</div>
+            <button class="btn btn-sm" @click="loadBattles" :disabled="battlesLoading">↻ Refresh</button>
+          </div>
+
+          <div v-if="battlesLoading" class="muted small">Loading…</div>
+          <div v-else-if="!battles.length" class="muted small">No finished battles yet.</div>
+          <div v-else class="battles-table-wrap">
+            <table class="battles-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Amount</th>
+                  <th>Creator</th>
+                  <th>Joiner</th>
+                  <th>Result</th>
+                  <th>Winner</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(b, i) in battles" :key="b.id">
+                  <td class="muted small">{{ i + 1 }}</td>
+                  <td class="gold">{{ fmt(b.amount * 2, 0) }} K</td>
+                  <td>{{ b.creatorNick }}</td>
+                  <td>{{ b.joinerNick ?? '—' }}</td>
+                  <td><span class="side-badge" :class="b.resultSide">{{ b.resultSide ?? '—' }}</span></td>
+                  <td :class="{ 'gold': !!b.winnerId }">
+                    {{ b.winnerId === b.creatorId ? b.creatorNick : b.joinerNick ?? '—' }}
+                  </td>
+                  <td class="muted small">{{ b.updatedAt ? new Date(b.updatedAt).toLocaleString('uk') : '—' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </template>
@@ -485,11 +540,30 @@ function itemDef(id: string) { return meta.value.items.find(i => i.id === id) ??
 }
 
 .global-msg {
-  padding: 10px 16px; border-radius: 12px; font-size: 13px; font-weight: 900;
-  border: 1px solid; position: sticky; top: 0; z-index: 10;
+  position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
+  z-index: 9999; padding: 10px 28px; border-radius: 12px;
+  font-size: 13px; font-weight: 900; border: 1px solid;
+  white-space: nowrap; box-shadow: 0 8px 32px rgba(0,0,0,.45);
+  pointer-events: none;
 }
-.global-msg.ok { border-color: rgba(34,197,94,.4); background: rgba(34,197,94,.12); }
-.global-msg.err { border-color: rgba(248,81,73,.4); background: rgba(248,81,73,.12); }
+.global-msg.ok { border-color: rgba(34,197,94,.5); background: rgba(10,40,20,.95); color: #4ade80; }
+.global-msg.err { border-color: rgba(248,81,73,.5); background: rgba(40,10,10,.95); color: #f87171; }
+
+/* Styled select — matches site dark theme */
+select.input {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1L6 7L11 1' stroke='rgba(255,255,255,0.45)' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px;
+  cursor: pointer;
+}
+select.input option {
+  background: #1a1a2e;
+  color: #fff;
+  padding: 6px 10px;
+}
 
 .muted { color: rgba(255,255,255,.6); }
 .small { font-size: 12px; }
@@ -648,4 +722,27 @@ function itemDef(id: string) { return meta.value.items.find(i => i.id === id) ??
   .stats-mini-head { display: none; }
   .stats-mini-row { grid-template-columns: 1fr auto auto; }
 }
+
+/* ─── Battles history table ──────────────────────────────────────────── */
+.battles-table-wrap { overflow-x: auto; }
+.battles-table {
+  width: 100%; border-collapse: collapse; font-size: 13px;
+}
+.battles-table th {
+  text-align: left; padding: 8px 12px;
+  font-size: 11px; text-transform: uppercase; letter-spacing: .4px;
+  color: rgba(255,255,255,.45); font-weight: 900;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.battles-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.battles-table tr:last-child td { border-bottom: none; }
+.battles-table tr:hover td { background: rgba(255,255,255,.03); }
+.side-badge {
+  display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 900; text-transform: uppercase;
+}
+.side-badge.heads { background: rgba(255,178,74,.15); color: #ffb24a; border: 1px solid rgba(255,178,74,.3); }
+.side-badge.tails { background: rgba(59,130,246,.15); color: #60a5fa; border: 1px solid rgba(59,130,246,.3); }
 </style>

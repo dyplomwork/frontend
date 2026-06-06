@@ -225,6 +225,9 @@ onBeforeUnmount(() => {
       <div v-if="message" class="msg-box" :class="messageType">{{ message }}</div>
     </aside>
 
+    <!-- ─── Right: clicker + upgrades ─────────────────── -->
+    <div class="c-main">
+
     <!-- ─── Center: click coin ───────────────────────── -->
     <div class="c-center c-panel">
       <div class="click-zone">
@@ -320,7 +323,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <!-- ─── Right: upgrades ──────────────────────────── -->
+    <!-- ─── Upgrades: below clicker ─────────────────── -->
     <aside class="c-panel c-right">
       <div class="upg-header">
         <span class="upg-title">{{ $t('ui.s_clicker_upgrades') }}</span>
@@ -330,6 +333,7 @@ onBeforeUnmount(() => {
         <div class="tier-label" :style="{ color: TIER_COLORS[group.tier] }">
           {{ $t(`ui.s_clicker_tier_${group.tier}`, `Tier ${group.tier}`) }}
         </div>
+        <div class="upg-cards">
         <div
           v-for="u in group.list"
           :key="u.id"
@@ -356,22 +360,28 @@ onBeforeUnmount(() => {
             <span v-else>{{ upgCostLabel(u) }}</span>
           </button>
         </div>
+        </div><!-- /.upg-cards -->
       </div>
     </aside>
+
+    </div><!-- /.c-main -->
   </div>
 </template>
 
 <style scoped>
 .clicker-page {
   display: grid;
-  grid-template-columns: 200px 1fr 340px;
+  grid-template-columns: 200px 1fr;
   gap: 10px;
   padding: 12px;
-  min-height: calc(100vh - 100px);
   align-items: start;
 }
-@media (max-width: 1100px) { .clicker-page { grid-template-columns: 1fr 320px; } .c-left { display: none; } }
-@media (max-width: 760px) { .clicker-page { grid-template-columns: 1fr; } .c-right { order: -1; } }
+.c-main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+@media (max-width: 760px) { .clicker-page { grid-template-columns: 1fr; } .c-left { display: none; } }
 
 .c-panel {
   background: rgba(0,0,0,.22);
@@ -686,17 +696,19 @@ onBeforeUnmount(() => {
 .click-label { font-size: 14px; font-weight: 900; letter-spacing: 2px; color: rgba(255,255,255,.65); }
 .click-sub { }
 
-/* Right — upgrades (larger panel) */
+/* Bottom — upgrades (full width, grid layout) */
 .c-right {
-  display: flex; flex-direction: column; gap: 10px;
-  overflow-y: auto; max-height: calc(100vh - 120px);
+  display: flex; flex-direction: column; gap: 14px;
 }
-.c-right::-webkit-scrollbar { width: 6px; }
-.c-right::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 999px; }
 .upg-header { display: flex; align-items: center; justify-content: space-between; }
 .upg-title { font-weight: 1000; font-size: 16px; }
-.upg-group { display: flex; flex-direction: column; gap: 6px; }
-.tier-label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .5px; padding: 4px 0 2px; border-bottom: 1px solid rgba(255,255,255,.04); margin-bottom: 2px; }
+.upg-group { display: flex; flex-direction: column; gap: 8px; }
+.tier-label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .5px; padding: 4px 0 4px; border-bottom: 1px solid rgba(255,255,255,.06); margin-bottom: 2px; }
+.upg-group .upg-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
 .upg-card {
   border: 1px solid color-mix(in srgb, var(--tc, #9ca3af) 18%, transparent);
   background: rgba(0,0,0,.18); border-radius: 14px; padding: 12px;
