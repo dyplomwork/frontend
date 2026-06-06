@@ -100,9 +100,9 @@ function rarity(amount: number){
   return 'common'
 }
 function lootIcon(l: any){
-  // Use icon from item def if available, fallback to amount-based
   if(l?.icon) return l.icon
-  const a = l?.amount ?? 0
+  // l can be a number (amount) or an object with .amount
+  const a = typeof l === 'number' ? l : (l?.amount ?? 0)
   if(a >= 2000000) return '✨'
   if(a >= 250000)  return '⚜️'
   if(a >= 45000)   return '🔮'
@@ -409,8 +409,9 @@ watch(quickOpen, (v) => {
                     <div class="ic" aria-hidden="true">{{ it.icon }}</div>
                   </div>
                   <div class="face back">
-                    <div class="amt">+{{ it.amount }}</div>
-                    <div class="lab">{{ $t('ui.s_928735d6f2') }}</div>
+                    <div class="ic">{{ it.icon }}</div>
+                    <div class="lab back-label">{{ it.label }}</div>
+                    <div class="back-amt">+{{ it.amount }} K</div>
                   </div>
                 </div>
               </div>
@@ -674,10 +675,24 @@ watch(quickOpen, (v) => {
   place-items:center;
 }
 .face.front{ transform: rotateY(0deg); }
-.face.back{ transform: rotateY(180deg); }
+.face.back{
+  transform: rotateY(180deg);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 2px;
+  background: radial-gradient(circle at 50% 40%, rgba(255,215,0,.08), transparent 70%);
+  border-radius: 14px;
+}
 .ic{ font-size: 34px; filter: drop-shadow(0 10px 18px rgba(0,0,0,.35)); }
 .amt{ font-weight: 1100; font-size: 18px; color: rgba(234,243,255,.95); }
 .lab{ font-weight: 900; font-size: 11px; color: rgba(255,255,255,.70); margin-top: -2px; }
+.face.back .ic{ font-size: 24px; }
+.back-label{
+  font-size: 10.5px; font-weight: 900; color: rgba(255,255,255,.9);
+  text-align: center; padding: 0 6px; line-height: 1.3;
+  max-width: 110px; word-break: break-word;
+}
+.back-amt{ font-size: 11px; font-weight: 900; color: rgba(255,215,0,.85); }
 
 .loot{ margin-top: 14px; }
 .loot-head{ margin-bottom: 10px; }
@@ -779,6 +794,20 @@ watch(quickOpen, (v) => {
   0%{ opacity:0; transform: scale(.92); }
   20%{ opacity:1; }
   100%{ opacity:0; transform: scale(1.06); }
+}
+
+/* Responsive */
+@media (max-width: 860px) {
+  .case-layout { flex-direction: column; }
+  .left-panel { width: 100%; border-right: none; border-bottom: 1px solid rgba(255,178,74,.10); }
+  .hist-list { max-height: 160px; }
+  .loot-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .app-page { padding: 10px 0 20px; }
+  .main-panel { padding: 12px; }
+  .left-panel { padding: 12px; }
+  .reel-wrap { padding: 8px; }
 }
 
 .loot-row.legendary{

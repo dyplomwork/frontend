@@ -222,4 +222,11 @@ onBeforeUnmount(() => {
 .amt{ font-weight: 1000; }
 .coin{ font-weight: 1000; opacity:.85; }
 .b-bottom{ margin-top: 10px; display:flex; align-items:center; justify-content:space-between; gap: 10px; }
+@media (max-width: 600px) {
+  .cf-lobby { padding: 8px; }
+  .lobby-head { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .b-top { flex-wrap: wrap; }
+  .b-creator { gap: 6px; }
+  .b-bottom { flex-wrap: wrap; gap: 8px; }
+}
 </style>

@@ -48,9 +48,13 @@ function upgCostLabel(u: any) {
     const { count, itemDefId } = u.itemReq
     const nameMap: Record<string,string> = {
       lucky_coin: '🍀 Lucky Coin', silver_shard: '💿 Silver Shard',
-      sapphire: '💎 Sapphire', dragon_crystal: '🔮 Dragon Crystal',
-      void_essence: '🌑 Void Essence', shadow_crown: '👑 Shadow Crown',
-      phoenix_feather: '🔥 Phoenix Feather', cosmos_gem: '🌌 Cosmos Gem',
+      emerald_gem: '💚 Emerald Gem', bronze_shard: '🪙 Bronze Shard',
+      iron_nugget: '⚙️ Iron Nugget', sapphire: '💎 Sapphire',
+      dragon_crystal: '🔮 Dragon Crystal', iron_sword: '⚔️ Iron Sword',
+      golden_shield: '🛡️ Golden Shield', void_essence: '🌑 Void Essence',
+      shadow_crown: '👑 Shadow Crown', phoenix_feather: '🔥 Phoenix Feather',
+      ancient_relic: '⚜️ Ancient Relic', void_artifact: '🌟 Void Artifact',
+      cosmos_gem: '🌌 Cosmos Gem', divine_relic: '✨ Divine Relic',
     }
     return `${count}× ${nameMap[itemDefId] ?? itemDefId}`
   }
@@ -68,12 +72,24 @@ const activeVisuals = computed(() => {
 })
 
 const robotCount = computed(() => getLevel('tap_bot'))
+const shieldCount = computed(() => getLevel('golden_guard'))
+const swordCount = computed(() => getLevel('sword_slash'))
 const isCosmos = computed(() => activeVisuals.value.has('cosmos'))
 const isDragon = computed(() => activeVisuals.value.has('dragon'))
 const isPhoenix = computed(() => activeVisuals.value.has('phoenix'))
 const isVoid = computed(() => activeVisuals.value.has('void'))
 const isShadow = computed(() => activeVisuals.value.has('shadow'))
 const isSapphire = computed(() => activeVisuals.value.has('sapphire'))
+const isLucky = computed(() => activeVisuals.value.has('lucky'))
+const isEmerald = computed(() => activeVisuals.value.has('emerald'))
+const isSword = computed(() => swordCount.value > 0)
+const isCrystal = computed(() => activeVisuals.value.has('crystal'))
+const isRelic = computed(() => activeVisuals.value.has('relic'))
+const isDivine = computed(() => activeVisuals.value.has('divine'))
+const isShield = computed(() => shieldCount.value > 0)
+const isSpark = computed(() => activeVisuals.value.has('spark'))
+const isIce = computed(() => activeVisuals.value.has('ice'))
+const isStorm = computed(() => activeVisuals.value.has('storm'))
 
 async function fetchState() {
   if (!auth.user) return
@@ -216,7 +232,7 @@ onBeforeUnmount(() => {
           <!-- Coin with dynamic skin -->
           <div
             class="click-coin"
-            :class="{ bump: clickAnim, cosmos: isCosmos, dragon: isDragon, phoenix: isPhoenix, void: isVoid, shadow: isShadow, sapphire: isSapphire }"
+            :class="{ bump: clickAnim, cosmos: isCosmos, dragon: isDragon, phoenix: isPhoenix, void: isVoid, shadow: isShadow, sapphire: isSapphire, lucky: isLucky, emerald: isEmerald, relic: isRelic, divine: isDivine, spark: isSpark, ice: isIce, storm: isStorm }"
             @animationend="clickAnim = false"
           >
             <!-- Cosmos stars -->
@@ -229,17 +245,64 @@ onBeforeUnmount(() => {
             <div v-if="isPhoenix" class="phoenix-halo" />
             <!-- Void swirl -->
             <div v-if="isVoid" class="void-swirl" />
+            <!-- Ice crystals -->
+            <div v-if="isIce" class="ice-ring" />
+            <!-- Spark glint ring -->
+            <div v-if="isSpark" class="spark-ring" />
+            <!-- Storm bolts -->
+            <template v-if="isStorm">
+              <div v-for="s in 8" :key="s" class="storm-bolt" :style="{ '--sa': (s * 45) + 'deg' }">
+                <div class="storm-bolt-inner" :style="{ animationDelay: (s * 0.12) + 's' }" />
+              </div>
+            </template>
+            <!-- Lucky shimmer -->
+            <div v-if="isLucky" class="lucky-shimmer" />
+            <!-- Emerald ring -->
+            <div v-if="isEmerald" class="emerald-aura" />
+            <!-- Relic rays -->
+            <div v-if="isRelic" class="relic-rays" />
+            <!-- Divine halo -->
+            <div v-if="isDivine" class="divine-halo" />
             <!-- Coin face -->
             <div class="coin-face">
-              <span class="glyph">{{ isCosmos ? '🌌' : isDragon ? '🐉' : isPhoenix ? '🔥' : 'K' }}</span>
+              <span class="glyph">{{ isDivine ? '✨' : isRelic ? '⚜️' : isCosmos ? '🌌' : isDragon ? '🐉' : isPhoenix ? '🔥' : 'K' }}</span>
               <div class="coin-ring" />
             </div>
           </div>
 
-          <!-- Robot beaters -->
+          <!-- Robot beaters: wrapper handles orbit position, inner handles beat animation (no var() in keyframes) -->
           <div class="robots" v-if="robotCount > 0">
-            <div v-for="i in robotCount" :key="i" class="robot" :style="{ '--ri': i, '--rtotal': robotCount }">
-              🤖
+            <div v-for="i in robotCount" :key="i" class="robot-orbit" :style="{ '--ri': i - 1, '--rtotal': robotCount }">
+              <div class="robot-icon" :style="{ animationDelay: ((i - 1) * 0.35) + 's' }">🤖</div>
+            </div>
+          </div>
+
+          <!-- Shield guards: orbit at wider radius -->
+          <div class="shields" v-if="isShield">
+            <div v-for="i in shieldCount" :key="i" class="shield-orbit" :style="{ animationDelay: ((i - 1) * -2.5) + 's' }">
+              <div class="shield-icon" :style="{ animationDelay: ((i - 1) * -2.5) + 's' }">🛡️</div>
+            </div>
+          </div>
+
+          <!-- Sword orbits: fast rotation -->
+          <div class="swords" v-if="isSword">
+            <div v-for="i in swordCount" :key="i" class="sword-orbit"
+              :style="{ animationDelay: ((i - 1) * (-3 / Math.max(swordCount,1))) + 's' }">
+              <div class="sword-icon" :style="{ animationDelay: ((i - 1) * (-3 / Math.max(swordCount,1))) + 's' }">⚔️</div>
+            </div>
+          </div>
+
+          <!-- Crystal orbits: 3 crystals slow wide orbit -->
+          <div class="crystals" v-if="isCrystal">
+            <div v-for="c in 3" :key="c" class="crystal-orbit" :style="{ animationDelay: ((c - 1) * -2) + 's' }">
+              <div class="crystal-icon" :style="{ animationDelay: ((c - 1) * -2) + 's' }">🔮</div>
+            </div>
+          </div>
+
+          <!-- Divine sparks: 6 sparks orbiting on largest radius -->
+          <div class="divine-sparks" v-if="isDivine">
+            <div v-for="d in 6" :key="d" class="divine-orbit" :style="{ animationDelay: ((d - 1) * -1.33) + 's' }">
+              <div class="divine-icon" :style="{ animationDelay: ((d - 1) * -1.33) + 's' }">✨</div>
             </div>
           </div>
         </div>
@@ -424,22 +487,193 @@ onBeforeUnmount(() => {
 .glyph { font-size: 66px; font-weight: 1200; color: #ffd700; text-shadow: 0 4px 18px rgba(0,0,0,.7); }
 .coin-ring { position: absolute; inset: -60px; border-radius: 999px; border: 2px solid rgba(255,210,80,.20); pointer-events: none; }
 
-/* Robots */
+/* Robots — wrapper sets orbit angle (no animation var()), inner div animates independently */
 .robots { position: absolute; inset: 0; pointer-events: none; }
-.robot {
+.robot-orbit {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 0; height: 0;
+  transform: rotate(calc(360deg / var(--rtotal) * var(--ri)));
+}
+.robot-icon {
   position: absolute;
   font-size: 28px;
-  /* Place robots around the coin at angles */
-  top: 50%; left: 50%;
-  transform-origin: -95px 0;
-  transform: rotate(calc(360deg / var(--rtotal) * var(--ri))) translateX(-95px);
-  animation: robotBeat 1.2s ease-in-out infinite;
-  animation-delay: calc(0.3s * var(--ri));
+  left: 88px;
+  top: -14px;
+  animation: robotBeat 1.1s ease-in-out infinite;
 }
 @keyframes robotBeat {
-  0%,100% { filter: none; }
-  50% { filter: drop-shadow(0 0 8px rgba(100,255,100,.8)); transform: rotate(calc(360deg / var(--rtotal) * var(--ri))) translateX(-95px) scale(1.15); }
+  0%, 100% { transform: scale(1) translateX(0); filter: none; }
+  50% { transform: scale(1.22) translateX(-8px); filter: drop-shadow(0 0 10px rgba(100,255,100,.9)); }
 }
+
+/* Shield guards — orbit around coin */
+.shields { position: absolute; inset: 0; pointer-events: none; }
+.shield-orbit {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 0; height: 0;
+  animation: shieldOrbit 5s linear infinite;
+}
+.shield-icon {
+  position: absolute;
+  font-size: 22px;
+  left: 120px;
+  top: -11px;
+  animation: shieldCounter 5s linear infinite;
+}
+@keyframes shieldOrbit { to { transform: rotate(360deg); } }
+@keyframes shieldCounter { to { transform: rotate(-360deg); } }
+
+/* Spark skin */
+.click-coin.spark {
+  border-color: rgba(180,180,220,.7);
+  box-shadow: 0 0 40px rgba(160,160,210,.25);
+}
+.spark-ring {
+  position: absolute; inset: -6px; border-radius: 999px;
+  border: 1px dashed rgba(180,180,220,.5);
+  animation: sparkSpin 2.5s linear infinite;
+}
+@keyframes sparkSpin { to { transform: rotate(360deg); } }
+
+/* Ice skin */
+.click-coin.ice {
+  border-color: rgba(100,200,255,.7);
+  box-shadow: 0 0 50px rgba(100,200,255,.3), 0 0 20px rgba(180,240,255,.15);
+}
+.ice-ring {
+  position: absolute; inset: -8px; border-radius: 999px;
+  border: 1px solid rgba(150,220,255,.35);
+  animation: iceRotate 8s linear infinite reverse;
+  background: conic-gradient(from 0deg, transparent 0%, rgba(100,200,255,.08) 20%, transparent 40%, rgba(150,230,255,.06) 60%, transparent 80%);
+}
+@keyframes iceRotate { to { transform: rotate(360deg); } }
+
+/* Storm skin */
+.click-coin.storm {
+  border-color: rgba(147,51,234,.75);
+  box-shadow: 0 0 65px rgba(147,51,234,.45), 0 0 25px rgba(200,80,255,.2);
+}
+.storm-bolt {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 0; height: 0;
+  transform: rotate(var(--sa));
+}
+.storm-bolt-inner {
+  position: absolute;
+  left: 87px;
+  top: -1px;
+  width: 18px; height: 2px;
+  background: rgba(200,80,255,.9);
+  border-radius: 2px;
+  animation: boltFlash 0.45s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 4px rgba(200,80,255,.8));
+}
+@keyframes boltFlash {
+  0% { opacity: 0.08; width: 6px; }
+  100% { opacity: 1; width: 22px; }
+}
+
+/* Lucky skin */
+.click-coin.lucky {
+  border-color: rgba(255,215,0,.65);
+  box-shadow: 0 0 55px rgba(255,215,0,.45), inset 0 0 20px rgba(255,215,0,.07);
+}
+.lucky-shimmer {
+  position: absolute; inset: 0; border-radius: 999px;
+  background: conic-gradient(from 0deg, transparent 0%, rgba(255,215,0,.14) 25%, transparent 50%, rgba(255,215,0,.09) 75%, transparent 100%);
+  animation: spinFire 4s linear infinite;
+}
+
+/* Emerald skin */
+.click-coin.emerald {
+  border-color: rgba(52,211,153,.7);
+  box-shadow: 0 0 50px rgba(52,211,153,.35);
+}
+.emerald-aura {
+  position: absolute; inset: -4px; border-radius: 999px;
+  border: 1px solid rgba(52,211,153,.28);
+  background: conic-gradient(from 0deg, transparent 0%, rgba(52,211,153,.1) 25%, transparent 50%, rgba(52,211,153,.07) 75%, transparent 100%);
+  animation: iceRotate 6s linear infinite;
+}
+
+/* Relic skin */
+.click-coin.relic {
+  border-color: rgba(251,191,36,.78);
+  box-shadow: 0 0 70px rgba(251,191,36,.5), 0 0 30px rgba(255,165,0,.3);
+}
+.relic-rays {
+  position: absolute; inset: -12px; border-radius: 999px;
+  background: conic-gradient(
+    from 0deg,
+    rgba(251,191,36,.15) 0deg, transparent 20deg,
+    rgba(251,191,36,.10) 45deg, transparent 65deg,
+    rgba(251,191,36,.13) 90deg, transparent 110deg,
+    rgba(251,191,36,.15) 135deg, transparent 155deg,
+    rgba(251,191,36,.10) 180deg, transparent 200deg,
+    rgba(251,191,36,.13) 225deg, transparent 245deg,
+    rgba(251,191,36,.15) 270deg, transparent 290deg,
+    rgba(251,191,36,.10) 315deg, transparent 335deg,
+    rgba(251,191,36,.13) 360deg
+  );
+  animation: spinFire 8s linear infinite;
+}
+
+/* Divine skin */
+.click-coin.divine {
+  background: radial-gradient(circle at 40% 35%, rgba(255,255,255,.28), rgba(255,248,200,.18) 55%, rgba(255,200,100,.12));
+  border-color: rgba(255,255,220,.88);
+  box-shadow: 0 0 80px rgba(255,255,200,.55), 0 0 35px rgba(255,200,0,.35);
+}
+.divine-halo {
+  position: absolute; inset: -6px; border-radius: 999px;
+  border: 2px solid rgba(255,255,200,.5);
+  animation: haloBreath 1.6s ease-in-out infinite;
+}
+
+/* Sword orbit */
+.swords { position: absolute; inset: 0; pointer-events: none; }
+.sword-orbit {
+  position: absolute; top: 50%; left: 50%; width: 0; height: 0;
+  animation: swordOrbit 2.8s linear infinite;
+}
+.sword-icon {
+  position: absolute; font-size: 22px;
+  left: 106px; top: -11px;
+  animation: swordOrbitCounter 2.8s linear infinite;
+}
+@keyframes swordOrbit { to { transform: rotate(360deg); } }
+@keyframes swordOrbitCounter { to { transform: rotate(-360deg); } }
+
+/* Crystal orbit */
+.crystals { position: absolute; inset: 0; pointer-events: none; }
+.crystal-orbit {
+  position: absolute; top: 50%; left: 50%; width: 0; height: 0;
+  animation: crystalOrbit 6s linear infinite;
+}
+.crystal-icon {
+  position: absolute; font-size: 18px;
+  left: 128px; top: -9px;
+  animation: crystalOrbitCounter 6s linear infinite;
+}
+@keyframes crystalOrbit { to { transform: rotate(360deg); } }
+@keyframes crystalOrbitCounter { to { transform: rotate(-360deg); } }
+
+/* Divine sparks orbit */
+.divine-sparks { position: absolute; inset: 0; pointer-events: none; }
+.divine-orbit {
+  position: absolute; top: 50%; left: 50%; width: 0; height: 0;
+  animation: divineOrbit 8s linear infinite;
+}
+.divine-icon {
+  position: absolute; font-size: 16px;
+  left: 112px; top: -8px;
+  animation: divineOrbitCounter 8s linear infinite;
+}
+@keyframes divineOrbit { to { transform: rotate(360deg); } }
+@keyframes divineOrbitCounter { to { transform: rotate(-360deg); } }
 
 .particle-host { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
 .particle {

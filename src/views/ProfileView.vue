@@ -101,7 +101,6 @@ watch(() => auth.user?.id, (v) => { if (v) loadStats() })
               </template>
             </div>
             <div v-if="nickMsg" class="nick-msg muted small">{{ nickMsg }}</div>
-            <div class="user-discord muted">{{ auth.user.discord }}</div>
             <div class="role-badge" :class="'role-' + auth.user.role">{{ auth.user.role }}</div>
           </div>
           <div class="balance-big">
@@ -112,7 +111,7 @@ watch(() => auth.user?.id, (v) => { if (v) loadStats() })
       </div>
 
       <!-- Stats card -->
-      <div class="card">
+      <div class="card stats-card">
         <div class="row-between">
           <h3 style="margin:0">{{ $t('ui.s_stats') }}</h3>
           <button class="btn" @click="loadStats" :disabled="statsLoading">↻</button>
@@ -167,8 +166,8 @@ watch(() => auth.user?.id, (v) => { if (v) loadStats() })
         </div>
       </div>
       <!-- Achievements -->
-      <div class="card" v-if="achievements.length > 0">
-        <h3 style="margin:0 0 14px">🏅 {{ $t('ui.s_stats') }}</h3>
+      <div class="card ach-section" v-if="achievements.length > 0">
+        <h3 style="margin:0 0 14px">🏅 {{ $t('ui.s_achievements') }}</h3>
         <div class="ach-grid">
           <div
             v-for="a in achievements"
@@ -190,7 +189,18 @@ watch(() => auth.user?.id, (v) => { if (v) loadStats() })
 </template>
 
 <style scoped>
-.profile-grid { display: grid; gap: 16px; max-width: 900px; margin: 0 auto; }
+.profile-grid { display: grid; gap: 16px; }
+@media (min-width: 860px) {
+  .profile-grid {
+    grid-template-columns: 300px 1fr;
+    grid-template-areas:
+      "user  stats"
+      "ach   ach";
+  }
+  .user-card  { grid-area: user; }
+  .stats-card { grid-area: stats; }
+  .ach-section { grid-area: ach; }
+}
 .small { font-size: 12px; }
 .row-between { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 
@@ -212,7 +222,6 @@ watch(() => auth.user?.id, (v) => { if (v) loadStats() })
 .edit-nick-btn { opacity: .6; }
 .edit-nick-btn:hover { opacity: 1; }
 .nick-msg { margin-top: 2px; }
-.user-discord { font-size: 13px; }
 .role-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .5px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.06); width: fit-content; }
 .role-admin { border-color: rgba(255,59,87,.4); background: rgba(255,59,87,.12); color: rgba(255,120,120,.9); }
 .balance-big { text-align: right; }
@@ -253,4 +262,16 @@ watch(() => auth.user?.id, (v) => { if (v) loadStats() })
 .ach-name { font-weight: 900; font-size: 14px; }
 .ach-desc { font-size: 12px; }
 .ach-rarity { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .4px; }
+
+@media (max-width: 600px) {
+  .user-head { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .balance-big { text-align: left; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .game-row { grid-template-columns: 1fr auto auto; }
+  .game-row .game-detail:last-of-type { display: none; }
+  .ach-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 400px) {
+  .stats-grid { grid-template-columns: 1fr; }
+}
 </style>

@@ -1,3 +1,15 @@
+/* Admin button */
+.btn-admin {
+  background: linear-gradient(135deg, rgba(168,85,247,.25), rgba(100,0,200,.20));
+  border-color: rgba(168,85,247,.45);
+  color: rgba(220,180,255,.95);
+  box-shadow: 0 0 12px rgba(168,85,247,.20);
+}
+.btn-admin:hover {
+  background: linear-gradient(135deg, rgba(168,85,247,.35), rgba(100,0,200,.28));
+  box-shadow: 0 0 20px rgba(168,85,247,.35);
+}
+
 .bgm-icon-btn{
   all: unset;
   display: inline-flex;

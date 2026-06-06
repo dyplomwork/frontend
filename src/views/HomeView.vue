@@ -60,6 +60,30 @@ import { RouterLink } from 'vue-router'
           <div class="muted">{{ $t('ui.s_0c54815c09') }}</div>
         </div>
       </RouterLink>
+
+      <RouterLink class="game card game-card-clicker" to="/clicker">
+        <div class="icon emoji-icon">🪙</div>
+        <div class="meta">
+          <div class="title">{{ $t('ui.s_clicker') }}</div>
+          <div class="muted">Клікай, апгрейдуй, заробляй K-монети</div>
+        </div>
+      </RouterLink>
+
+      <RouterLink class="game card game-card-inventory" to="/inventory">
+        <div class="icon emoji-icon">🎒</div>
+        <div class="meta">
+          <div class="title">{{ $t('ui.s_inventory') }}</div>
+          <div class="muted">Переглядай предмети, продавай на аукціоні</div>
+        </div>
+      </RouterLink>
+
+      <RouterLink class="game card game-card-auction" to="/auction">
+        <div class="icon emoji-icon">🏷️</div>
+        <div class="meta">
+          <div class="title">{{ $t('ui.s_auction') }}</div>
+          <div class="muted">Купуй та продавай предмети з гравцями</div>
+        </div>
+      </RouterLink>
     </div>
   </div>
 </template>
@@ -129,6 +153,19 @@ import { RouterLink } from 'vue-router'
   object-fit: contain;
   filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35));
 }
+.emoji-icon {
+  font-size: 46px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 50px;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
+}
+.game-card-clicker:hover { border-color: rgba(255, 215, 0, 0.3); box-shadow: 0 16px 40px rgba(0,0,0,.32), 0 0 26px rgba(255,215,0,.12); }
+.game-card-inventory:hover { border-color: rgba(52, 211, 153, 0.3); box-shadow: 0 16px 40px rgba(0,0,0,.32), 0 0 26px rgba(52,211,153,.12); }
+.game-card-auction:hover { border-color: rgba(251, 146, 60, 0.3); box-shadow: 0 16px 40px rgba(0,0,0,.32), 0 0 26px rgba(251,146,60,.12); }
 .meta {
   display: flex;
   flex-direction: column;

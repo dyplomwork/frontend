@@ -51,31 +51,39 @@ export function subscribeBattle(id: string, onBattle: (b: BattleLike) => void): 
     if (ES) {
       const url = `/api/v1/battles/${encodeURIComponent(id)}/events`
       let es: any = null
-      try {
-        es = new ES(url)
-      } catch {
-        es = null
-      }
-      if (es) {
+      let reconnectTimer: any = null
+      let destroyed = false
+
+      function connect() {
+        if (destroyed) return
+        try { es?.close() } catch {}
+        try {
+          es = new ES(url)
+        } catch {
+          es = null
+          return
+        }
         es.onmessage = (ev: any) => {
           try {
             const data = JSON.parse(ev.data)
             if (data && data.id) onBattle(data)
-          } catch {
-          }
+          } catch {}
         }
         es.onerror = () => {
-          try {
-            es.close()
-          } catch {
-          }
+          if (destroyed) return
+          try { es.close() } catch {}
+          es = null
+          // Reconnect after 2s unless battle is terminal
+          reconnectTimer = setTimeout(connect, 2000)
         }
-        return () => {
-          try {
-            es.close()
-          } catch {
-          }
-        }
+      }
+
+      connect()
+
+      return () => {
+        destroyed = true
+        if (reconnectTimer) clearTimeout(reconnectTimer)
+        try { es?.close() } catch {}
       }
     }
   }

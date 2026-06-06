@@ -80,27 +80,85 @@ const sfxOn = ref(isSfxOn())
 watch(sfxOn, (v) => setSfxOn(!!v), { immediate: true })
 function toggleSfx() { sfxOn.value = !sfxOn.value }
 
-// Recent drops ticker
+// Drops strip — queue-based, each new drop slides through exactly once;
+// when idle, cycles top-5 rarest recent drops
 import { api } from './utils/api'
 type Drop = { nick: string; icon: string; name: string; nameUa: string; rarity: string; color: string; ts: number }
-const drops = ref<Drop[]>([])
-let dropsTimer: number | null = null
+
+const RARITY_ORDER: Record<string, number> = { mythic: 5, legendary: 4, epic: 3, rare: 2, uncommon: 1, common: 0 }
+
+const seenDropTs = new Set<number>()
+const dropQueue: Drop[] = []
+const activeDrop = ref<Drop | null>(null)
+const isIdle = ref(false)
+const idleDrops = ref<Drop[]>([])
+let idleIdx = 0
+let dropKey = 0
+let tickerTimer: number | null = null
+let tickerInit = false
+
+function dropName(d: Drop) {
+  return locale.value === 'ua' ? (d.nameUa || d.name) : d.name
+}
+
+function showNextDrop() {
+  dropKey++
+  if (dropQueue.length > 0) {
+    isIdle.value = false
+    idleIdx = 0
+    activeDrop.value = dropQueue.shift()!
+    return
+  }
+  if (idleDrops.value.length > 0) {
+    isIdle.value = true
+    activeDrop.value = idleDrops.value[idleIdx % idleDrops.value.length]
+    idleIdx++
+    return
+  }
+  isIdle.value = false
+  activeDrop.value = null
+}
+
+function onDropAnimEnd() {
+  // Immediately show next — no gap between items
+  showNextDrop()
+}
+
+function mergeIdleDrops(newDrops: Drop[]) {
+  const merged = [...idleDrops.value, ...newDrops]
+  const seen = new Set<number>()
+  idleDrops.value = merged
+    .filter(d => { if (seen.has(d.ts)) return false; seen.add(d.ts); return true })
+    .sort((a, b) => (RARITY_ORDER[b.rarity] ?? 0) - (RARITY_ORDER[a.rarity] ?? 0))
+    .slice(0, 5)
+}
+
 async function fetchDrops() {
   try {
     const res = await api<Drop[]>('/api/v1/drops/recent', { noAuth: true })
-    if (Array.isArray(res)) drops.value = res
+    if (!Array.isArray(res)) return
+    if (!tickerInit) {
+      for (const d of res) seenDropTs.add(d.ts)
+      mergeIdleDrops(res)
+      tickerInit = true
+      if (!activeDrop.value) setTimeout(showNextDrop, 800)
+      return
+    }
+    const newDrops = res.filter(d => !seenDropTs.has(d.ts)).sort((a, b) => a.ts - b.ts)
+    for (const d of newDrops) {
+      seenDropTs.add(d.ts)
+      dropQueue.push(d)
+    }
+    if (newDrops.length) mergeIdleDrops(newDrops)
+    if (!activeDrop.value && dropQueue.length > 0) showNextDrop()
   } catch {}
 }
+
 onMounted(() => {
   void fetchDrops()
-  dropsTimer = window.setInterval(fetchDrops, 5000)
+  tickerTimer = window.setInterval(fetchDrops, 3000)
 })
-onUnmounted(() => { if (dropsTimer) clearInterval(dropsTimer) })
-
-function dropName(d: Drop) {
-  const l = locale.value
-  return l === 'ua' ? (d.nameUa || d.name) : d.name
-}
+onUnmounted(() => { if (tickerTimer) clearInterval(tickerTimer) })
 
 function goLogin() {
   sfx('click')
@@ -292,6 +350,15 @@ function logout() {
               <span class="bal">{{ fmt(ui.balanceOverride ?? auth.user.balance, 2) }}</span>
               <span class="coin" :aria-label="$t('ui.s_d940a38dce')">K</span>
             </div>
+            <!-- Admin button — only visible to admins -->
+            <button
+              v-if="auth.isAdmin"
+              class="btn btn-admin"
+              @click="router.push('/admin')"
+              title="Admin Panel"
+            >
+              ⚙️ Admin
+            </button>
             <button class="btn" @click="logout">{{ $t('ui.s_logout') }}</button>
           </template>
           <template v-else>
@@ -301,15 +368,21 @@ function logout() {
         </div>
       </header>
 
-      <!-- Recent drops ticker -->
-      <div v-if="drops.length" class="drops-ticker" aria-live="polite">
-        <div class="ticker-track">
-          <div class="ticker-inner">
-            <span v-for="(d, i) in [...drops, ...drops]" :key="i + '-' + d.ts" class="ticker-item">
-              <span class="ticker-icon">{{ d.icon }}</span>
-              <span class="ticker-nick">{{ d.nick }}</span>
-              <span class="ticker-name" :style="{ color: d.color }">{{ dropName(d) }}</span>
-            </span>
+      <!-- Drops strip: always visible; new drops priority, idle cycles top-5 rarest -->
+      <div class="drops-strip" :class="{ 'strip-idle': isIdle }">
+        <div class="strip-live">
+          <span v-if="!isIdle" class="strip-dot-pulse"></span>
+          <span v-else class="strip-dot-idle">★</span>
+          {{ isIdle ? 'ТОП' : 'LIVE' }}
+        </div>
+        <div class="strip-scroll">
+          <div v-if="activeDrop" class="strip-item" @animationend="onDropAnimEnd" :key="dropKey">
+            <span class="strip-rarity-dot" :style="{ color: activeDrop.color }">⬤</span>
+            <span class="strip-nick">{{ activeDrop.nick }}</span>
+            <span class="strip-sep">{{ isIdle ? 'нещодавно виграв' : 'виграв' }}</span>
+            <span class="strip-icon">{{ activeDrop.icon }}</span>
+            <span class="strip-name" :style="{ color: activeDrop.color }">{{ dropName(activeDrop) }}</span>
+            <span class="strip-tag" :style="{ color: activeDrop.color }">{{ activeDrop.rarity }}</span>
           </div>
         </div>
       </div>

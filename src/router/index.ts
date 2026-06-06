@@ -160,6 +160,7 @@ export const routes = [
     component: AdminView,
     meta: {
       requiresAuth: true,
+      requiresAdmin: true,
       title: 'SCXDROP — Admin',
       description: 'Admin panel.',
     },

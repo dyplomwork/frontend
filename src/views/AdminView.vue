@@ -1,670 +1,651 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import GamePageLayout from '../components/GamePageLayout.vue'
-import BaseSelect from '../components/BaseSelect.vue'
+import { useI18n } from 'vue-i18n'
 import { api } from '../utils/api'
 import { useAuthStore } from '../stores/auth'
+import { formatNumber } from '../utils/format'
 
-type Role = 'user' | 'admin'
-
-type AdminUser = {
-  id: string
-  nickname: string
-  discord: string
-  role: Role
-  balance: number
-}
-
-type TicketStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
-type TicketType = 'DEPOSIT' | 'WITHDRAW'
-
-type Ticket = {
-  id: number
-  ownerId: number
-  type: TicketType
-  amount: number
-  status: TicketStatus
-  closedAt?: string | null
-  nickname?: string
-  discord?: string
-}
-
-
-const tab = ref<'users' | 'tickets'>('users')
-
-const users = ref<AdminUser[]>([])
-const tickets = ref<Ticket[]>([])
-
-const loadingUsers = ref(false)
-const loadingTickets = ref(false)
-const msg = ref('')
+const { t, locale } = useI18n()
 const auth = useAuthStore()
 
-const err = ref('')
+// ─── State ────────────────────────────────────────────────────────────
+const tab = ref<'dashboard' | 'users'>('dashboard')
+const loading = ref(false)
+const globalMsg = ref('')
+const globalMsgType = ref<'ok'|'err'>('ok')
 
-const qUsers = ref('')
-const qTickets = ref('')
+const dashboard = ref<any>(null)
+const users = ref<any[]>([])
+const meta = ref<{ achievements: any[]; items: any[] }>({ achievements: [], items: [] })
 
-const pendingCount = computed(() => tickets.value.filter(t => t.status === 'PENDING').length)
+const searchUsers = ref('')
+const expandedUser = ref<string | null>(null)
+const userDetail = ref<any>(null)
+const userDetailLoading = ref(false)
 
-const filteredUsers = computed(() => {
-  const q = qUsers.value.trim().toLowerCase()
-  if (!q) return users.value
-  return users.value.filter(u =>
-    (u.nickname || "").toLowerCase().includes(q) ||
-    (u.discord || "").toLowerCase().includes(q) ||
-    String(u.id).toLowerCase().includes(q) ||
-    (u.role || "").toLowerCase().includes(q)
-  )
-})
+// Give forms
+const giveAmount = ref(0)
+const giveItemDef = ref('')
+const giveAchId = ref('')
+const giveClickerCoins = ref(0)
+const giveBusy = ref(false)
 
-const filteredTickets = computed(() => {
-  const q = qTickets.value.trim().toLowerCase()
-  if (!q) return tickets.value
-  return tickets.value.filter(t =>
-    String(t.id).toLowerCase().includes(q) ||
-    String(t.ownerId).toLowerCase().includes(q) ||
-    (t.nickname || '').toLowerCase().includes(q) ||
-    (t.discord || '').toLowerCase().includes(q) ||
-    t.type.toLowerCase().includes(q) ||
-    t.status.toLowerCase().includes(q)
-  )
-})
+// Edit user
+const editNick = ref('')
+const editRole = ref<'user'|'admin'>('user')
+const editBalance = ref(0)
+const editBusy = ref(false)
 
+const fmt = (v: number, d = 2) => formatNumber(v, d)
+const fmt0 = (v: number) => formatNumber(v, 0)
 
-// ==== Sorting ====
-type SortDir = 'asc' | 'desc'
-
-const sortUsersKey = ref<keyof AdminUser | ''>('')
-const sortUsersDir = ref<SortDir>('asc')
-
-const sortTicketsKey = ref<keyof Ticket | ''>('')
-const sortTicketsDir = ref<SortDir>('asc')
-
-function toggleSortUsers(key: keyof AdminUser) {
-  if (sortUsersKey.value === key) sortUsersDir.value = sortUsersDir.value === 'asc' ? 'desc' : 'asc'
-  else {
-    sortUsersKey.value = key
-    sortUsersDir.value = 'asc'
-  }
+function showMsg(text: string, type: 'ok'|'err' = 'ok') {
+  globalMsg.value = text; globalMsgType.value = type
+  setTimeout(() => { globalMsg.value = '' }, 3000)
 }
 
-function toggleSortTickets(key: keyof Ticket) {
-  if (sortTicketsKey.value === key) sortTicketsDir.value = sortTicketsDir.value === 'asc' ? 'desc' : 'asc'
-  else {
-    sortTicketsKey.value = key
-    sortTicketsDir.value = 'asc'
-  }
-}
-
-function cmp(a: any, b: any) {
-  // nulls/undefined last
-  const an = a === null || a === undefined
-  const bn = b === null || b === undefined
-  if (an && bn) return 0
-  if (an) return 1
-  if (bn) return -1
-
-  // numbers
-  const na = typeof a === 'number' ? a : Number(a)
-  const nb = typeof b === 'number' ? b : Number(b)
-  const bothNumeric = Number.isFinite(na) && Number.isFinite(nb) && (typeof a === 'number' || typeof b === 'number' || /^[0-9.]+$/.test(String(a)) && /^[0-9.]+$/.test(String(b)))
-  if (bothNumeric) return na - nb
-
-  // strings
-  const sa = String(a).toLowerCase()
-  const sb = String(b).toLowerCase()
-  return sa.localeCompare(sb)
-}
-
-function sortedBy<T extends object>(rows: T[], key: keyof T | '', dir: SortDir) {
-  if (!key) return rows
-  const sorted = [...rows].sort((ra: any, rb: any) => cmp(ra?.[key as any], rb?.[key as any]))
-  return dir === 'asc' ? sorted : sorted.reverse()
-}
-
-const sortedUsers = computed(() => sortedBy(filteredUsers.value, sortUsersKey.value, sortUsersDir.value))
-const sortedTickets = computed(() => sortedBy(filteredTickets.value, sortTicketsKey.value, sortTicketsDir.value))
-
-function sortCaret(active: boolean, dir: SortDir) {
-  if (!active) return '↕'
-  return dir === 'asc' ? '↑' : '↓'
-}
-
-function thClass(active: boolean) {
-  return ['th-sort', active ? 'is-active' : '']
-}
-
-const editingId = ref<string | null>(null)
-const editNickname = ref('')
-const editRole = ref<Role>('user')
-const editBalance = ref<number>(0)
-
-const roleOptions = [
-  { value: 'user', label: 'User' },
-  { value: 'admin', label: 'Admin' },
-] as const
-
-function startEdit(u: AdminUser) {
-  editingId.value = u.id
-  editNickname.value = u.nickname
-  editRole.value = u.role
-  editBalance.value = Number(u.balance) || 0
-  msg.value = ''
-  err.value = ''
-}
-
-function cancelEdit() {
-  editingId.value = null
+// ─── Load data ─────────────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const res = await api<any>('/api/v1/admin/dashboard', { method: 'GET' })
+    dashboard.value = res.dashboard
+  } catch (e: any) { showMsg(e?.message ?? 'Error', 'err') }
 }
 
 async function loadUsers() {
-  err.value = ''
-  msg.value = ''
-  loadingUsers.value = true
+  loading.value = true
   try {
-    const res = await api<{ ok: boolean; users: AdminUser[] }>('/api/v1/admin/users', { method: 'GET' })
-    users.value = Array.isArray(res.users) ? res.users : []
-  } catch (e: any) {
-    err.value = e?.message || 'Не вдалось загрузити користувачів'
-  } finally {
-    loadingUsers.value = false
-  }
+    const res = await api<any>('/api/v1/admin/users', { method: 'GET' })
+    users.value = res.users ?? []
+  } catch (e: any) { showMsg(e?.message ?? 'Error', 'err') }
+  finally { loading.value = false }
 }
 
-async function loadTickets() {
-  err.value = ''
-  msg.value = ''
-  loadingTickets.value = true
+async function loadMeta() {
   try {
-    const res = await api<{ ok: boolean; ticket: Ticket[] }>('/api/v1/admin/tickets', { method: 'GET' })
-
-    const list = Array.isArray(res.ticket) ? res.ticket : []
-
-    // на всякий: нормализация чисел
-    tickets.value = list.map((t: any) => ({
-      ...t,
-      id: Number(t.id),
-      ownerId: Number(t.ownerId),
-      amount: Number(t.amount),
-      createdAt: t.createdAt ?? undefined,
-    }))
-  } catch (e: any) {
-    err.value = e?.message || 'Не вдалось загрузити тікети'
-  } finally {
-    loadingTickets.value = false
-  }
+    const res = await api<any>('/api/v1/admin/meta', { method: 'GET' })
+    meta.value = res
+  } catch {}
 }
 
 async function refreshAll() {
-  await Promise.all([loadUsers(), loadTickets()])
+  await Promise.all([loadDashboard(), loadUsers(), loadMeta()])
 }
 
-async function saveUser(id: string) {
-  msg.value = ''
-  err.value = ''
+onMounted(refreshAll)
 
-  const nickname = editNickname.value.trim()
-  if (!nickname) {
-    err.value = 'Нікнейм не може бути порожнім'
-    return
-  }
-  const balance = Number(editBalance.value)
-  if (!Number.isFinite(balance)) {
-    err.value = 'Баланс повинен бути числом'
-    return
-  }
-
+// ─── User detail ───────────────────────────────────────────────────────
+async function toggleUser(id: string) {
+  if (expandedUser.value === id) { expandedUser.value = null; userDetail.value = null; return }
+  expandedUser.value = id
+  userDetailLoading.value = true
+  userDetail.value = null
   try {
-    await api<{ ok: boolean; user: AdminUser }>(`/api/v1/admin/users/${id}`, {
-      method: 'PATCH',
-      body: { nickname, role: editRole.value, balance }
-    })
+    const res = await api<any>(`/api/v1/admin/users/${id}`, { method: 'GET' })
+    userDetail.value = res
+    const u = res.user
+    editNick.value = u.nickname
+    editRole.value = u.role
+    editBalance.value = u.balance
+    giveAmount.value = 1000
+    giveItemDef.value = meta.value.items[0]?.id ?? ''
+    giveAchId.value = meta.value.achievements[0]?.id ?? ''
+    giveClickerCoins.value = 1000
+  } catch {}
+  finally { userDetailLoading.value = false }
+}
 
-    // update locally
-    const idx = users.value.findIndex(u => u.id === id)
-    if (idx !== -1) {
-      users.value[idx] = { ...users.value[idx], nickname, role: editRole.value, balance }
-    }
-
-    editingId.value = null
-    msg.value = 'Користувач оновлений'
-  } catch (e: any) {
-    err.value = e?.message || 'Не вдалось зберегти'
-  }
+// ─── User actions ─────────────────────────────────────────────────────
+async function saveUser(id: string) {
+  editBusy.value = true
+  try {
+    await api(`/api/v1/admin/users/${id}`, { method: 'PATCH', json: true, body: { nickname: editNick.value, role: editRole.value, balance: editBalance.value } })
+    await loadUsers()
+    showMsg('User saved ✓')
+  } catch (e: any) { showMsg(e?.message ?? 'Error', 'err') }
+  finally { editBusy.value = false }
 }
 
 async function deleteUser(id: string) {
-  msg.value = ''
-  err.value = ''
-  if (!confirm('Видалити користувача? Цю дію неможливо відмінити.')) return
+  if (!confirm('Delete user? Cannot be undone.')) return
   try {
-    await api<{ ok: boolean }>(`/api/v1/admin/users/${id}`, { method: 'DELETE' })
+    await api(`/api/v1/admin/users/${id}`, { method: 'DELETE' })
     users.value = users.value.filter(u => u.id !== id)
-    msg.value = 'Користувача видалено'
-    if (editingId.value === id) editingId.value = null
-  } catch (e: any) {
-    err.value = e?.message || 'Не вдалось видалити користувача'
-  }
+    if (expandedUser.value === id) { expandedUser.value = null; userDetail.value = null }
+    showMsg('User deleted')
+  } catch (e: any) { showMsg(e?.message ?? 'Error', 'err') }
 }
 
-async function approveTicket(id: number) {
-  msg.value = ''
-  err.value = ''
+async function giveBalance(id: string) {
+  if (!giveAmount.value) return
+  giveBusy.value = true
   try {
-    await api<void>(`/api/v1/admin/tickets/${id}`, {
-      method: 'PATCH',
-      body: { status: 'APPROVED' }
-    })
-    const t = tickets.value.find(x => x.id === Number(id))
-    if (t) t.status = 'APPROVED'
-    await auth.fetchBalance({ force: true }).catch(() => {})
-    msg.value = 'Тікет підтверджено'
-  } catch (e: any) {
-    err.value = e?.message || 'Не вдалось підтвердити тікет'
-  }
+    const res = await api<any>(`/api/v1/admin/users/${id}/give-balance`, { method: 'POST', json: true, body: { amount: giveAmount.value } })
+    editBalance.value = res.balance
+    await loadUsers()
+    showMsg(`Balance updated → ${fmt(res.balance)} K`)
+  } catch (e: any) { showMsg(e?.message ?? 'Error', 'err') }
+  finally { giveBusy.value = false }
 }
 
-async function rejectTicket(id: number) {
-  msg.value = ''
-  err.value = ''
+async function giveItem(id: string) {
+  if (!giveItemDef.value) return
+  giveBusy.value = true
   try {
-    const note = prompt('Причина відмови(Необовязково:') ?? undefined
-    await api<void>(`/api/v1/admin/tickets/${id}`, {
-      method: 'PATCH',
-      body: { status: 'REJECTED', note }
-    })
-    const t = tickets.value.find(x => x.id === Number(id))
-    if (t) t.status = 'REJECTED'
-    await auth.fetchBalance({ force: true }).catch(() => {})
-    msg.value = 'Тікет відмовлено'
-  } catch (e: any) {
-    err.value = e?.message || 'Не вдалось відмовити тікет'
-  }
+    await api(`/api/v1/admin/users/${id}/give-item`, { method: 'POST', json: true, body: { itemDefId: giveItemDef.value } })
+    showMsg('Item given ✓')
+    await toggleUser(id); await toggleUser(id)
+  } catch (e: any) { showMsg(e?.message ?? 'Error', 'err') }
+  finally { giveBusy.value = false }
 }
 
+async function giveClicker(id: string) {
+  if (!giveClickerCoins.value) return
+  giveBusy.value = true
+  try {
+    const res = await api<any>(`/api/v1/admin/users/${id}/give-clicker-coins`, { method: 'POST', json: true, body: { amount: giveClickerCoins.value } })
+    showMsg(`Clicker coins: ${fmt0(res.coins)} 🪙`)
+  } catch (e: any) { showMsg(e?.message ?? 'Error', 'err') }
+  finally { giveBusy.value = false }
+}
 
-onMounted(async () => {
-  await refreshAll()
+async function giveAchievement(id: string) {
+  if (!giveAchId.value) return
+  giveBusy.value = true
+  try {
+    await api(`/api/v1/admin/users/${id}/give-achievement`, { method: 'POST', json: true, body: { achievementId: giveAchId.value } })
+    showMsg('Achievement granted ✓')
+    await toggleUser(id); await toggleUser(id)
+  } catch (e: any) { showMsg(e?.message ?? 'Error', 'err') }
+  finally { giveBusy.value = false }
+}
+
+async function revokeAchievement(userId: string, achId: string) {
+  try {
+    await api(`/api/v1/admin/users/${userId}/achievement/${achId}`, { method: 'DELETE' })
+    showMsg('Achievement revoked')
+    await toggleUser(userId); await toggleUser(userId)
+  } catch (e: any) { showMsg(e?.message ?? 'Error', 'err') }
+}
+
+// ─── Computed ─────────────────────────────────────────────────────────
+const filteredUsers = computed(() => {
+  const q = searchUsers.value.toLowerCase()
+  if (!q) return users.value
+  return users.value.filter(u =>
+    u.nickname?.toLowerCase().includes(q) ||
+    u.role?.toLowerCase().includes(q) ||
+    String(u.id).includes(q)
+  )
 })
+
+function rarityColor(r: string) {
+  const m: Record<string,string> = { common:'#9ca3af', uncommon:'#34d399', rare:'#3b82f6', epic:'#a855f7', legendary:'#f59e0b', mythic:'#ec4899' }
+  return m[r] ?? '#9ca3af'
+}
+function achDef(id: string) { return meta.value.achievements.find(a => a.id === id) ?? { icon: '🏅', name: id, rarity: 'common' } }
+function itemDef(id: string) { return meta.value.items.find(i => i.id === id) ?? { icon: '📦', name: id, rarity: 'common' } }
 </script>
 
 <template>
-  <GamePageLayout :min-height="640">
-    <div class="admin-wrap">
-      <div class="admin-head card">
-        <div class="row-between" style="gap:12px;">
-          <div class="grid" style="gap:4px;">
-            <h2 style="margin:0;">{{ $t('ui.s_a0e0d3f0c6') }}</h2>
-            <div class="muted">{{ $t('ui.s_796e48762a') }} </div>
+  <div v-if="!auth.isAdmin" style="padding:40px;text-align:center;color:rgba(255,59,87,.9);font-weight:900;">
+    403 — Access Denied
+  </div>
+  <div v-else class="admin-shell">
+    <!-- ─── Left nav ─── -->
+    <nav class="admin-nav">
+      <div class="admin-logo">⚙️ ADMIN</div>
+      <button class="nav-btn" :class="{ on: tab==='dashboard' }" @click="tab='dashboard'">
+        <span>📊</span> Dashboard
+      </button>
+      <button class="nav-btn" :class="{ on: tab==='users' }" @click="tab='users'; loadUsers()">
+        <span>👥</span> Users <span class="nav-badge">{{ users.length }}</span>
+      </button>
+      <div class="nav-spacer" />
+      <button class="nav-btn refresh-btn" @click="refreshAll" :disabled="loading">
+        <span>↻</span> Refresh
+      </button>
+    </nav>
+
+    <!-- ─── Content ─── -->
+    <div class="admin-content">
+      <!-- Global message -->
+      <div v-if="globalMsg" class="global-msg" :class="globalMsgType">{{ globalMsg }}</div>
+
+      <!-- ╔═ DASHBOARD ═════════════════════════════════════════════════╗ -->
+      <div v-if="tab === 'dashboard'" class="dash-grid">
+        <template v-if="dashboard">
+          <!-- Stat cards -->
+          <div class="stat-card blue">
+            <div class="sc-icon">👥</div>
+            <div class="sc-num">{{ dashboard.totalUsers }}</div>
+            <div class="sc-lbl">Total Users</div>
+          </div>
+          <div class="stat-card orange">
+            <div class="sc-icon">📦</div>
+            <div class="sc-num">{{ dashboard.totalItems ?? 0 }}</div>
+            <div class="sc-lbl">Items in Economy</div>
+          </div>
+          <div class="stat-card gold">
+            <div class="sc-icon">💰</div>
+            <div class="sc-num">{{ fmt(dashboard.totalWagered, 0) }}</div>
+            <div class="sc-lbl">Total Wagered (K)</div>
+          </div>
+          <div class="stat-card green">
+            <div class="sc-icon">🏆</div>
+            <div class="sc-num">{{ fmt(dashboard.biggestWin, 0) }}</div>
+            <div class="sc-lbl">Biggest Win Ever (K)</div>
           </div>
 
-          <div class="row" style="gap:10px; flex-wrap:wrap;">
-            <button class="btn" @click="refreshAll" :disabled="loadingUsers || loadingTickets">Refresh</button>
-            <span class="badge">pending tickets: {{ pendingCount }}</span>
+          <!-- Top balances -->
+          <div class="dash-card top-balances">
+            <div class="dc-title">💎 Top Balances</div>
+            <div v-for="(u, i) in dashboard.topBalance" :key="u.nickname" class="top-row">
+              <span class="top-rank">#{{ i+1 }}</span>
+              <span class="top-nick">{{ u.nickname }}</span>
+              <span class="top-bal">{{ fmt(u.balance) }} K</span>
+            </div>
           </div>
-        </div>
 
-        <div class="tabs" style="margin-top:12px;">
-          <button class="tab" :class="{ on: tab === 'users' }" @click="tab = 'users'">
-            Users <span class="pill">{{ users.length }}</span>
-          </button>
-          <button class="tab" :class="{ on: tab === 'tickets' }" @click="tab = 'tickets'">
-            Tickets <span class="pill">{{ tickets.length }}</span>
-          </button>
-        </div>
+          <!-- Quick actions -->
+          <div class="dash-card quick-actions">
+            <div class="dc-title">⚡ Quick Actions</div>
+            <button class="btn btn-primary qa-btn" @click="tab='users'; loadUsers()">
+              Manage {{ dashboard.totalUsers }} Users
+            </button>
+            <button class="btn qa-btn" @click="refreshAll">
+              ↻ Refresh All Stats
+            </button>
+          </div>
 
-        <div v-if="err" class="alert alert-err" style="margin-top:12px;">{{ err }}</div>
-        <div v-else-if="msg" class="alert alert-ok" style="margin-top:12px;">{{ msg }}</div>
+          <!-- House edge -->
+          <div class="dash-card">
+            <div class="dc-title">📈 Economy</div>
+            <div class="eco-row"><span class="muted">Wagered</span><span>{{ fmt(dashboard.totalWagered, 0) }} K</span></div>
+            <div class="eco-row"><span class="muted">Won back</span><span>{{ fmt(dashboard.totalWon, 0) }} K</span></div>
+            <div class="eco-row"><span class="muted">House kept</span>
+              <span :style="{ color: '#34d399' }">{{ fmt(dashboard.totalWagered - dashboard.totalWon, 0) }} K</span>
+            </div>
+          </div>
+        </template>
+        <div v-else class="muted">Loading dashboard…</div>
       </div>
 
-      <!-- USERS -->
-      <div v-if="tab === 'users'" class="card admin-card">
-        <div class="row-between" style="gap:12px; flex-wrap:wrap;">
-          <div class="row" style="gap:10px; align-items:center;">
-            <b>{{ $t('ui.s_0d603cecbd') }}</b>
-            <span v-if="loadingUsers" class="muted">{{ $t('ui.s_d8e058e700') }}</span>
-          </div>
-
-          <div class="row" style="gap:10px; flex-wrap:wrap;">
-            <input class="input" v-model="qUsers" :placeholder="$t('ui.s_9db5fc32e4')" />
-            <button class="btn" @click="loadUsers" :disabled="loadingUsers">Reload</button>
-          </div>
+      <!-- ╔═ USERS ══════════════════════════════════════════════════════╗ -->
+      <div v-if="tab === 'users'" class="users-panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Users ({{ users.length }})</h2>
+          <input class="input search-input" v-model="searchUsers" placeholder="Search nick / role / id…" />
         </div>
 
-        <div class="table-wrap" style="margin-top:12px;">
-          <table class="table">
-            <thead>
-            <tr>
-              <th style="width: 220px;" :class="thClass(sortUsersKey==='nickname')" @click="toggleSortUsers('nickname')">
-                {{ $t('ui.s_8f9bfe9d13') }} <span class="caret">{{ sortCaret(sortUsersKey==='nickname', sortUsersDir) }}</span>
-              </th>
-              <th :class="thClass(sortUsersKey==='discord')" @click="toggleSortUsers('discord')">
-                {{ $t('ui.s_8f5cc64306') }} <span class="caret">{{ sortCaret(sortUsersKey==='discord', sortUsersDir) }}</span>
-              </th>
-              <th style="width: 120px;" :class="thClass(sortUsersKey==='role')" @click="toggleSortUsers('role')">
-                {{ $t('ui.s_bbbabdbe1b') }} <span class="caret">{{ sortCaret(sortUsersKey==='role', sortUsersDir) }}</span>
-              </th>
-              <th style="width: 160px; text-align:right;" :class="thClass(sortUsersKey==='balance')" @click="toggleSortUsers('balance')">
-                {{ $t('ui.s_99a808d8d1') }} <span class="caret">{{ sortCaret(sortUsersKey==='balance', sortUsersDir) }}</span>
-              </th>
-              <th style="width: 260px; text-align:right;">{{ $t('ui.s_06df33001c') }}</th>
-            </tr>
-            </thead>
+        <div v-if="loading" class="muted pad">Loading…</div>
+        <div v-else class="users-list">
+          <div v-for="u in filteredUsers" :key="u.id" class="user-row">
+            <!-- Row header -->
+            <div class="ur-head" @click="toggleUser(u.id)">
+              <div class="ur-left">
+                <span class="ur-expand">{{ expandedUser === u.id ? '▼' : '▶' }}</span>
+                <div class="ur-avatar">{{ u.nickname.slice(0,2).toUpperCase() }}</div>
+                <div class="ur-info">
+                  <span class="ur-nick">{{ u.nickname }}</span>
+                </div>
+              </div>
+              <div class="ur-right">
+                <span class="role-tag" :class="'role-' + u.role">{{ u.role }}</span>
+                <span class="ur-bal">{{ fmt(u.balance) }} K</span>
+                <span class="ur-items muted small">📦 {{ u.itemCount }}</span>
+                <button class="btn btn-danger btn-xs" @click.stop="deleteUser(u.id)">🗑</button>
+              </div>
+            </div>
 
-            <tbody>
-            <tr v-for="u in sortedUsers" :key="u.id">
-              <td>
-                <div class="u-meta">
-                  <div class="u-name">
-                    <template v-if="editingId === u.id">
-                      <input class="input input-sm" v-model="editNickname" />
-                    </template>
-                    <template v-else>
-                      <b>{{ u.nickname }}</b>
-                    </template>
+            <!-- Expanded detail -->
+            <div v-if="expandedUser === u.id" class="ur-detail">
+              <div v-if="userDetailLoading" class="muted small pad">Loading details…</div>
+
+              <div v-else-if="userDetail" class="detail-grid">
+
+                <!-- Edit profile -->
+                <div class="detail-card">
+                  <div class="dc-title">✏️ Edit Profile</div>
+                  <div class="form-row">
+                    <label class="form-label">Nickname</label>
+                    <input class="input input-sm" v-model="editNick" maxlength="50" />
                   </div>
-                  <div class="muted u-id">#{{ String(u.id).slice(0, 8) }}</div>
-                </div>
-              </td>
-
-              <td class="muted">
-                <span>{{ u.discord }}</span>
-              </td>
-
-              <td>
-                <template v-if="editingId === u.id">
-                  <BaseSelect
-                    class="input input-sm"
-                    v-model="editRole"
-                    :options="roleOptions as any"
-                    aria-label="Role"
-                  />
-                </template>
-                <template v-else>
-                  <span class="badge">{{ u.role }}</span>
-                </template>
-              </td>
-
-              <td style="text-align:right;">
-                <template v-if="editingId === u.id">
-                  <input class="input input-sm" type="number" step="0.01" v-model.number="editBalance" style="text-align:right;" />
-                </template>
-                <template v-else>
-                  <span class="num">{{ Number(u.balance).toFixed(2) }}</span>
-                </template>
-              </td>
-
-              <td style="text-align:right;">
-                <div class="row" style="gap:8px; justify-content:flex-end; flex-wrap:wrap;">
-                  <template v-if="editingId === u.id">
-                    <button class="btn btn-primary" @click="saveUser(u.id)">Save</button>
-                    <button class="btn" @click="cancelEdit">Cancel</button>
-                  </template>
-                  <template v-else>
-                    <button class="btn" @click="startEdit(u)">Edit</button>
-                    <button class="btn btn-danger" @click="deleteUser(u.id)">Delete</button>
-                  </template>
-                </div>
-              </td>
-            </tr>
-
-            <tr v-if="!loadingUsers && filteredUsers.length === 0">
-              <td colspan="5" class="muted" style="padding:16px;">No users found.</td>
-            </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- TICKETS -->
-      <div v-else class="card admin-card">
-        <div class="row-between" style="gap:12px; flex-wrap:wrap;">
-          <div class="row" style="gap:10px; align-items:center;">
-            <b>All tickets</b>
-            <span class="badge">pending: {{ pendingCount }}</span>
-            <span v-if="loadingTickets" class="muted">loading…</span>
-          </div>
-
-          <div class="row" style="gap:10px; flex-wrap:wrap;">
-            <input class="input" v-model="qTickets" placeholder="Search: id / ownerId / status / type" />
-            <button class="btn" @click="loadTickets" :disabled="loadingTickets">Reload</button>
-          </div>
-        </div>
-
-        <div class="table-wrap" style="margin-top:12px;">
-          <table class="table">
-            <thead>
-            <tr>
-              <th style="width: 220px;" :class="thClass(sortTicketsKey==='id')" @click="toggleSortTickets('id')">
-                Ticket <span class="caret">{{ sortCaret(sortTicketsKey==='id', sortTicketsDir) }}</span>
-              </th>
-              <th style="width: 200px;" :class="thClass(sortTicketsKey==='nickname')" @click="toggleSortTickets('nickname')">
-                User <span class="caret">{{ sortCaret(sortTicketsKey==='nickname', sortTicketsDir) }}</span>
-              </th>
-              <th style="width: 120px;" :class="thClass(sortTicketsKey==='type')" @click="toggleSortTickets('type')">
-                Type <span class="caret">{{ sortCaret(sortTicketsKey==='type', sortTicketsDir) }}</span>
-              </th>
-              <th style="width: 140px; text-align:right;" :class="thClass(sortTicketsKey==='amount')" @click="toggleSortTickets('amount')">
-                Amount <span class="caret">{{ sortCaret(sortTicketsKey==='amount', sortTicketsDir) }}</span>
-              </th>
-              <th style="width: 140px;" :class="thClass(sortTicketsKey==='status')" @click="toggleSortTickets('status')">
-                Status <span class="caret">{{ sortCaret(sortTicketsKey==='status', sortTicketsDir) }}</span>
-              </th>
-              <th style="width: 260px; text-align:right;">Actions</th>
-            </tr>
-            </thead>
-
-            <tbody>
-            <tr v-for="t in sortedTickets" :key="t.id">
-              <td>
-                <div class="u-meta">
-                  <div class="u-name"><b>#{{ String(t.id).slice(0, 8) }}</b></div>
-                  <div class="muted u-id">
-                    {{ t.closedAt ? new Date(t.closedAt).toLocaleString() : '—' }}
+                  <div class="form-row">
+                    <label class="form-label">Role</label>
+                    <select class="input input-sm" v-model="editRole">
+                      <option value="user">user</option>
+                      <option value="admin">admin</option>
+                    </select>
                   </div>
-                </div>
-              </td>
-
-              <td class="muted">
-                <div class="grid" style="gap:2px;">
-                  <span>#{{ String(t.ownerId).slice(0, 8) }}</span>
-                  <span v-if="t.nickname">{{ t.nickname }}</span>
-                </div>
-              </td>
-
-              <td>
-                <span class="badge">{{ t.type }}</span>
-              </td>
-
-              <td style="text-align:right;">
-                <span class="num">{{ Number(t.amount).toFixed(2) }}</span>
-              </td>
-
-              <td>
-                <span class="badge" :class="'st-' + String(t.status).toLowerCase()">{{ t.status }}</span>
-              </td>
-
-              <td style="text-align:right;">
-                <div class="row" style="gap:8px; justify-content:flex-end; flex-wrap:wrap;">
-                  <button
-                    class="btn btn-primary"
-                    @click="approveTicket(t.id)"
-                    :disabled="t.status !== 'PENDING' || loadingTickets"
-                  >
-                    Approve
-                  </button>
-                  <button
-                    class="btn btn-danger"
-                    @click="rejectTicket(t.id)"
-                    :disabled="t.status !== 'PENDING' || loadingTickets"
-                  >
-                    Reject
+                  <div class="form-row">
+                    <label class="form-label">Balance (K)</label>
+                    <input class="input input-sm" type="number" v-model.number="editBalance" min="0" />
+                  </div>
+                  <button class="btn btn-primary btn-sm mt-8" @click="saveUser(u.id)" :disabled="editBusy">
+                    Save Changes
                   </button>
                 </div>
-              </td>
-            </tr>
 
-            <tr v-if="!loadingTickets && filteredTickets.length === 0">
-              <td colspan="6" class="muted" style="padding:16px;">No tickets found.</td>
-            </tr>
-            </tbody>
-          </table>
+                <!-- Give K-coins -->
+                <div class="detail-card">
+                  <div class="dc-title">💰 Give / Take K-coins</div>
+                  <div class="give-row">
+                    <input class="input input-sm" type="number" v-model.number="giveAmount" placeholder="Amount (can be negative)" />
+                    <button class="btn btn-primary btn-sm" @click="giveBalance(u.id)" :disabled="giveBusy">Give</button>
+                  </div>
+                  <div class="muted small mt-4">Current: {{ fmt(userDetail.user.balance) }} K</div>
+
+                  <div class="dc-title mt-12">🪙 Give Clicker Coins</div>
+                  <div class="give-row">
+                    <input class="input input-sm" type="number" v-model.number="giveClickerCoins" min="1" />
+                    <button class="btn btn-primary btn-sm" @click="giveClicker(u.id)" :disabled="giveBusy">Give</button>
+                  </div>
+                  <div class="muted small mt-4">
+                    Current: {{ userDetail.clicker ? fmt0(userDetail.clicker.coins) : 0 }} 🪙
+                  </div>
+                </div>
+
+                <!-- Give item -->
+                <div class="detail-card">
+                  <div class="dc-title">📦 Give Item</div>
+                  <div class="give-row">
+                    <select class="input input-sm" v-model="giveItemDef">
+                      <option v-for="item in meta.items" :key="item.id" :value="item.id">
+                        {{ item.icon }} {{ item.name }} ({{ item.rarity }})
+                      </option>
+                    </select>
+                    <button class="btn btn-primary btn-sm" @click="giveItem(u.id)" :disabled="giveBusy">Give</button>
+                  </div>
+
+                  <div class="dc-title mt-12">Inventory Summary</div>
+                  <div class="inv-mini" v-if="userDetail.inventory.length">
+                    <div v-for="inv in userDetail.inventory" :key="inv.itemDefId" class="inv-mini-row">
+                      <span>{{ itemDef(inv.itemDefId).icon }} {{ itemDef(inv.itemDefId).name }}</span>
+                      <span class="muted small">×{{ inv.count }}</span>
+                    </div>
+                  </div>
+                  <div v-else class="muted small">No items</div>
+                </div>
+
+                <!-- Achievements -->
+                <div class="detail-card">
+                  <div class="dc-title">🏅 Grant Achievement</div>
+                  <div class="give-row">
+                    <select class="input input-sm" v-model="giveAchId">
+                      <option v-for="a in meta.achievements" :key="a.id" :value="a.id">
+                        {{ a.icon }} {{ a.name }}
+                      </option>
+                    </select>
+                    <button class="btn btn-primary btn-sm" @click="giveAchievement(u.id)" :disabled="giveBusy">Grant</button>
+                  </div>
+
+                  <div class="ach-mini" v-if="userDetail.achievements.length">
+                    <div v-for="rawAch in userDetail.achievements" :key="typeof rawAch === 'string' ? rawAch : rawAch.id" class="ach-mini-row">
+                      <template v-if="typeof rawAch === 'string'">
+                        <span :style="{ color: rarityColor(achDef(rawAch).rarity) }">
+                          {{ achDef(rawAch).icon }} {{ achDef(rawAch).name }}
+                        </span>
+                        <button class="btn btn-xs btn-danger" @click="revokeAchievement(u.id, rawAch)">✕</button>
+                      </template>
+                      <template v-else>
+                        <span :style="{ color: rarityColor(rawAch.rarity) }">
+                          {{ rawAch.icon }} {{ rawAch.nameUa || rawAch.name }}
+                          <span v-if="!rawAch.manual" class="ach-auto-tag">auto</span>
+                        </span>
+                        <button v-if="rawAch.manual" class="btn btn-xs btn-danger" @click="revokeAchievement(u.id, rawAch.id)">✕</button>
+                      </template>
+                    </div>
+                  </div>
+                  <div v-else class="muted small">No achievements</div>
+                </div>
+
+                <!-- Stats -->
+                <div class="detail-card detail-wide">
+                  <div class="dc-title">📊 Game Stats</div>
+                  <div v-if="userDetail.stats.length" class="stats-mini">
+                    <div class="stats-mini-head">
+                      <span>Game</span><span>Played</span><span>Wagered</span><span>Won</span><span>Best</span>
+                    </div>
+                    <div v-for="s in userDetail.stats" :key="s.gameType" class="stats-mini-row">
+                      <span class="game-name">{{ s.gameType }}</span>
+                      <span>{{ s.gamesPlayed }}</span>
+                      <span>{{ fmt(s.totalWagered, 0) }} K</span>
+                      <span>{{ fmt(s.totalWon, 0) }} K</span>
+                      <span class="gold">{{ fmt(s.biggestWin, 0) }} K</span>
+                    </div>
+                  </div>
+                  <div v-else class="muted small">No game history</div>
+
+                  <div v-if="userDetail.clicker" class="clicker-mini mt-8">
+                    <span class="muted small">🪙 Clicker: {{ fmt0(userDetail.clicker.coins) }} coins • {{ userDetail.clicker.clickPower }}/click • {{ userDetail.clicker.autoPower }}/sec</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="filteredUsers.length === 0" class="muted pad">No users found.</div>
         </div>
       </div>
+
     </div>
-  </GamePageLayout>
+  </div>
 </template>
 
 <style scoped>
-.admin-wrap{
-  width: min(1150px, 100%);
-  margin: 0 auto;
+/* ─── Shell ──────────────────────────────────────────────────────────── */
+.admin-shell {
   display: grid;
-  gap: 16px;
+  grid-template-columns: 200px 1fr;
+  height: calc(100vh - 64px);
+  overflow: hidden;
 }
 
-.admin-head{
-  border-radius: 18px;
-  padding: 14px;
-  background:
-    radial-gradient(560px 220px at 20% 0%, rgba(58,145,255,.18), rgba(0,0,0,0)),
-    radial-gradient(460px 180px at 80% 0%, rgba(0,231,1,.10), rgba(0,0,0,0));
-  border: 1px solid rgba(255,255,255,.08);
+/* ─── Left nav ───────────────────────────────────────────────────────── */
+.admin-nav {
+  background: rgba(0,0,0,.35);
+  border-right: 1px solid rgba(255,255,255,.06);
+  padding: 16px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
 }
-
-.admin-card{
-  border-radius: 18px;
-  padding: 14px;
-  border: 1px solid rgba(255,255,255,.06);
-}
-
-.tabs{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-}
-.tab{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding: 10px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.08);
-  background: rgba(0,0,0,.18);
-  color: rgba(255,255,255,.9);
-  cursor:pointer;
-  font-weight: 900;
-}
-.tab.on{
-  background: rgba(58,145,255,.18);
-  border-color: rgba(58,145,255,.28);
-  box-shadow: 0 0 0 1px rgba(0,0,0,.2), 0 10px 22px rgba(0,0,0,.28);
-}
-.pill{
-  font-size: 12px;
-  font-weight: 900;
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.22);
-  color: rgba(255,255,255,.86);
-}
-
-.alert{
-  border-radius: 14px;
-  padding: 10px 12px;
-  border: 1px solid rgba(255,255,255,.08);
-  background: rgba(0,0,0,.18);
-  white-space: normal;
-}
-.alert-err{
-  border-color: rgba(248,81,73,.35);
-  background: rgba(248,81,73,.10);
-}
-.alert-ok{
-  border-color: rgba(34,197,94,.35);
-  background: rgba(34,197,94,.10);
-}
-
-.table-wrap{
-  overflow:auto;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,.06);
-  background: rgba(0,0,0,.14);
-}
-.table{
-  width:100%;
-  border-collapse: collapse;
-  min-width: 860px;
-}
-.table thead th{
-  text-align:left;
-  font-size: 12px;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: rgba(255,255,255,.70);
-  padding: 12px 12px;
+.admin-logo {
+  font-size: 15px; font-weight: 1000; letter-spacing: .5px;
+  padding: 0 8px 14px;
   border-bottom: 1px solid rgba(255,255,255,.06);
-  background: rgba(0,0,0,.18);
-  position: sticky;
-  top: 0;
-  z-index: 1;
+  margin-bottom: 6px;
+  color: #ffb24a;
 }
-.table tbody td{
-  padding: 12px 12px;
-  border-bottom: 1px solid rgba(255,255,255,.06);
-  vertical-align: middle;
+.nav-btn {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 12px;
+  border: 1px solid transparent;
+  background: transparent; color: rgba(255,255,255,.75);
+  cursor: pointer; font-size: 13px; font-weight: 900;
+  transition: all .15s;
 }
-.table tbody tr:hover td{
-  background: rgba(255,255,255,.03);
+.nav-btn:hover { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.08); color: #fff; }
+.nav-btn.on { background: rgba(255,178,74,.14); border-color: rgba(255,178,74,.28); color: #fff; }
+.nav-badge {
+  margin-left: auto; padding: 2px 8px; border-radius: 999px;
+  background: rgba(255,255,255,.10); font-size: 11px;
 }
-.u-meta{ display:flex; flex-direction:column; gap:2px; }
-.u-name{ display:flex; align-items:center; gap:8px; }
-.u-id{ font-size: 12px; }
+.nav-badge.pending { background: rgba(250,204,21,.25); color: #fcd34d; }
+.nav-spacer { flex: 1; }
+.refresh-btn { opacity: .7; }
+.refresh-btn:hover { opacity: 1; }
 
-.input-sm{
-  padding: 8px 10px;
-  border-radius: 12px;
-  min-height: 34px;
-}
-
-.num{
-  font-weight: 900;
-  color: rgba(255,255,255,.92);
-}
-
-.btn-danger{
-  border-color: rgba(248,81,73,.35);
-  background: rgba(248,81,73,.10);
-}
-.btn-danger:hover{
-  background: rgba(248,81,73,.16);
+/* ─── Content ────────────────────────────────────────────────────────── */
+.admin-content {
+  overflow-y: auto; padding: 16px;
+  display: flex; flex-direction: column; gap: 14px;
 }
 
-.st-pending{ border-color: rgba(250,204,21,.45); background: rgba(250,204,21,.10); }
-.st-approved{ border-color: rgba(34,197,94,.45); background: rgba(34,197,94,.10); }
-.st-rejected{ border-color: rgba(248,81,73,.45); background: rgba(248,81,73,.10); }
-
-
-/* sortable headers */
-.th-sort{
-  cursor: pointer;
-  user-select: none;
-  white-space: nowrap;
+.global-msg {
+  padding: 10px 16px; border-radius: 12px; font-size: 13px; font-weight: 900;
+  border: 1px solid; position: sticky; top: 0; z-index: 10;
 }
-.th-sort .caret{
-  display: inline-block;
-  margin-left: 6px;
-  font-weight: 900;
-  opacity: .45;
-  transform: translateY(-1px);
-}
-.th-sort.is-active .caret{ opacity: .95; }
-.th-sort:hover .caret{ opacity: .85; }
+.global-msg.ok { border-color: rgba(34,197,94,.4); background: rgba(34,197,94,.12); }
+.global-msg.err { border-color: rgba(248,81,73,.4); background: rgba(248,81,73,.12); }
 
-@media (max-width: 900px){
-  .table{ min-width: 760px; }
-}
+.muted { color: rgba(255,255,255,.6); }
+.small { font-size: 12px; }
+.pad { padding: 16px; }
+.mt-4 { margin-top: 4px; }
+.mt-8 { margin-top: 8px; }
+.mt-12 { margin-top: 12px; }
+.gold { color: #ffd700; font-weight: 900; }
 
+/* ─── Dashboard ──────────────────────────────────────────────────────── */
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+@media (max-width: 1200px) { .dash-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.stat-card {
+  border-radius: 16px; padding: 18px;
+  border: 1px solid rgba(255,255,255,.06);
+  display: flex; flex-direction: column; gap: 6px;
+  background: rgba(0,0,0,.2);
+}
+.stat-card.blue { border-color: rgba(59,130,246,.3); box-shadow: 0 0 20px rgba(59,130,246,.08); }
+.stat-card.orange { border-color: rgba(251,146,60,.3); box-shadow: 0 0 20px rgba(251,146,60,.08); }
+.stat-card.gold { border-color: rgba(255,210,80,.3); box-shadow: 0 0 20px rgba(255,210,80,.08); }
+.stat-card.green { border-color: rgba(34,197,94,.3); box-shadow: 0 0 20px rgba(34,197,94,.08); }
+.sc-icon { font-size: 28px; }
+.sc-num { font-size: 26px; font-weight: 1000; }
+.sc-lbl { font-size: 12px; color: rgba(255,255,255,.55); text-transform: uppercase; letter-spacing: .4px; }
+
+.dash-card {
+  background: rgba(0,0,0,.2); border: 1px solid rgba(255,255,255,.06);
+  border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 10px;
+  grid-column: span 2;
+}
+.dc-title { font-weight: 1000; font-size: 14px; margin-bottom: 4px; }
+.top-row { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.top-rank { width: 24px; font-weight: 900; color: #ffd700; }
+.top-nick { flex: 1; font-weight: 900; }
+.top-bal { font-weight: 900; color: #ffd700; }
+.qa-btn { width: 100%; height: 42px; border-radius: 12px; margin-top: 4px; }
+.eco-row { display: flex; justify-content: space-between; font-size: 13px; }
+
+/* ─── Panel head ─────────────────────────────────────────────────────── */
+.panel-head {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 4px;
+}
+.panel-title { font-size: 18px; font-weight: 1000; margin: 0; display: flex; align-items: center; gap: 10px; }
+.pending-badge { padding: 4px 12px; border-radius: 999px; background: rgba(250,204,21,.2); border: 1px solid rgba(250,204,21,.4); font-size: 12px; font-weight: 900; color: #fcd34d; }
+.search-input { flex: 1; min-width: 200px; max-width: 400px; }
+
+/* ─── Users ──────────────────────────────────────────────────────────── */
+.users-list { display: flex; flex-direction: column; gap: 6px; }
+.user-row { border: 1px solid rgba(255,255,255,.06); border-radius: 14px; overflow: hidden; }
+.ur-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; cursor: pointer;
+  background: rgba(0,0,0,.15);
+  transition: background .12s;
+}
+.ur-head:hover { background: rgba(255,255,255,.04); }
+.ur-left { display: flex; align-items: center; gap: 10px; }
+.ur-right { display: flex; align-items: center; gap: 10px; }
+.ur-expand { font-size: 11px; color: rgba(255,255,255,.4); width: 14px; }
+.ur-avatar {
+  width: 34px; height: 34px; border-radius: 999px;
+  background: rgba(255,178,74,.2); border: 1px solid rgba(255,178,74,.3);
+  display: grid; place-items: center; font-weight: 1000; font-size: 12px;
+  flex-shrink: 0;
+}
+.ur-info { display: flex; flex-direction: column; gap: 1px; }
+.ur-nick { font-weight: 900; font-size: 14px; }
+.ur-bal { font-weight: 900; }
+.ur-items { }
+.role-tag { padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .4px; }
+.role-tag.role-admin { background: rgba(255,59,87,.15); border: 1px solid rgba(255,59,87,.3); color: #f87171; }
+.role-tag.role-user { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.10); }
+.btn-xs { height: 28px; padding: 0 10px; border-radius: 8px; font-size: 12px; }
+.btn-sm { height: 34px; padding: 0 12px; border-radius: 10px; font-size: 12px; }
+.btn-danger { border-color: rgba(248,81,73,.35); background: rgba(248,81,73,.10); color: #f87171; }
+.btn-danger:hover { background: rgba(248,81,73,.20); }
+
+/* Detail grid */
+.ur-detail { padding: 14px; border-top: 1px solid rgba(255,255,255,.05); background: rgba(0,0,0,.12); }
+.detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+@media (max-width: 1000px) { .detail-grid { grid-template-columns: 1fr; } }
+.detail-card { background: rgba(0,0,0,.2); border: 1px solid rgba(255,255,255,.06); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.detail-wide { grid-column: span 2; }
+.form-row { display: flex; flex-direction: column; gap: 4px; }
+.form-label { font-size: 11px; color: rgba(255,255,255,.55); text-transform: uppercase; letter-spacing: .4px; }
+.input-sm { height: 36px; font-size: 13px; }
+.give-row { display: flex; gap: 8px; }
+.give-row .input-sm { flex: 1; }
+.inv-mini { display: flex; flex-direction: column; gap: 4px; max-height: 120px; overflow-y: auto; }
+.inv-mini-row { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,.04); }
+.ach-mini { display: flex; flex-direction: column; gap: 4px; }
+.ach-mini-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,.04); }
+.ach-auto-tag { font-size: 10px; opacity: .5; padding: 1px 4px; border-radius: 4px; border: 1px solid rgba(255,255,255,.15); margin-left: 4px; }
+.stats-mini { display: grid; gap: 4px; font-size: 12px; }
+.stats-mini-head { display: grid; grid-template-columns: 1fr 60px 90px 90px 90px; color: rgba(255,255,255,.4); font-size: 11px; text-transform: uppercase; padding-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,.06); }
+.stats-mini-row { display: grid; grid-template-columns: 1fr 60px 90px 90px 90px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,.04); }
+.game-name { font-weight: 900; text-transform: capitalize; }
+.clicker-mini { border-top: 1px solid rgba(255,255,255,.06); padding-top: 8px; }
+
+/* ─── Tickets ────────────────────────────────────────────────────────── */
+.tickets-list { display: flex; flex-direction: column; gap: 6px; }
+.ticket-card {
+  display: grid; grid-template-columns: 1fr auto auto;
+  gap: 16px; align-items: center;
+  padding: 14px 16px; border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.06);
+  background: rgba(0,0,0,.15);
+  transition: background .12s;
+}
+.ticket-card.tc-pending { border-left: 3px solid #fbbf24; }
+.ticket-card.tc-approved { border-left: 3px solid #34d399; opacity: .7; }
+.ticket-card.tc-rejected { border-left: 3px solid #f87171; opacity: .6; }
+.tc-left { display: flex; flex-direction: column; gap: 3px; }
+.tc-id { }
+.tc-user { font-weight: 900; }
+.tc-center { display: flex; align-items: center; gap: 12px; }
+.type-badge { padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 900; }
+.type-badge.type-deposit { background: rgba(34,197,94,.15); border: 1px solid rgba(34,197,94,.3); color: #34d399; }
+.type-badge.type-withdraw { background: rgba(251,146,60,.15); border: 1px solid rgba(251,146,60,.3); color: #fb923c; }
+.tc-amount { font-size: 18px; font-weight: 1000; }
+.tc-right { display: flex; align-items: center; gap: 8px; }
+.status-dot { font-size: 10px; }
+.btn-approve { background: rgba(34,197,94,.15); border-color: rgba(34,197,94,.35); color: #34d399; }
+.btn-approve:hover { background: rgba(34,197,94,.25); }
+.btn-reject { background: rgba(248,81,73,.10); border-color: rgba(248,81,73,.35); color: #f87171; }
+.btn-reject:hover { background: rgba(248,81,73,.20); }
+
+/* Mobile responsive */
+@media (max-width: 720px) {
+  .admin-shell { grid-template-columns: 1fr; height: auto; overflow: visible; }
+  .admin-nav {
+    flex-direction: row; flex-wrap: wrap; gap: 4px;
+    padding: 10px; border-right: none;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  .admin-logo { display: none; }
+  .nav-btn { padding: 8px 10px; font-size: 12px; flex: 0 0 auto; }
+  .nav-spacer, .refresh-btn { display: none; }
+  .admin-content { padding: 10px; }
+  .dash-grid { grid-template-columns: repeat(2, 1fr); }
+  .detail-grid { grid-template-columns: 1fr; }
+  .detail-wide { grid-column: span 1; }
+  .ur-row { flex-wrap: wrap; gap: 6px; }
+  .stats-mini-head, .stats-mini-row { grid-template-columns: 1fr 50px 70px 70px 70px; }
+}
+@media (max-width: 480px) {
+  .dash-grid { grid-template-columns: 1fr; }
+  .search-row { flex-direction: column; gap: 8px; }
+  .search-input { max-width: 100%; }
+  .stats-mini-head { display: none; }
+  .stats-mini-row { grid-template-columns: 1fr auto auto; }
+}
 </style>

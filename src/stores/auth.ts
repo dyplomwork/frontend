@@ -16,7 +16,6 @@ export type Role = 'guest' | 'user' | 'admin'
 export type User = {
   id: string
   nickname: string
-  discord: string
   role: Role
   balance: number
 }
@@ -60,7 +59,7 @@ export const useAuthStore = defineStore('auth', {
         })
 
         this.user = {
-          ...(this.user ?? { id: '', nickname: '', discord: '', role: 'user' }),
+          ...(this.user ?? { id: '', nickname: '', role: 'user' as Role }),
           balance: Number(res.balance),
         }
         setCachedUser(this.user)
@@ -77,7 +76,7 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    async register(payload: { nickname: string; discord: string; password: string }) {
+    async register(payload: { nickname: string; password: string }) {
       if (!canUseStorage()) return { ok: false as const }
       const res = await api<{ ok: boolean; token: string; user: User }>('/api/v1/accounts/auth/register', {
         method: 'POST',
@@ -155,10 +154,16 @@ export const useAuthStore = defineStore('auth', {
       if (this._balanceFetchPromise) return this._balanceFetchPromise
 
       this._balanceFetchPromise = (async () => {
-        const res = await api<{ ok: boolean; balance: number }>('/api/v1/accounts/users/me/balance', {
+        const res = await api<{ ok: boolean; balance: number; role?: string; nickname?: string }>('/api/v1/accounts/users/me/balance', {
           method: 'GET',
         })
-        this.user = { ...u, balance: Number(res.balance) }
+        // Sync role and nickname from DB in case admin changed them
+        this.user = {
+          ...u,
+          balance: Number(res.balance),
+          ...(res.role ? { role: res.role as any } : {}),
+          ...(res.nickname ? { nickname: res.nickname } : {}),
+        }
         setCachedUser(this.user)
         this._balanceFetchAt = Date.now()
         return { ok: true as const, balance: res.balance }

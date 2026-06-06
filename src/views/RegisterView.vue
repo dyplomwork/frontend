@@ -7,25 +7,23 @@ const router = useRouter()
 const auth = useAuthStore()
 
 const nickname = ref('')
-const discord = ref('')
 const password = ref('')
 const error = ref('')
 
 const passwordOk = computed(() => password.value.length >= 8)
-const canSubmit = computed(() => nickname.value.trim().length > 0 && discord.value.trim().length > 0 && passwordOk.value && !auth.loading)
+const canSubmit = computed(() => nickname.value.trim().length > 0 && passwordOk.value && !auth.loading)
 
 async function submit() {
   error.value = ''
 
   const nick = nickname.value.trim()
-  const disc = discord.value.trim()
   if (password.value.length < 8) {
     error.value = 'Пароль повинен мати як мінімум 8 символів'
     return
   }
 
   try {
-    const res = await auth.register({ nickname: nick, discord: disc, password: password.value })
+    const res = await auth.register({ nickname: nick, password: password.value })
     if (!res.ok) {
       error.value = (res as any).message || 'Не вдалось зареєструватися'
       return
@@ -49,11 +47,6 @@ async function submit() {
         <label class="field">
           <span class="label">{{ $t('ui.s_3fea2b66f7') }}</span>
           <input v-model="nickname" type="text" autocomplete="nickname" :placeholder="$t('ui.s_4b49f253c1')" required />
-        </label>
-
-        <label class="field">
-          <span class="label">{{ $t('ui.s_8f5cc64306') }}</span>
-          <input v-model="discord" type="text" autocomplete="username" :placeholder="$t('ui.s_d46406af91')" required />
         </label>
 
         <label class="field">
