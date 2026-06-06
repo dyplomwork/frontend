@@ -88,8 +88,8 @@ async function doBuy(listing: Listing) {
     await api(`/api/v1/auction/${listing.id}/buy`, { method: 'POST' })
     msg.value = `Куплено: ${itemName(listing)}`
     msgType.value = 'success'
-    await auth.fetchBalance({ force: true })
-    await load()
+    // Balance refresh and listings reload are independent — run in parallel
+    await Promise.all([auth.fetchBalance({ force: true }), load()])
   } catch (e: any) {
     msg.value = e?.message ?? t('ui.s_error')
     msgType.value = 'error'

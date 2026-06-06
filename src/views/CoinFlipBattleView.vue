@@ -43,11 +43,47 @@ const isCreator = computed(() => !!battle.value && battle.value.creatorId === my
 const isJoiner = computed(() => !!battle.value && String(battle.value.joinerId || '') === myId.value)
 const isParticipant = computed(() => isCreator.value || isJoiner.value)
 
-const mySide = computed<CoinSide | null>(() => {
+// When both players chose random sides, the backend doesn't assign sides in the DB —
+// it just picks a random winner. After FINISHED we can *derive* each player's side:
+// the winner gets resultSide, the loser gets the opposite.
+function deriveRandomSide(
+  playerId: string,
+  winnerId: string | null | undefined,
+  resultSide: CoinSide | null | undefined
+): CoinSide | null {
+  if (!resultSide || !winnerId) return null   // battle not finished yet
+  if (winnerId === playerId) return resultSide
+  return resultSide === 'heads' ? 'tails' : 'heads'
+}
+
+// Resolved side for the creator:
+// • explicit choice  → use it directly
+// • random (null)    → derive from result once FINISHED, null before that
+const creatorResolvedSide = computed<CoinSide | null>(() => {
   const b = battle.value
   if (!b) return null
-  if (isCreator.value) return (b.creatorSide || null) as any
-  if (isJoiner.value) return (b.joinerSide || null) as any
+  if (b.creatorSide) return b.creatorSide
+  return deriveRandomSide(b.creatorId, b.winnerId, b.resultSide as CoinSide | null)
+})
+
+// Same for the joiner (joinerSide is also null only when BOTH chose random;
+// if creator picked a side, backend auto-assigned the opposite to joiner)
+const joinerResolvedSide = computed<CoinSide | null>(() => {
+  const b = battle.value
+  if (!b) return null
+  if (b.joinerSide) return b.joinerSide
+  return deriveRandomSide(b.joinerId ?? '', b.winnerId, b.resultSide as CoinSide | null)
+})
+
+const mySide = computed<CoinSide | null>(() => {
+  if (isCreator.value) return creatorResolvedSide.value
+  if (isJoiner.value) return joinerResolvedSide.value
+  return null
+})
+
+const oppSide = computed<CoinSide | null>(() => {
+  if (isCreator.value) return joinerResolvedSide.value
+  if (isJoiner.value) return creatorResolvedSide.value
   return null
 })
 
@@ -118,6 +154,14 @@ const sideText = (s: CoinSide | string | null | undefined) => {
   return String(s)
 }
 
+// Side label shown inside the arena player badge.
+// Null means "random, not yet revealed" → show a dice emoji + label.
+// After FINISHED the resolved computed fills in the real side.
+const arenaSideText = (side: CoinSide | null) => {
+  if (!side) return t('ui.s_cf_side_pending')   // 🎲 Рандом / 🎲 Random
+  return sideText(side)
+}
+
 async function fetchBattle() {
   if (!id.value) return
   loading.value = true
@@ -162,7 +206,7 @@ async function join() {
     const nb = await battlesJoin(battle.value.id)
     publishMockEvent({ type: 'battle', battle: nb })
     publishMockEvent({ type: 'battles' })
-    await auth.fetchBalance({ force: true }).catch(() => {})
+    void auth.fetchBalance({ force: true }).catch(() => {})
     battle.value = nb as any
   } catch (e: any) {
     error.value = e?.message || 'Помилка'
@@ -199,7 +243,7 @@ async function cancel() {
     await battlesCancel(battle.value.id)
     publishMockEvent({ type: 'battle', battle: { id: battle.value.id, status: 'CANCELLED' } as any })
     publishMockEvent({ type: 'battles' })
-    await auth.fetchBalance({ force: true }).catch(() => {})
+    void auth.fetchBalance({ force: true }).catch(() => {})
     await router.push({ name: 'coinflip' })
   } catch (e: any) {
     error.value = e?.message || 'Помилка'
@@ -217,7 +261,7 @@ async function leave() {
     const nb = await battlesLeave(b.id)
     publishMockEvent({ type: 'battle', battle: nb })
     publishMockEvent({ type: 'battles' })
-    await auth.fetchBalance({ force: true }).catch(() => {})
+    void auth.fetchBalance({ force: true }).catch(() => {})
   } catch {
   }
 }
@@ -324,11 +368,17 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="arena" v-if="battle.status !== 'CANCELLED' && battle.status !== 'ABANDONED'">
+        <!-- Left player: me (participant view) or creator (spectator view) -->
         <div class="player left">
           <div class="nick">{{ isParticipant ? myNick : battle.creatorNick }}</div>
           <div class="meta">
-            <span class="badge" :class="{ on: isParticipant ? myReady : !!battle.creatorReady }">{{ (isParticipant ? myReady : !!battle.creatorReady) ? '✓' : '…' }}</span>
-            <span class="muted small">{{ sideText(isParticipant ? mySide : battle.creatorSide) }}</span>
+            <span class="badge" :class="{ on: isParticipant ? myReady : !!battle.creatorReady }">
+              {{ (isParticipant ? myReady : !!battle.creatorReady) ? '✓' : '…' }}
+            </span>
+            <!-- arenaSideText: shows "🎲 Рандом" until FINISHED, then the resolved side -->
+            <span class="muted small side-label" :class="{ 'side-revealed': !!(isParticipant ? mySide : creatorResolvedSide) }">
+              {{ arenaSideText(isParticipant ? mySide : creatorResolvedSide) }}
+            </span>
           </div>
         </div>
 
@@ -352,11 +402,16 @@ onBeforeUnmount(() => {
           <div class="muted small" v-if="coinState === 'result'">{{ $t('ui.s_cf_result') }}: <b>{{ sideText(coinResult) }}</b></div>
         </div>
 
+        <!-- Right player: opponent (participant view) or joiner (spectator view) -->
         <div class="player right">
           <div class="nick">{{ isParticipant ? oppNick : battle.joinerNick || '…' }}</div>
           <div class="meta">
-            <span class="badge" :class="{ on: isParticipant ? oppReady : !!battle.joinerReady }">{{ (isParticipant ? oppReady : !!battle.joinerReady) ? '✓' : '…' }}</span>
-            <span class="muted small">{{ sideText(isParticipant ? (battle.creatorId === myId ? battle.joinerSide : battle.creatorSide) : battle.joinerSide) }}</span>
+            <span class="badge" :class="{ on: isParticipant ? oppReady : !!battle.joinerReady }">
+              {{ (isParticipant ? oppReady : !!battle.joinerReady) ? '✓' : '…' }}
+            </span>
+            <span class="muted small side-label" :class="{ 'side-revealed': !!(isParticipant ? oppSide : joinerResolvedSide) }">
+              {{ arenaSideText(isParticipant ? oppSide : joinerResolvedSide) }}
+            </span>
           </div>
         </div>
       </div>
@@ -430,4 +485,8 @@ onBeforeUnmount(() => {
 .actions{ margin-top: 14px; display:flex; gap: 10px; flex-wrap: wrap; justify-content:center; }
 .result{ margin-top: 12px; border: 1px solid rgba(255,255,255,.08); background: rgba(0,0,0,.18); border-radius: 16px; padding: 12px; text-align:center; }
 .winner{ font-weight: 1100; font-size: 22px; }
+
+/* Side label in player badge: muted while still random, highlighted once revealed */
+.side-label { transition: color 300ms ease; }
+.side-revealed { color: rgba(255,210,80,.9); font-weight: 900; }
 </style>

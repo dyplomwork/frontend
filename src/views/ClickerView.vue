@@ -170,8 +170,8 @@ async function convert() {
   try {
     const res = await api<any>('/api/v1/clicker/convert', { method: 'POST' })
     coins.value = Number(res.coinsLeft)
-    await auth.fetchBalance({ force: true })
     setMsg(`+${fmtK(res.kCoinsEarned)} K`, 'success')
+    void auth.fetchBalance({ force: true }).catch(() => {})
   } catch (e: any) { setMsg(e?.message ?? t('ui.s_error'), 'error') }
 }
 

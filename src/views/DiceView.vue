@@ -228,12 +228,9 @@ async function playInternal() {
       message.value = 'Проигрыш'
     }
 
-    try {
-      await auth.fetchBalance({ force: true })
-    } catch (e) {
-      reportError(e)
-    }
-
+    // Fire-and-forget: result is already shown, don't hold the play button
+    // hostage to a network round-trip for a balance display update
+    auth.fetchBalance({ force: true }).catch(reportError)
     running.value = false
   }
 

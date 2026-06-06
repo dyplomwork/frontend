@@ -464,12 +464,9 @@ async function spinInternal() {
       message.value = t('ui.s_roulette_result', { n: win })
     }
 
+    // Fire-and-forget: wheel animation finished, don't delay re-enable for a balance fetch
     if (shouldRefreshBalance) {
-      try {
-        await auth.fetchBalance({ force: true })
-      } catch (e) {
-        reportError(e)
-      }
+      auth.fetchBalance({ force: true }).catch(reportError)
     }
   } catch (e: any) {
     setError(e, t('ui.s_error'))

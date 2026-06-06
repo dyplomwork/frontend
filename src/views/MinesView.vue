@@ -106,8 +106,8 @@ onMounted(async () => {
     lost.value = false
     message.value = ''
     nextMultiplier.value = null
-    await refreshMultiplierFromServer()
-    await refreshNextMultiplierFromServer()
+    // Both multiplier fetches are independent (same inputs) — run in parallel
+    await Promise.all([refreshMultiplierFromServer(), refreshNextMultiplierFromServer()])
   } catch (e) {
     reportError(e)
   }
@@ -204,13 +204,13 @@ async function startInternal() {
     multiplier.value = 1
     nextMultiplier.value = null
 
-    await auth.fetchBalance({ force: true })
+    // Balance is display-only here — game already started server-side
+    void auth.fetchBalance({ force: true }).catch(() => {})
 
     try {
       const s = await minesGetSession()
       safePicks.value = (s.opened?.length ?? 0)
-      await refreshMultiplierFromServer()
-      await refreshNextMultiplierFromServer()
+      await Promise.all([refreshMultiplierFromServer(), refreshNextMultiplierFromServer()])
     } catch {}
   } catch (e: any) {
     setError(e, t('ui.s_mines_error_start'))
@@ -224,8 +224,7 @@ async function startInternal() {
       inGame.value = true
       lost.value = false
       nextMultiplier.value = null
-      await refreshMultiplierFromServer()
-      await refreshNextMultiplierFromServer()
+      await Promise.all([refreshMultiplierFromServer(), refreshNextMultiplierFromServer()])
       message.value = ''
       return
     } catch (e2) {
@@ -275,7 +274,7 @@ async function revealInternal(cell: Cell) {
         explodingId.value = null
       }, 680)
 
-      await auth.fetchBalance({ force: true })
+      void auth.fetchBalance({ force: true }).catch(() => {})
       return
     }
 
@@ -300,7 +299,7 @@ async function revealInternal(cell: Cell) {
       revealWholeField(fin.field)
       inGame.value = false
       lost.value = true
-      await auth.fetchBalance({ force: true })
+      void auth.fetchBalance({ force: true }).catch(() => {})
     } catch (e2) {
       reportError(e2)
     }
@@ -339,7 +338,7 @@ async function cashOutInternal() {
 
     inGame.value = false
     lost.value = false
-    await auth.fetchBalance({ force: true })
+    void auth.fetchBalance({ force: true }).catch(() => {})
   } catch (e: any) {
     setError(e, t('ui.s_mines_error_cashout'))
   }

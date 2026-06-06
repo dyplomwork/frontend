@@ -36,6 +36,14 @@ const sideText = (s: CoinSide | string | null | undefined) => {
   return String(s)
 }
 
+// For the "Creator: …" line in the lobby card —
+// shows what side the creator picked (or that it is random)
+const creatorSideLabel = (side: CoinSide | null | undefined) => {
+  if (!side) return t('ui.s_cf_chosen_random')
+  if (side === 'heads') return t('ui.s_cf_chosen_heads')
+  return t('ui.s_cf_chosen_tails')
+}
+
 // showLoading = true only on the very first fetch; background polls are silent
 // so they don't shift / hide existing battle cards
 async function refreshList(showLoading = false) {
@@ -69,7 +77,7 @@ async function createBattle() {
     const b = await battlesCreate({ amount: a, side: side.value ? (side.value as CoinSide) : null })
     publishMockEvent({ type: 'battle', battle: b })
     publishMockEvent({ type: 'battles' })
-    await auth.fetchBalance({ force: true }).catch(() => {})
+    void auth.fetchBalance({ force: true }).catch(() => {})
     await router.push({ name: 'coinflip-battle', params: { id: b.id } })
   } catch (e: any) {
     error.value = e?.message || 'Помилка'
@@ -90,7 +98,7 @@ async function joinBattle(b: BattleDTO) {
     const nb = await battlesJoin(b.id)
     publishMockEvent({ type: 'battle', battle: nb })
     publishMockEvent({ type: 'battles' })
-    await auth.fetchBalance({ force: true }).catch(() => {})
+    void auth.fetchBalance({ force: true }).catch(() => {})
     await router.push({ name: 'coinflip-battle', params: { id: b.id } })
   } catch (e: any) {
     error.value = e?.message || 'Помилка'
@@ -194,7 +202,7 @@ onBeforeUnmount(() => {
             </div>
           </div>
           <div class="b-bottom">
-            <span class="muted small">{{ $t('ui.s_cf_creator') }}: {{ sideText(b.creatorSide) }}</span>
+            <span class="muted small">{{ $t('ui.s_cf_creator') }}: {{ creatorSideLabel(b.creatorSide) }}</span>
             <button class="btn btn-blue" :disabled="!isAuthed || !!joiningId" @click="joinBattle(b)">{{ joiningId === b.id ? $t('ui.s_cf_loading') : $t('ui.s_cf_join') }}</button>
           </div>
         </div>

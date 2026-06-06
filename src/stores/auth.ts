@@ -80,7 +80,8 @@ export const useAuthStore = defineStore('auth', {
       setToken(res.token)
       this.user = res.user
       setCachedUser(res.user)
-      await this.fetchBalance().catch(reportError)
+      // res.user already has fresh balance; background-refresh to sync role/nickname too
+      void this.fetchBalance().catch(reportError)
       return { ok: true as const }
     },
 
@@ -94,7 +95,7 @@ export const useAuthStore = defineStore('auth', {
       setToken(res.token)
       this.user = res.user
       setCachedUser(res.user)
-      await this.fetchBalance().catch(reportError)
+      void this.fetchBalance().catch(reportError)
       return { ok: true as const }
     },
 
@@ -108,7 +109,7 @@ export const useAuthStore = defineStore('auth', {
       setToken(res.token)
       this.user = res.user
       setCachedUser(res.user)
-      await this.fetchBalance().catch(reportError)
+      void this.fetchBalance().catch(reportError)
       return { ok: true as const }
     },
 
