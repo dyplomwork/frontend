@@ -285,9 +285,11 @@ watch(() => auth.user?.id, (v) => { if (v) loadStats() })
         </div>
       </div>
       <!-- Achievements -->
-      <div class="card ach-section" v-if="achievements.length > 0">
+      <div class="card ach-section">
         <h3 style="margin:0 0 14px">🏅 {{ $t('ui.s_achievements') }}</h3>
-        <div class="ach-grid">
+        <div v-if="statsLoading" class="muted small">{{ $t('ui.s_43e40d49fd') }}</div>
+        <div v-else-if="!achievements.length" class="ach-empty muted">{{ $t('ui.s_ach_none') }}</div>
+        <div v-else class="ach-grid">
           <div
             v-for="a in achievements"
             :key="a.id"
@@ -416,6 +418,7 @@ watch(() => auth.user?.id, (v) => { if (v) loadStats() })
 .game-detail { white-space: nowrap; }
 .game-best { font-weight: 900; font-size: 13px; white-space: nowrap; }
 
+.ach-empty { padding: 8px 0; font-size: 14px; }
 .ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
 .ach-card {
   display: flex; align-items: center; gap: 14px;

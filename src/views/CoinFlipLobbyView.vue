@@ -36,16 +36,19 @@ const sideText = (s: CoinSide | string | null | undefined) => {
   return String(s)
 }
 
-async function refreshList() {
+// showLoading = true only on the very first fetch; background polls are silent
+// so they don't shift / hide existing battle cards
+async function refreshList(showLoading = false) {
+  if (showLoading) loading.value = true
   error.value = ''
-  loading.value = true
   try {
     const all = await battlesList()
     list.value = all.filter((b) => b.status === 'OPEN')
   } catch (e: any) {
-    error.value = e?.message || 'Помилка завантаження'
+    // Silent on background refresh — don't flash an error on every poll tick
+    if (showLoading) error.value = e?.message || 'Помилка завантаження'
   } finally {
-    loading.value = false
+    if (showLoading) loading.value = false
   }
 }
 
@@ -97,10 +100,10 @@ async function joinBattle(b: BattleDTO) {
 }
 
 onMounted(() => {
-  void refreshList()
-  unsubBattles = subscribeBattles(() => { void refreshList() })
-  // Auto-refresh every 3s regardless of SSE (SSE only works in mock mode for lobby)
-  listPollTimer = window.setInterval(refreshList, 3000)
+  void refreshList(true) // initial fetch — show spinner
+  unsubBattles = subscribeBattles(() => { void refreshList(false) }) // SSE event — silent update
+  // Background poll: update list every 3s without showing a spinner or clearing the list
+  listPollTimer = window.setInterval(() => refreshList(false), 3000)
 })
 
 onBeforeUnmount(() => {
@@ -175,23 +178,27 @@ onBeforeUnmount(() => {
       <div v-if="loading" class="muted small pad">{{ $t('ui.s_cf_loading') }}</div>
       <div v-else-if="!list.length" class="muted small pad">{{ $t('ui.s_cf_empty') }}</div>
 
-      <div v-for="b in list" :key="b.id" class="battle">
-        <div class="b-top">
-          <div class="b-creator">
-            <span class="dot open" />
-            <span class="nick">{{ b.creatorNick }}</span>
-            <span class="muted small">{{ $t('ui.s_cf_waiting') }}</span>
+      <!-- TransitionGroup gives smooth appear/disappear for each battle card
+           without resetting the rest of the list (cards that stay keep their position) -->
+      <TransitionGroup name="battle-list" tag="div" class="battle-list">
+        <div v-for="b in list" :key="b.id" class="battle">
+          <div class="b-top">
+            <div class="b-creator">
+              <span class="dot open" />
+              <span class="nick">{{ b.creatorNick }}</span>
+              <span class="muted small">{{ $t('ui.s_cf_waiting') }}</span>
+            </div>
+            <div class="b-amt">
+              <span class="amt">{{ fmt(b.amount, 2) }}</span>
+              <span class="coin" aria-label="Currency K">K</span>
+            </div>
           </div>
-          <div class="b-amt">
-            <span class="amt">{{ fmt(b.amount, 2) }}</span>
-            <span class="coin" aria-label="Currency K">K</span>
+          <div class="b-bottom">
+            <span class="muted small">{{ $t('ui.s_cf_creator') }}: {{ sideText(b.creatorSide) }}</span>
+            <button class="btn btn-blue" :disabled="!isAuthed || !!joiningId" @click="joinBattle(b)">{{ joiningId === b.id ? $t('ui.s_cf_loading') : $t('ui.s_cf_join') }}</button>
           </div>
         </div>
-        <div class="b-bottom">
-          <span class="muted small">{{ $t('ui.s_cf_creator') }}: {{ sideText(b.creatorSide) }}</span>
-          <button class="btn btn-blue" :disabled="!isAuthed || !!joiningId" @click="joinBattle(b)">{{ joiningId === b.id ? $t('ui.s_cf_loading') : $t('ui.s_cf_join') }}</button>
-        </div>
-      </div>
+      </TransitionGroup>
     </div>
   </GamePageLayout>
 </template>
@@ -212,6 +219,17 @@ onBeforeUnmount(() => {
 .lobby-left{ display:flex; flex-direction:column; gap: 2px; }
 .cf-refresh{ width: 44px; height: 44px; border-radius: 14px; }
 .title{ font-weight: 1000; letter-spacing: .2px; }
+
+/* TransitionGroup container — inherits the gap via margin-top on each card */
+.battle-list{ display: flex; flex-direction: column; }
+
+/* battle card enter / leave animation */
+.battle-list-enter-active,
+.battle-list-leave-active { transition: opacity 220ms ease, transform 220ms ease; }
+.battle-list-enter-from  { opacity: 0; transform: translateY(-6px); }
+.battle-list-leave-to    { opacity: 0; transform: translateY(6px); }
+/* keep layout stable while a leaving card animates out */
+.battle-list-leave-active { position: absolute; width: 100%; }
 
 .battle{ width: 100%; border-radius: 14px; border: 1px solid rgba(255,255,255,.08); background: rgba(0,0,0,.18); padding: 12px; margin-top: 10px; color: inherit; }
 .b-top{ display:flex; align-items:center; justify-content:space-between; gap: 10px; }

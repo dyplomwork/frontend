@@ -5,8 +5,26 @@
   display:grid;
   grid-template-columns: var(--sidebar-current) 1fr;
   overflow-x: hidden; /* prevent ticker from causing horizontal scroll */
+  position: relative; /* anchor ::before */
 }
 .app-shell.open{ --sidebar-current: var(--sidebar-w); }
+
+/* Full-height background for the sidebar grid column.
+   Without this, the sidebar (position:sticky; height:100vh) creates a visual
+   gap at the bottom of tall pages — the left column below the sticky element
+   has no background. ::before fills the entire column height. */
+.app-shell::before{
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-current);
+  background: linear-gradient(180deg, rgba(14,13,9,.85) 0%, rgba(8,8,6,.78) 100%);
+  border-right: 1px solid rgba(255,178,74,.08);
+  pointer-events: none;
+  z-index: 0;
+}
 
 .app-sidebar{
   width: var(--sidebar-current);
@@ -23,6 +41,7 @@
   align-items:center;
   gap: 10px;
   transition: width .18s ease, transform .18s ease;
+  z-index: 1; /* sit above the ::before pseudo-element */
 }
 .app-sidebar.open{ align-items:stretch; }
 
@@ -256,6 +275,8 @@
 @media (max-width: 980px){
   /* Mobile: sidebar becomes off-canvas and is opened via the topbar menu button */
   .app-shell{ grid-template-columns: 1fr; }
+  /* Sidebar column pseudo-background not needed on mobile (off-canvas sidebar) */
+  .app-shell::before{ display: none; }
 
   .app-sidebar{
     position: fixed;

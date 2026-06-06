@@ -308,6 +308,7 @@ export default {
     "s_clicker_tier_6": "✨ Mythic Items",
     "s_clicker_need_items": "Requires items from inventory",
     "s_achievements": "Achievements",
+    "s_ach_none": "No achievements yet",
 
     "s_inventory": "Inventory",
     "s_inventory_empty": "Inventory is empty. Open cases to get items!",

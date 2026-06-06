@@ -283,6 +283,7 @@ export default {
     "s_clicker_tier_6": "✨ Mythic предмети",
     "s_clicker_need_items": "Потрібні предмети з інвентаря",
     "s_achievements": "Досягнення",
+    "s_ach_none": "Поки досягнень немає",
 
     "s_inventory": "Інвентар",
     "s_inventory_empty": "Інвентар порожній. Відкривай кейси, щоб отримати предмети!",
