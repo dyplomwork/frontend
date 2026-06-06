@@ -1,19 +1,8 @@
 import { defineStore } from 'pinia'
 import { api } from '../utils/api'
-export type TicketType = 'DEPOSIT' | 'WITHDRAW'
-export type TicketStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
+import type { TicketType, TicketStatus, Ticket } from '../types'
 
-export type Ticket = {
-  id: string
-  userId: string
-  nickname: string
-  type: TicketType
-  amount: number
-  status: TicketStatus
-  createdAt: string
-  resolvedAt: string | null
-  note?: string | null
-}
+export type { TicketType, TicketStatus, Ticket }
 
 const isBrowser = () => typeof window !== 'undefined' && typeof localStorage !== 'undefined'
 

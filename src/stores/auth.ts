@@ -10,16 +10,9 @@ import {
   setToken,
 } from '../core/auth/storage'
 import { reportError } from '../utils/errors'
+import type { Role, User } from '../types'
 
-export type Role = 'guest' | 'user' | 'admin'
-
-export type User = {
-  id: string
-  nickname: string
-  role: Role
-  balance: number
-  avatar_url?: string | null
-}
+export type { Role, User }
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({

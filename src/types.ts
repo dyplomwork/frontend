@@ -1,24 +1,33 @@
+// ── Auth & user ───────────────────────────────────────────────────────────
+
 export type Role = 'guest' | 'user' | 'admin'
 
 export type User = {
   id: string
-  email: string
-  name: string
+  nickname: string
   role: Role
   balance: number
+  avatar_url?: string | null
 }
 
-export type TicketType = 'deposit' | 'withdraw'
-export type TicketStatus = 'pending' | 'approved' | 'rejected'
+// ── Tickets ───────────────────────────────────────────────────────────────
+
+export type TicketType   = 'DEPOSIT' | 'WITHDRAW'
+export type TicketStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
 
 export type Ticket = {
   id: string
   userId: string
+  nickname: string
   type: TicketType
   amount: number
   status: TicketStatus
-  createdAt: number
+  createdAt: string
+  resolvedAt: string | null
+  note?: string | null
 }
+
+// ── Cases ─────────────────────────────────────────────────────────────────
 
 export type LootItem = {
   id: string
