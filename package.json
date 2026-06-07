@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test": "vitest run",
     "dev": "vite",
     "build": "node scripts/generateSitemap.mjs && vite-ssg build",
     "preview": "vite preview",
@@ -14,23 +15,27 @@
   "dependencies": {
     "pinia": "^2.2.6",
     "vue": "^3.5.0",
-    "vue-router": "^4.4.5",
-    "vue-i18n": "^9.14.0"
+    "vue-i18n": "^9.14.0",
+    "vue-router": "^4.4.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@typescript-eslint/eslint-plugin": "^8.6.0",
     "@typescript-eslint/parser": "^8.6.0",
     "@unhead/vue": "^1.11.7",
     "@vitejs/plugin-vue": "^5.2.0",
+    "@vitest/coverage-v8": "^4.1.8",
     "eslint": "^9.10.0",
     "eslint-plugin-vue": "^9.28.0",
+    "jsdom": "^29.1.1",
+    "msw": "^2.10.0",
     "prettier": "^3.3.3",
     "typescript": "^5.6.3",
     "vite": "^6.0.0",
     "vite-ssg": "^28.2.2",
-    "vue-tsc": "^2.1.6",
+    "vitest": "^4.1.8",
     "vue-eslint-parser": "^9.4.3",
-    "msw": "^2.10.0"
+    "vue-tsc": "^2.1.6"
   },
   "msw": {
     "workerDirectory": [
