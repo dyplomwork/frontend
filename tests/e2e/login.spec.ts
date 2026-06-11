@@ -1,7 +1,5 @@
 import { test, expect } from '@playwright/test'
 
-// E2E тести для сторінки авторизації SCXDROP
-// URL: https://dyplomworkfrontend.vercel.app
 
 test.describe('E2E Тестування: Авторизація користувача', () => {
   test('успішний логін та перехід на головну', async ({ page }) => {
