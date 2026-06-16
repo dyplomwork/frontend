@@ -3,13 +3,16 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api } from '../utils/api'
 import { useAuthStore } from '../stores/auth'
+import { useTicketsStore } from '../stores/tickets'
 import { formatNumber } from '../utils/format'
 
 const { t, locale } = useI18n()
 const auth = useAuthStore()
+const ticketsStore = useTicketsStore()
 
 // ─── State ────────────────────────────────────────────────────────────
-const tab = ref<'dashboard' | 'users' | 'battles'>('dashboard')
+const tab = ref<'dashboard' | 'users' | 'battles' | 'tickets'>('dashboard')
+const ticketBusyId = ref<string | null>(null)
 const loading = ref(false)
 const globalMsg = ref('')
 const globalMsgType = ref<'ok'|'err'>('ok')
@@ -190,6 +193,29 @@ async function loadBattles() {
   finally { battlesLoading.value = false }
 }
 
+// ─── Tickets (deposit / withdraw approvals) ───────────────────────────
+async function loadTickets() {
+  try {
+    await ticketsStore.fetchAdmin()
+  } catch (e: any) { showMsg(e?.message ?? 'Error', 'err') }
+}
+
+async function resolveTicket(id: string, action: 'approve' | 'reject') {
+  ticketBusyId.value = id
+  try {
+    if (action === 'approve') await ticketsStore.approve(id)
+    else await ticketsStore.reject(id)
+    showMsg('OK', 'ok')
+  } catch (e: any) { showMsg(e?.message ?? 'Error', 'err') }
+  finally { ticketBusyId.value = null }
+}
+
+function ticketStatusLabel(s: string) {
+  if (s === 'APPROVED') return t('ui.s_ticket_status_approved')
+  if (s === 'REJECTED') return t('ui.s_ticket_status_rejected')
+  return t('ui.s_ticket_status_pending')
+}
+
 function rarityColor(r: string) {
   const m: Record<string,string> = { common:'#9ca3af', uncommon:'#34d399', rare:'#3b82f6', epic:'#a855f7', legendary:'#f59e0b', mythic:'#ec4899' }
   return m[r] ?? '#9ca3af'
@@ -214,6 +240,9 @@ function itemDef(id: string) { return meta.value.items.find(i => i.id === id) ??
       </button>
       <button class="nav-btn" :class="{ on: tab==='battles' }" @click="tab='battles'; loadBattles()">
         <span>🪙</span> CoinFlip History
+      </button>
+      <button class="nav-btn" :class="{ on: tab==='tickets' }" @click="tab='tickets'; loadTickets()">
+        <span>💳</span> Tickets
       </button>
       <div class="nav-spacer" />
       <button class="nav-btn refresh-btn" @click="refreshAll" :disabled="loading">
@@ -480,6 +509,45 @@ function itemDef(id: string) { return meta.value.items.find(i => i.id === id) ??
                 </tr>
               </tbody>
             </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ╔═ TICKETS (deposit / withdraw approvals) ════════════════════╗ -->
+      <div v-if="tab === 'tickets'">
+        <div class="dash-card" style="grid-column:unset">
+          <div class="row-between" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div class="dc-title">💳 Tickets</div>
+            <button class="btn btn-sm" @click="loadTickets" :disabled="ticketsStore.loading">↻ Refresh</button>
+          </div>
+
+          <div v-if="ticketsStore.loading" class="muted small">Loading…</div>
+          <div v-else-if="!ticketsStore.admin.length" class="muted small">{{ $t('ui.s_c7a9d14173') }}</div>
+          <div v-else class="tickets-list">
+            <div
+              v-for="tk in ticketsStore.admin"
+              :key="tk.id"
+              class="ticket-card"
+              :class="'tc-' + tk.status.toLowerCase()"
+            >
+              <div class="tc-left">
+                <span class="tc-user">{{ tk.nickname ?? tk.userId }}</span>
+                <span class="tc-id muted small">{{ tk.createdAt ? new Date(tk.createdAt).toLocaleString('uk') : '' }}</span>
+              </div>
+              <div class="tc-center">
+                <span class="type-badge" :class="tk.type === 'DEPOSIT' ? 'type-deposit' : 'type-withdraw'">
+                  {{ tk.type === 'DEPOSIT' ? $t('ui.s_ticket_deposit') : $t('ui.s_ticket_withdraw') }}
+                </span>
+                <span class="tc-amount">{{ fmt(tk.amount, 0) }} K</span>
+              </div>
+              <div class="tc-right">
+                <template v-if="tk.status === 'PENDING'">
+                  <button class="btn btn-sm btn-approve" :disabled="ticketBusyId === tk.id" @click="resolveTicket(tk.id, 'approve')">✓</button>
+                  <button class="btn btn-sm btn-reject" :disabled="ticketBusyId === tk.id" @click="resolveTicket(tk.id, 'reject')">✕</button>
+                </template>
+                <span v-else class="muted small">{{ ticketStatusLabel(tk.status) }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -18,6 +18,7 @@ const CoinFlipLobbyView = () => import('../views/CoinFlipLobbyView.vue')
 const CoinFlipBattleView = () => import('../views/CoinFlipBattleView.vue')
 const ProfileView = () => import('../views/ProfileView.vue')
 const AdminView = () => import('../views/AdminView.vue')
+const DonateView = () => import('../views/DonateView.vue')
 
 export const routes = [
   {
@@ -163,6 +164,16 @@ export const routes = [
       requiresAdmin: true,
       title: 'SCXDROP — Admin',
       description: 'Admin panel.',
+    },
+  },
+  {
+    path: '/donate',
+    name: 'donate',
+    component: DonateView,
+    meta: {
+      requiresAuth: true,
+      title: 'SCXDROP — Donate',
+      description: 'Top up your balance with Google Pay.',
     },
   },
 ] as const

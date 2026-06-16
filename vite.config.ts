@@ -11,10 +11,14 @@ export default defineConfig({
     }
   },
   ssgOptions: {
-    // Include dynamic case pages in prerender output.
+    // Prerender only static routes plus concrete case pages. Routes with a
+    // dynamic segment (":id", e.g. /coinflip/:id) cannot be prerendered with a
+    // literal param — they produce a ":id.html" filename that is invalid on
+    // Windows and useless on Linux. The SPA handles them client-side.
     includedRoutes: (paths) => {
+      const staticPaths = paths.filter((p) => !p.includes(':'))
       const casePaths = (CASES || []).map((c) => `/cases/${c.id}`)
-      return Array.from(new Set([...paths, ...casePaths]))
+      return Array.from(new Set([...staticPaths, ...casePaths]))
     },
   },
   // If you have a local backend, you can enable proxying here:

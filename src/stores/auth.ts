@@ -185,17 +185,12 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    async applyBalance(delta: number) {
-      if (!canUseStorage()) return { ok: false as const }
-      if (!this.user) return { ok: false as const, message: 'Not logged in' }
-      const res = await api<{ ok: boolean; balance: number }>('/api/balance/apply', {
-        method: 'POST',
-        json: true,
-        body: { delta },
-      })
-      this.user = { ...this.user, balance: res.balance }
+    // Set the balance to an authoritative value returned by the server
+    // (e.g. after a donation checkout). The server is the source of truth.
+    setBalance(balance: number) {
+      if (!this.user) return
+      this.user = { ...this.user, balance: Number(balance) }
       setCachedUser(this.user)
-      return { ok: true as const }
     },
   },
 })

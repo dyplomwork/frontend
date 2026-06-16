@@ -175,6 +175,15 @@ function logout() {
           <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_clicker') }}</span>
         </RouterLink>
         <RouterLink
+          to="/donate"
+          class="side-link"
+          :class="{ active: route.path.startsWith('/donate') }"
+          :title="$t('ui.s_donate')"
+        >
+          <span class="side-ic side-emoji">💎</span>
+          <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_donate') }}</span>
+        </RouterLink>
+        <RouterLink
           to="/roulette"
           class="side-link"
           :class="{ active: route.path.startsWith('/roulette') }"
@@ -322,6 +331,7 @@ function logout() {
               <span class="muted">{{ $t('ui.s_99a808d8d1') }}</span>
               <span class="bal">{{ fmt(ui.balanceOverride ?? auth.user.balance, 2) }}</span>
               <span class="coin" :aria-label="$t('ui.s_d940a38dce')">K</span>
+              <button class="balance-add" :title="$t('ui.s_donate_tooltip')" :aria-label="$t('ui.s_donate_tooltip')" @click="router.push('/donate')">+</button>
             </div>
             <!-- Admin button — only visible to admins -->
             <button

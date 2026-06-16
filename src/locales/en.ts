@@ -360,6 +360,25 @@ export default {
     "s_case_item_dropped": "Item dropped",
     "s_case_sell_instantly": "Sell for K",
 
-    "s_profile_no_auth": "Sign in to see your profile"
+    "s_profile_no_auth": "Sign in to see your profile",
+
+    "s_donate": "Donate",
+    "s_donate_tooltip": "Top up balance",
+    "s_donate_title": "Top up balance",
+    "s_donate_subtitle": "Support the project via Google Pay and instantly get K currency — no clicker needed.",
+    "s_donate_select": "Choose a package",
+    "s_donate_get": "You get",
+    "s_donate_bonus": "Bonus",
+    "s_donate_pay": "Pay with Google Pay",
+    "s_donate_login": "Sign in to top up your balance",
+    "s_donate_processing": "Processing payment…",
+    "s_donate_success": "Balance topped up by {coins} K",
+    "s_donate_failed": "Payment failed",
+    "s_donate_cancelled": "Payment cancelled",
+    "s_donate_unavailable": "Google Pay is unavailable in this browser",
+    "s_donate_loading": "Loading Google Pay…",
+    "s_donate_note": "Payments run in the Google Pay test environment — no real money is charged.",
+    "s_donate_history": "Top-up history",
+    "s_donate_history_empty": "No top-ups yet"
   }
 }

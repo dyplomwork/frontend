@@ -173,7 +173,7 @@ onBeforeUnmount(() => {
           <div class="title">{{ $t('ui.s_cf_battles') }}</div>
           <div class="muted small">{{ $t('ui.s_cf_subtitle') }}</div>
         </div>
-        <button class="icon-btn cf-refresh" :disabled="loading" type="button" :aria-label="$t('ui.s_cf_refresh')" @click="refreshList">
+        <button class="icon-btn cf-refresh" :disabled="loading" type="button" :aria-label="$t('ui.s_cf_refresh')" @click="() => refreshList(true)">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <path d="M20 12a8 8 0 0 1-14.9 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             <path d="M4 12a8 8 0 0 1 14.9-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>

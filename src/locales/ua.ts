@@ -335,6 +335,25 @@ export default {
     "s_case_item_dropped": "Випав предмет",
     "s_case_sell_instantly": "Продати за K",
 
-    "s_profile_no_auth": "Увійди, щоб побачити профіль"
+    "s_profile_no_auth": "Увійди, щоб побачити профіль",
+
+    "s_donate": "Донат",
+    "s_donate_tooltip": "Поповнити баланс",
+    "s_donate_title": "Поповнення балансу",
+    "s_donate_subtitle": "Підтримай проєкт через Google Pay і миттєво отримай ігрову валюту K — без клікера.",
+    "s_donate_select": "Оберіть пакет",
+    "s_donate_get": "Отримаєш",
+    "s_donate_bonus": "Бонус",
+    "s_donate_pay": "Оплатити через Google Pay",
+    "s_donate_login": "Увійдіть, щоб поповнити баланс",
+    "s_donate_processing": "Обробка платежу…",
+    "s_donate_success": "Баланс поповнено на {coins} K",
+    "s_donate_failed": "Платіж не виконано",
+    "s_donate_cancelled": "Платіж скасовано",
+    "s_donate_unavailable": "Google Pay недоступний у цьому браузері",
+    "s_donate_loading": "Завантаження Google Pay…",
+    "s_donate_note": "Платежі виконуються в тестовому середовищі Google Pay — реальні кошти не списуються.",
+    "s_donate_history": "Історія поповнень",
+    "s_donate_history_empty": "Поки що поповнень немає"
   }
 }
