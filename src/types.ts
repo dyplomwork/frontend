@@ -10,23 +10,6 @@ export type User = {
   avatar_url?: string | null
 }
 
-// ── Tickets ───────────────────────────────────────────────────────────────
-
-export type TicketType   = 'DEPOSIT' | 'WITHDRAW'
-export type TicketStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
-
-export type Ticket = {
-  id: string
-  userId: string
-  nickname: string
-  type: TicketType
-  amount: number
-  status: TicketStatus
-  createdAt: string
-  resolvedAt: string | null
-  note?: string | null
-}
-
 // ── Cases ─────────────────────────────────────────────────────────────────
 
 export type LootItem = {

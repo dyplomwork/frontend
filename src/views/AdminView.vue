@@ -3,16 +3,13 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api } from '../utils/api'
 import { useAuthStore } from '../stores/auth'
-import { useTicketsStore } from '../stores/tickets'
 import { formatNumber } from '../utils/format'
 
 const { t, locale } = useI18n()
 const auth = useAuthStore()
-const ticketsStore = useTicketsStore()
 
 // ─── State ────────────────────────────────────────────────────────────
-const tab = ref<'dashboard' | 'users' | 'battles' | 'tickets'>('dashboard')
-const ticketBusyId = ref<string | null>(null)
+const tab = ref<'dashboard' | 'users' | 'battles' | 'games' | 'drops'>('dashboard')
 const loading = ref(false)
 const globalMsg = ref('')
 const globalMsgType = ref<'ok'|'err'>('ok')
@@ -22,6 +19,8 @@ const users = ref<any[]>([])
 const meta = ref<{ achievements: any[]; items: any[] }>({ achievements: [], items: [] })
 const battles = ref<any[]>([])
 const battlesLoading = ref(false)
+const analytics = ref<any>(null)
+const analyticsLoading = ref(false)
 
 const searchUsers = ref('')
 const expandedUser = ref<string | null>(null)
@@ -193,28 +192,22 @@ async function loadBattles() {
   finally { battlesLoading.value = false }
 }
 
-// ─── Tickets (deposit / withdraw approvals) ───────────────────────────
-async function loadTickets() {
+// ─── Analytics (game modes + drop distribution) ───────────────────────
+async function loadAnalytics() {
+  if (analytics.value) return
+  analyticsLoading.value = true
   try {
-    await ticketsStore.fetchAdmin()
+    const res = await api<any>('/api/v1/admin/analytics', { method: 'GET' })
+    analytics.value = res.analytics
   } catch (e: any) { showMsg(e?.message ?? 'Error', 'err') }
+  finally { analyticsLoading.value = false }
 }
 
-async function resolveTicket(id: string, action: 'approve' | 'reject') {
-  ticketBusyId.value = id
-  try {
-    if (action === 'approve') await ticketsStore.approve(id)
-    else await ticketsStore.reject(id)
-    showMsg('OK', 'ok')
-  } catch (e: any) { showMsg(e?.message ?? 'Error', 'err') }
-  finally { ticketBusyId.value = null }
+const GAME_LABELS: Record<string, string> = {
+  dice: 'Dice', roulette: 'Roulette', mines: 'Mines',
+  plinko: 'Plinko', coinflip: 'Coin Flip', cases: 'Cases',
 }
-
-function ticketStatusLabel(s: string) {
-  if (s === 'APPROVED') return t('ui.s_ticket_status_approved')
-  if (s === 'REJECTED') return t('ui.s_ticket_status_rejected')
-  return t('ui.s_ticket_status_pending')
-}
+function gameLabel(k: string) { return GAME_LABELS[k] ?? k }
 
 function rarityColor(r: string) {
   const m: Record<string,string> = { common:'#9ca3af', uncommon:'#34d399', rare:'#3b82f6', epic:'#a855f7', legendary:'#f59e0b', mythic:'#ec4899' }
@@ -241,8 +234,11 @@ function itemDef(id: string) { return meta.value.items.find(i => i.id === id) ??
       <button class="nav-btn" :class="{ on: tab==='battles' }" @click="tab='battles'; loadBattles()">
         <span>🪙</span> CoinFlip History
       </button>
-      <button class="nav-btn" :class="{ on: tab==='tickets' }" @click="tab='tickets'; loadTickets()">
-        <span>💳</span> Tickets
+      <button class="nav-btn" :class="{ on: tab==='games' }" @click="tab='games'; loadAnalytics()">
+        <span>🎮</span> Game Stats
+      </button>
+      <button class="nav-btn" :class="{ on: tab==='drops' }" @click="tab='drops'; loadAnalytics()">
+        <span>🎁</span> Drops
       </button>
       <div class="nav-spacer" />
       <button class="nav-btn refresh-btn" @click="refreshAll" :disabled="loading">
@@ -513,42 +509,75 @@ function itemDef(id: string) { return meta.value.items.find(i => i.id === id) ??
         </div>
       </div>
 
-      <!-- ╔═ TICKETS (deposit / withdraw approvals) ════════════════════╗ -->
-      <div v-if="tab === 'tickets'">
+      <!-- ╔═ GAME STATS (per-game analytics) ═══════════════════════════╗ -->
+      <div v-if="tab === 'games'">
         <div class="dash-card" style="grid-column:unset">
           <div class="row-between" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-            <div class="dc-title">💳 Tickets</div>
-            <button class="btn btn-sm" @click="loadTickets" :disabled="ticketsStore.loading">↻ Refresh</button>
+            <div class="dc-title">🎮 Game Statistics</div>
+            <button class="btn btn-sm" @click="analytics = null; loadAnalytics()" :disabled="analyticsLoading">↻ Refresh</button>
           </div>
 
-          <div v-if="ticketsStore.loading" class="muted small">Loading…</div>
-          <div v-else-if="!ticketsStore.admin.length" class="muted small">{{ $t('ui.s_c7a9d14173') }}</div>
-          <div v-else class="tickets-list">
-            <div
-              v-for="tk in ticketsStore.admin"
-              :key="tk.id"
-              class="ticket-card"
-              :class="'tc-' + tk.status.toLowerCase()"
-            >
-              <div class="tc-left">
-                <span class="tc-user">{{ tk.nickname ?? tk.userId }}</span>
-                <span class="tc-id muted small">{{ tk.createdAt ? new Date(tk.createdAt).toLocaleString('uk') : '' }}</span>
-              </div>
-              <div class="tc-center">
-                <span class="type-badge" :class="tk.type === 'DEPOSIT' ? 'type-deposit' : 'type-withdraw'">
-                  {{ tk.type === 'DEPOSIT' ? $t('ui.s_ticket_deposit') : $t('ui.s_ticket_withdraw') }}
-                </span>
-                <span class="tc-amount">{{ fmt(tk.amount, 0) }} K</span>
-              </div>
-              <div class="tc-right">
-                <template v-if="tk.status === 'PENDING'">
-                  <button class="btn btn-sm btn-approve" :disabled="ticketBusyId === tk.id" @click="resolveTicket(tk.id, 'approve')">✓</button>
-                  <button class="btn btn-sm btn-reject" :disabled="ticketBusyId === tk.id" @click="resolveTicket(tk.id, 'reject')">✕</button>
-                </template>
-                <span v-else class="muted small">{{ ticketStatusLabel(tk.status) }}</span>
+          <div v-if="analyticsLoading" class="muted small">Loading…</div>
+          <div v-else-if="!analytics || !analytics.byGame.length" class="muted small">No game data yet.</div>
+          <div v-else class="battles-table-wrap">
+            <table class="battles-table">
+              <thead>
+                <tr>
+                  <th>Game</th>
+                  <th>Rounds</th>
+                  <th>Wagered</th>
+                  <th>Paid out</th>
+                  <th>House profit</th>
+                  <th>RTP</th>
+                  <th>Biggest win</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="g in analytics.byGame" :key="g.gameType">
+                  <td class="game-name">{{ gameLabel(g.gameType) }}</td>
+                  <td>{{ fmt0(g.games) }}</td>
+                  <td>{{ fmt0(g.wagered) }} K</td>
+                  <td>{{ fmt0(g.won) }} K</td>
+                  <td :class="g.profit >= 0 ? 'gold' : ''">{{ g.profit >= 0 ? '+' : '' }}{{ fmt0(g.profit) }} K</td>
+                  <td>{{ g.rtp }}%</td>
+                  <td class="gold">{{ fmt0(g.biggest) }} K</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ╔═ DROPS (item rarity distribution) ══════════════════════════╗ -->
+      <div v-if="tab === 'drops'">
+        <div class="dash-card" style="grid-column:unset">
+          <div class="row-between" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div class="dc-title">🎁 Item Drops — {{ analytics ? fmt0(analytics.totalItems) : 0 }} total</div>
+            <button class="btn btn-sm" @click="analytics = null; loadAnalytics()" :disabled="analyticsLoading">↻ Refresh</button>
+          </div>
+
+          <div v-if="analyticsLoading" class="muted small">Loading…</div>
+          <div v-else-if="!analytics" class="muted small">No drop data yet.</div>
+          <template v-else>
+            <div class="rarity-bars">
+              <div v-for="r in analytics.byRarity" :key="r.rarity" class="rarity-row">
+                <span class="rarity-name" :style="{ color: rarityColor(r.rarity) }">{{ r.rarity }}</span>
+                <div class="rarity-track">
+                  <div class="rarity-fill" :style="{ width: r.percent + '%', background: rarityColor(r.rarity) }"></div>
+                </div>
+                <span class="rarity-val">{{ fmt0(r.count) }} ({{ r.percent }}%)</span>
               </div>
             </div>
-          </div>
+
+            <div class="dc-title" style="margin:18px 0 10px; font-size:14px;">Most dropped items</div>
+            <div class="top-items">
+              <div v-for="it in analytics.topItems" :key="it.itemDefId" class="top-item">
+                <span class="ti-icon">{{ it.icon }}</span>
+                <span class="ti-name" :style="{ color: rarityColor(it.rarity) }">{{ it.name }}</span>
+                <span class="ti-count">{{ fmt0(it.count) }}</span>
+              </div>
+            </div>
+          </template>
         </div>
       </div>
 
@@ -737,33 +766,18 @@ select.input option {
 .game-name { font-weight: 900; text-transform: capitalize; }
 .clicker-mini { border-top: 1px solid rgba(255,255,255,.06); padding-top: 8px; }
 
-/* ─── Tickets ────────────────────────────────────────────────────────── */
-.tickets-list { display: flex; flex-direction: column; gap: 6px; }
-.ticket-card {
-  display: grid; grid-template-columns: 1fr auto auto;
-  gap: 16px; align-items: center;
-  padding: 14px 16px; border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.06);
-  background: rgba(0,0,0,.15);
-  transition: background .12s;
-}
-.ticket-card.tc-pending { border-left: 3px solid #fbbf24; }
-.ticket-card.tc-approved { border-left: 3px solid #34d399; opacity: .7; }
-.ticket-card.tc-rejected { border-left: 3px solid #f87171; opacity: .6; }
-.tc-left { display: flex; flex-direction: column; gap: 3px; }
-.tc-id { }
-.tc-user { font-weight: 900; }
-.tc-center { display: flex; align-items: center; gap: 12px; }
-.type-badge { padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 900; }
-.type-badge.type-deposit { background: rgba(34,197,94,.15); border: 1px solid rgba(34,197,94,.3); color: #34d399; }
-.type-badge.type-withdraw { background: rgba(251,146,60,.15); border: 1px solid rgba(251,146,60,.3); color: #fb923c; }
-.tc-amount { font-size: 18px; font-weight: 1000; }
-.tc-right { display: flex; align-items: center; gap: 8px; }
-.status-dot { font-size: 10px; }
-.btn-approve { background: rgba(34,197,94,.15); border-color: rgba(34,197,94,.35); color: #34d399; }
-.btn-approve:hover { background: rgba(34,197,94,.25); }
-.btn-reject { background: rgba(248,81,73,.10); border-color: rgba(248,81,73,.35); color: #f87171; }
-.btn-reject:hover { background: rgba(248,81,73,.20); }
+/* ─── Drops analytics ────────────────────────────────────────────────── */
+.rarity-bars { display: flex; flex-direction: column; gap: 8px; }
+.rarity-row { display: grid; grid-template-columns: 90px 1fr 120px; align-items: center; gap: 12px; }
+.rarity-name { font-weight: 900; text-transform: capitalize; font-size: 13px; }
+.rarity-track { height: 14px; border-radius: 999px; background: rgba(255,255,255,.06); overflow: hidden; }
+.rarity-fill { height: 100%; border-radius: 999px; min-width: 2px; transition: width .3s; }
+.rarity-val { text-align: right; font-size: 12px; color: rgba(255,255,255,.7); }
+.top-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.top-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; background: rgba(0,0,0,.15); border: 1px solid rgba(255,255,255,.06); }
+.ti-icon { font-size: 20px; }
+.ti-name { font-weight: 800; flex: 1; }
+.ti-count { font-weight: 900; color: rgba(255,255,255,.85); }
 
 /* Mobile responsive */
 @media (max-width: 720px) {

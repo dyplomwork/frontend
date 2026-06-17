@@ -1,17 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { useTicketsStore } from '../stores/tickets'
-import { useUiStore } from '../stores/ui'
 import { formatNumber } from '../utils/format'
 import { api } from '../utils/api'
 
 const auth = useAuthStore()
-const ticketsStore = useTicketsStore()
-const ui = useUiStore()
-const router = useRouter()
 const { t, locale } = useI18n()
 
 const stats = ref<any>(null)
@@ -150,44 +144,8 @@ async function loadStats() {
   finally { statsLoading.value = false }
 }
 
-// ── Deposit / withdraw tickets ─────────────────────────────────────────────
-const ticketAmount = ref<number | null>(null)
-const ticketBusy = ref(false)
-const pendingCount = computed(() => ticketsStore.mine.filter((tk) => tk.status === 'PENDING').length)
-
-async function submitTicket(type: 'DEPOSIT' | 'WITHDRAW') {
-  const amt = Number(ticketAmount.value)
-  if (!Number.isFinite(amt) || amt <= 0) {
-    ui.toast(t('ui.s_ticket_amount'), 'error')
-    return
-  }
-  ticketBusy.value = true
-  try {
-    await ticketsStore.create(type, amt)
-    ui.toast(type === 'DEPOSIT' ? t('ui.s_ticket_deposit_sent') : t('ui.s_ticket_withdraw_sent'), 'success')
-    ticketAmount.value = null
-    // WITHDRAW reserves funds immediately on the server — refresh the balance.
-    if (type === 'WITHDRAW') void auth.fetchBalance({ force: true })
-  } catch (e: any) {
-    ui.toast(e?.message ?? t('ui.s_ticket_create_failed'), 'error')
-  } finally {
-    ticketBusy.value = false
-  }
-}
-
-function ticketStatusLabel(s: string) {
-  if (s === 'APPROVED') return t('ui.s_ticket_status_approved')
-  if (s === 'REJECTED') return t('ui.s_ticket_status_rejected')
-  return t('ui.s_ticket_status_pending')
-}
-
-function loadAll() {
-  loadStats()
-  if (auth.user) ticketsStore.fetchMine()
-}
-
-onMounted(loadAll)
-watch(() => auth.user?.id, (v) => { if (v) loadAll() })
+onMounted(loadStats)
+watch(() => auth.user?.id, (v) => { if (v) loadStats() })
 </script>
 
 <template>
@@ -347,32 +305,6 @@ watch(() => auth.user?.id, (v) => { if (v) loadAll() })
           </div>
         </div>
       </div>
-      <!-- Deposit / withdraw tickets -->
-      <div class="card topup-section">
-        <div class="row-between">
-          <h3 style="margin:0">💳 {{ $t('ui.s_ticket_deposit') }} / {{ $t('ui.s_ticket_withdraw') }}</h3>
-          <span v-if="pendingCount" class="muted small">{{ $t('ui.s_ticket_pending', { n: pendingCount }) }}</span>
-        </div>
-        <div class="muted small topup-hint">
-          {{ $t('ui.s_457727a7c0') }} {{ $t('ui.s_30b0348a35') }}.
-          <a class="topup-link" @click="router.push('/donate')">💎 Google Pay →</a>
-        </div>
-        <div class="topup-form">
-          <input class="input" type="number" min="1" v-model.number="ticketAmount" :placeholder="$t('ui.s_ticket_amount')" />
-          <button class="btn btn-primary" :disabled="ticketBusy" @click="submitTicket('DEPOSIT')">{{ $t('ui.s_ticket_deposit') }}</button>
-          <button class="btn" :disabled="ticketBusy" @click="submitTicket('WITHDRAW')">{{ $t('ui.s_ticket_withdraw') }}</button>
-        </div>
-        <div class="topup-list">
-          <div v-if="!ticketsStore.mine.length" class="muted small">{{ $t('ui.s_c7a9d14173') }}</div>
-          <div v-for="tk in ticketsStore.mine" :key="tk.id" class="topup-row">
-            <span class="tk-type" :class="tk.type === 'DEPOSIT' ? 'tk-dep' : 'tk-wd'">
-              {{ tk.type === 'DEPOSIT' ? $t('ui.s_ticket_deposit') : $t('ui.s_ticket_withdraw') }}
-            </span>
-            <span class="tk-amt">{{ fmt(tk.amount) }} K</span>
-            <span class="tk-status" :class="'tks-' + tk.status.toLowerCase()">{{ ticketStatusLabel(tk.status) }}</span>
-          </div>
-        </div>
-      </div>
     </template>
   </div>
 </template>
@@ -384,30 +316,12 @@ watch(() => auth.user?.id, (v) => { if (v) loadAll() })
     grid-template-columns: 300px 1fr;
     grid-template-areas:
       "user  stats"
-      "ach   ach"
-      "topup topup";
+      "ach   ach";
   }
   .user-card  { grid-area: user; }
   .stats-card { grid-area: stats; }
   .ach-section { grid-area: ach; }
-  .topup-section { grid-area: topup; }
 }
-.topup-section { border-radius: 18px; padding: 18px; }
-.topup-hint { margin-top: 6px; }
-.topup-link { color: #ffd54a; cursor: pointer; font-weight: 700; }
-.topup-link:hover { text-decoration: underline; }
-.topup-form { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-.topup-form .input { flex: 1; min-width: 140px; }
-.topup-list { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
-.topup-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
-.tk-type { font-weight: 800; font-size: 12px; padding: 2px 8px; border-radius: 999px; }
-.tk-dep { background: rgba(34,197,94,.15); color: #34d399; }
-.tk-wd { background: rgba(248,81,73,.12); color: #f87171; }
-.tk-amt { font-weight: 900; min-width: 110px; }
-.tk-status { font-size: 12px; font-weight: 700; }
-.tks-pending { color: #fbbf24; }
-.tks-approved { color: #34d399; }
-.tks-rejected { color: #f87171; }
 .small { font-size: 12px; }
 .row-between { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 

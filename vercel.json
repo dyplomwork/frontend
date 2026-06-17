@@ -3,7 +3,6 @@
     { "source": "/api/v1/accounts/:path*",  "destination": "https://dyplomworkbackend-production.up.railway.app/api/v1/accounts/:path*" },
     { "source": "/api/v1/admin/:path*",     "destination": "https://dyplomworkbackend-production.up.railway.app/api/v1/admin/:path*" },
     { "source": "/api/v1/stats/:path*",     "destination": "https://dyplomworkbackend-production.up.railway.app/api/v1/stats/:path*" },
-    { "source": "/api/v1/tickets/:path*",    "destination": "https://dyplomworkbackend-production.up.railway.app/api/v1/tickets/:path*" },
     { "source": "/api/v1/donations/:path*",  "destination": "https://dyplomworkbackend-production.up.railway.app/api/v1/donations/:path*" },
     { "source": "/api/me",                  "destination": "https://dyplomworkbackend-production.up.railway.app/api/me" },
     { "source": "/api/v1/games/:path*",     "destination": "https://game-service-production-d5e1.up.railway.app/api/v1/games/:path*" },
