@@ -9,7 +9,7 @@ const { t, locale } = useI18n()
 const auth = useAuthStore()
 
 // ─── State ────────────────────────────────────────────────────────────
-const tab = ref<'dashboard' | 'users' | 'battles' | 'games' | 'drops'>('dashboard')
+const tab = ref<'dashboard' | 'users' | 'battles' | 'games' | 'drops' | 'audit' | 'donations'>('dashboard')
 const loading = ref(false)
 const globalMsg = ref('')
 const globalMsgType = ref<'ok'|'err'>('ok')
@@ -21,11 +21,27 @@ const battles = ref<any[]>([])
 const battlesLoading = ref(false)
 const analytics = ref<any>(null)
 const analyticsLoading = ref(false)
+const auditLog = ref<any[]>([])
+const auditLoading = ref(false)
+const donations = ref<{ summary: any; donations: any[] } | null>(null)
+const donationsLoading = ref(false)
 
 const searchUsers = ref('')
+const filterRole = ref('')      // '' | 'user' | 'admin'
+const filterStatus = ref('')    // '' | 'active' | 'banned'
+const userPage = ref(1)
+const userPageSize = 20
+const userTotal = ref(0)
 const expandedUser = ref<string | null>(null)
 const userDetail = ref<any>(null)
 const userDetailLoading = ref(false)
+
+// Confirmation modal for destructive actions (delete / ban)
+const pendingAction = ref<{ kind: 'delete' | 'ban'; id: string; nick: string } | null>(null)
+const pendingReason = ref('')
+const pendingBusy = ref(false)
+
+const totalPages = computed(() => Math.max(1, Math.ceil(userTotal.value / userPageSize)))
 
 // Give forms
 const giveAmount = ref(0)
@@ -59,10 +75,29 @@ async function loadDashboard() {
 async function loadUsers() {
   loading.value = true
   try {
-    const res = await api<any>('/api/v1/admin/users', { method: 'GET' })
+    const params = new URLSearchParams()
+    if (searchUsers.value.trim()) params.set('search', searchUsers.value.trim())
+    if (filterRole.value) params.set('role', filterRole.value)
+    if (filterStatus.value) params.set('status', filterStatus.value)
+    params.set('page', String(userPage.value))
+    params.set('pageSize', String(userPageSize))
+    const res = await api<any>(`/api/v1/admin/users?${params.toString()}`, { method: 'GET' })
     users.value = res.users ?? []
+    userTotal.value = res.total ?? users.value.length
   } catch (e: any) { showMsg(e?.message ?? 'Error', 'err') }
   finally { loading.value = false }
+}
+
+// Reset to page 1 and reload (used by search / filter changes)
+function applyUserFilters() {
+  userPage.value = 1
+  loadUsers()
+}
+function changePage(delta: number) {
+  const next = userPage.value + delta
+  if (next < 1 || next > totalPages.value) return
+  userPage.value = next
+  loadUsers()
 }
 
 async function loadMeta() {
@@ -108,16 +143,6 @@ async function saveUser(id: string) {
     showMsg('User saved ✓')
   } catch (e: any) { showMsg(e?.message ?? 'Error', 'err') }
   finally { editBusy.value = false }
-}
-
-async function deleteUser(id: string) {
-  if (!confirm('Delete user? Cannot be undone.')) return
-  try {
-    await api(`/api/v1/admin/users/${id}`, { method: 'DELETE' })
-    users.value = users.value.filter(u => u.id !== id)
-    if (expandedUser.value === id) { expandedUser.value = null; userDetail.value = null }
-    showMsg('User deleted')
-  } catch (e: any) { showMsg(e?.message ?? 'Error', 'err') }
 }
 
 async function giveBalance(id: string) {
@@ -172,16 +197,54 @@ async function revokeAchievement(userId: string, achId: string) {
   } catch (e: any) { showMsg(e?.message ?? 'Error', 'err') }
 }
 
-// ─── Computed ─────────────────────────────────────────────────────────
-const filteredUsers = computed(() => {
-  const q = searchUsers.value.toLowerCase()
-  if (!q) return users.value
-  return users.value.filter(u =>
-    u.nickname?.toLowerCase().includes(q) ||
-    u.role?.toLowerCase().includes(q) ||
-    String(u.id).includes(q)
-  )
-})
+// ─── Ban / unban + confirmation modal ─────────────────────────────────
+function askConfirm(kind: 'delete' | 'ban', id: string, nick: string) {
+  pendingAction.value = { kind, id, nick }
+  pendingReason.value = ''
+}
+async function runPendingAction() {
+  const a = pendingAction.value
+  if (!a) return
+  pendingBusy.value = true
+  try {
+    if (a.kind === 'delete') {
+      await api(`/api/v1/admin/users/${a.id}`, { method: 'DELETE' })
+      if (expandedUser.value === a.id) { expandedUser.value = null; userDetail.value = null }
+      showMsg('User deleted')
+    } else {
+      await api(`/api/v1/admin/users/${a.id}/ban`, { method: 'POST', json: true, body: { reason: pendingReason.value } })
+      showMsg(`Banned ${a.nick}`)
+    }
+    pendingAction.value = null
+    await loadUsers()
+  } catch (e: any) { showMsg(e?.message ?? 'Error', 'err') }
+  finally { pendingBusy.value = false }
+}
+
+async function unbanUser(id: string, nick: string) {
+  try {
+    await api(`/api/v1/admin/users/${id}/unban`, { method: 'POST', json: true, body: {} })
+    showMsg(`Unbanned ${nick}`)
+    await loadUsers()
+  } catch (e: any) { showMsg(e?.message ?? 'Error', 'err') }
+}
+
+// ─── Audit log + donations ─────────────────────────────────────────────
+async function loadAudit() {
+  auditLoading.value = true
+  try {
+    const res = await api<any>('/api/v1/admin/audit?limit=200', { method: 'GET' })
+    auditLog.value = res.actions ?? []
+  } catch (e: any) { showMsg(e?.message ?? 'Error', 'err') }
+  finally { auditLoading.value = false }
+}
+async function loadDonations() {
+  donationsLoading.value = true
+  try {
+    donations.value = await api<any>('/api/v1/admin/donations?limit=200', { method: 'GET' })
+  } catch (e: any) { showMsg(e?.message ?? 'Error', 'err') }
+  finally { donationsLoading.value = false }
+}
 
 async function loadBattles() {
   battlesLoading.value = true
@@ -239,6 +302,12 @@ function itemDef(id: string) { return meta.value.items.find(i => i.id === id) ??
       </button>
       <button class="nav-btn" :class="{ on: tab==='drops' }" @click="tab='drops'; loadAnalytics()">
         <span>🎁</span> Drops
+      </button>
+      <button class="nav-btn" :class="{ on: tab==='donations' }" @click="tab='donations'; loadDonations()">
+        <span>💳</span> Donations
+      </button>
+      <button class="nav-btn" :class="{ on: tab==='audit' }" @click="tab='audit'; loadAudit()">
+        <span>📋</span> Audit Log
       </button>
       <div class="nav-spacer" />
       <button class="nav-btn refresh-btn" @click="refreshAll" :disabled="loading">
@@ -313,13 +382,26 @@ function itemDef(id: string) { return meta.value.items.find(i => i.id === id) ??
       <!-- ╔═ USERS ══════════════════════════════════════════════════════╗ -->
       <div v-if="tab === 'users'" class="users-panel">
         <div class="panel-head">
-          <h2 class="panel-title">Users ({{ users.length }})</h2>
-          <input class="input search-input" v-model="searchUsers" placeholder="Search nick / role / id…" />
+          <h2 class="panel-title">Users ({{ userTotal }})</h2>
+          <div class="user-filters">
+            <input class="input search-input" v-model="searchUsers" placeholder="Search nickname…" @keyup.enter="applyUserFilters" />
+            <select class="input" v-model="filterRole" @change="applyUserFilters">
+              <option value="">All roles</option>
+              <option value="user">user</option>
+              <option value="admin">admin</option>
+            </select>
+            <select class="input" v-model="filterStatus" @change="applyUserFilters">
+              <option value="">All statuses</option>
+              <option value="active">active</option>
+              <option value="banned">banned</option>
+            </select>
+            <button class="btn btn-sm" @click="applyUserFilters">Search</button>
+          </div>
         </div>
 
         <div v-if="loading" class="muted pad">Loading…</div>
         <div v-else class="users-list">
-          <div v-for="u in filteredUsers" :key="u.id" class="user-row">
+          <div v-for="u in users" :key="u.id" class="user-row" :class="{ 'row-banned': u.status === 'banned' }">
             <!-- Row header -->
             <div class="ur-head" @click="toggleUser(u.id)">
               <div class="ur-left">
@@ -330,10 +412,13 @@ function itemDef(id: string) { return meta.value.items.find(i => i.id === id) ??
                 </div>
               </div>
               <div class="ur-right">
+                <span v-if="u.status === 'banned'" class="ban-tag" :title="u.banReason || ''">BANNED</span>
                 <span class="role-tag" :class="'role-' + u.role">{{ u.role }}</span>
                 <span class="ur-bal">{{ fmt(u.balance) }} K</span>
                 <span class="ur-items muted small">📦 {{ u.itemCount }}</span>
-                <button class="btn btn-danger btn-xs" @click.stop="deleteUser(u.id)">🗑</button>
+                <button v-if="u.status === 'banned'" class="btn btn-xs btn-approve" @click.stop="unbanUser(u.id, u.nickname)" title="Unban">⊘</button>
+                <button v-else-if="u.id !== auth.user?.id" class="btn btn-xs" @click.stop="askConfirm('ban', u.id, u.nickname)" title="Ban">🚫</button>
+                <button class="btn btn-danger btn-xs" @click.stop="askConfirm('delete', u.id, u.nickname)">🗑</button>
               </div>
             </div>
 
@@ -464,7 +549,13 @@ function itemDef(id: string) { return meta.value.items.find(i => i.id === id) ??
             </div>
           </div>
 
-          <div v-if="filteredUsers.length === 0" class="muted pad">No users found.</div>
+          <div v-if="users.length === 0" class="muted pad">No users found.</div>
+        </div>
+
+        <div v-if="!loading && userTotal > userPageSize" class="pager">
+          <button class="btn btn-sm" :disabled="userPage <= 1" @click="changePage(-1)">← Prev</button>
+          <span class="muted small">Page {{ userPage }} / {{ totalPages }}</span>
+          <button class="btn btn-sm" :disabled="userPage >= totalPages" @click="changePage(1)">Next →</button>
         </div>
       </div>
 
@@ -581,6 +672,92 @@ function itemDef(id: string) { return meta.value.items.find(i => i.id === id) ??
         </div>
       </div>
 
+      <!-- ╔═ DONATIONS / REVENUE ═══════════════════════════════════════╗ -->
+      <div v-if="tab === 'donations'">
+        <div class="dash-card" style="grid-column:unset">
+          <div class="row-between" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div class="dc-title">💳 Donations
+              <span v-if="donations" class="muted small" style="font-weight:600;">
+                — ${{ fmt(donations.summary.revenueUsd) }} from {{ donations.summary.count }} payments ({{ fmt0(donations.summary.coinsCredited) }} K credited)
+              </span>
+            </div>
+            <button class="btn btn-sm" @click="loadDonations" :disabled="donationsLoading">↻ Refresh</button>
+          </div>
+
+          <div v-if="donationsLoading" class="muted small">Loading…</div>
+          <div v-else-if="!donations || !donations.donations.length" class="muted small">No donations yet.</div>
+          <div v-else class="battles-table-wrap">
+            <table class="battles-table">
+              <thead>
+                <tr><th>User</th><th>Package</th><th>Amount</th><th>Coins</th><th>Status</th><th>Date</th></tr>
+              </thead>
+              <tbody>
+                <tr v-for="d in donations.donations" :key="d.id">
+                  <td>{{ d.nickname }}</td>
+                  <td>{{ d.packageId }}</td>
+                  <td>${{ d.amountUsd.toFixed(2) }}</td>
+                  <td class="gold">{{ fmt0(d.coinsCredited) }} K</td>
+                  <td>{{ d.status }}</td>
+                  <td class="muted small">{{ new Date(d.createdAt).toLocaleString('uk') }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ╔═ AUDIT LOG ═════════════════════════════════════════════════╗ -->
+      <div v-if="tab === 'audit'">
+        <div class="dash-card" style="grid-column:unset">
+          <div class="row-between" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div class="dc-title">📋 Admin Audit Log</div>
+            <button class="btn btn-sm" @click="loadAudit" :disabled="auditLoading">↻ Refresh</button>
+          </div>
+
+          <div v-if="auditLoading" class="muted small">Loading…</div>
+          <div v-else-if="!auditLog.length" class="muted small">No actions recorded yet.</div>
+          <div v-else class="battles-table-wrap">
+            <table class="battles-table">
+              <thead>
+                <tr><th>When</th><th>Admin</th><th>Action</th><th>Target</th><th>Details</th><th>Reason</th></tr>
+              </thead>
+              <tbody>
+                <tr v-for="a in auditLog" :key="a.id">
+                  <td class="muted small">{{ new Date(a.createdAt).toLocaleString('uk') }}</td>
+                  <td>{{ a.adminNick }}</td>
+                  <td><span class="audit-action">{{ a.action }}</span></td>
+                  <td>{{ a.targetNick ?? '—' }}</td>
+                  <td class="muted small">{{ a.details ? JSON.stringify(a.details) : '—' }}</td>
+                  <td class="muted small">{{ a.reason ?? '—' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Confirmation modal (delete / ban) -->
+    <div v-if="pendingAction" class="modal-backdrop" @click.self="pendingAction = null">
+      <div class="modal-box card">
+        <h3 style="margin:0 0 10px">
+          {{ pendingAction.kind === 'delete' ? '🗑 Delete user' : '🚫 Ban user' }} «{{ pendingAction.nick }}»?
+        </h3>
+        <p v-if="pendingAction.kind === 'delete'" class="muted small" style="margin:0 0 12px">
+          This permanently removes the account and all its data. Cannot be undone.
+        </p>
+        <template v-else>
+          <p class="muted small" style="margin:0 0 8px">The user is logged out immediately and cannot sign in until unbanned.</p>
+          <input class="input" v-model="pendingReason" placeholder="Reason (optional)" style="width:100%; margin-bottom:12px" />
+        </template>
+        <div class="row" style="display:flex; gap:10px; justify-content:flex-end;">
+          <button class="btn" @click="pendingAction = null">Cancel</button>
+          <button class="btn btn-danger" :disabled="pendingBusy" @click="runPendingAction">
+            {{ pendingBusy ? '…' : (pendingAction.kind === 'delete' ? 'Delete' : 'Ban') }}
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -743,6 +920,20 @@ select.input option {
 .btn-sm { height: 34px; padding: 0 12px; border-radius: 10px; font-size: 12px; }
 .btn-danger { border-color: rgba(248,81,73,.35); background: rgba(248,81,73,.10); color: #f87171; }
 .btn-danger:hover { background: rgba(248,81,73,.20); }
+.btn-approve { border-color: rgba(34,197,94,.35); background: rgba(34,197,94,.12); color: #34d399; }
+.btn-approve:hover { background: rgba(34,197,94,.22); }
+
+/* Users: filters, status, pagination */
+.user-filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.user-filters .input { height: 34px; }
+.row-banned { opacity: .75; }
+.ban-tag { font-size: 10px; font-weight: 900; letter-spacing: .5px; padding: 2px 7px; border-radius: 999px; background: rgba(248,81,73,.18); color: #f87171; border: 1px solid rgba(248,81,73,.4); }
+.pager { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 14px; }
+.audit-action { font-weight: 800; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.08); }
+
+/* Confirmation modal */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 300; }
+.modal-box { width: min(420px, 92vw); padding: 22px; border-radius: 16px; }
 
 /* Detail grid */
 .ur-detail { padding: 14px; border-top: 1px solid rgba(255,255,255,.05); background: rgba(0,0,0,.12); }
