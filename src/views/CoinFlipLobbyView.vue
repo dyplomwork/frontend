@@ -54,7 +54,7 @@ async function refreshList(showLoading = false) {
     list.value = all.filter((b) => b.status === 'OPEN')
   } catch (e: any) {
     // Silent on background refresh — don't flash an error on every poll tick
-    if (showLoading) error.value = e?.message || 'Помилка завантаження'
+    if (showLoading) error.value = e?.message || t('ui.s_error')
   } finally {
     if (showLoading) loading.value = false
   }
@@ -80,7 +80,7 @@ async function createBattle() {
     void auth.fetchBalance({ force: true }).catch(() => {})
     await router.push({ name: 'coinflip-battle', params: { id: b.id } })
   } catch (e: any) {
-    error.value = e?.message || 'Помилка'
+    error.value = e?.message || t('ui.s_error')
   } finally {
     createBusy.value = false
   }
@@ -101,7 +101,7 @@ async function joinBattle(b: BattleDTO) {
     void auth.fetchBalance({ force: true }).catch(() => {})
     await router.push({ name: 'coinflip-battle', params: { id: b.id } })
   } catch (e: any) {
-    error.value = e?.message || 'Помилка'
+    error.value = e?.message || t('ui.s_error')
   } finally {
     joiningId.value = ''
   }

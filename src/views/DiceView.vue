@@ -157,11 +157,11 @@ async function playInternal() {
 
   if (bet.value <= 0) {
     messageType.value = 'error'
-    return (message.value = 'Вкажи Amount')
+    return (message.value = t('ui.s_enter_amount'))
   }
   if (auth.user?.balance != null && auth.user.balance < bet.value) {
     messageType.value = 'error'
-    return (message.value = 'Недостатньо коштів')
+    return (message.value = t('ui.s_insufficient_balance'))
   }
 
   running.value = true
@@ -175,7 +175,7 @@ async function playInternal() {
     res = await dicePlay({ bet: Number(bet.value), rollOver: ro })
   } catch (e: any) {
     running.value = false
-    setError(e, 'Помилка запросу')
+    setError(e, t('ui.s_request_error'))
     return
   }
 
@@ -216,7 +216,7 @@ async function playInternal() {
       triggerFinishFx('win')
       const profit = Math.max(0, resultPayout - Number(bet.value))
       messageType.value = 'success'
-      message.value = `Победа: +${fmt(profit, 2)} (x${formatNumber(multiplier.value, 4)})`
+      message.value = t('ui.s_dice_win_amount', { p: fmt(profit, 2), x: formatNumber(multiplier.value, 4) })
       bigwinStore.maybeShow(resultPayout, bet.value)
     } else {
       sfx('lose')
@@ -225,7 +225,7 @@ async function playInternal() {
       triggerFinishFx('lose')
       triggerBarShake()
       messageType.value = 'error'
-      message.value = 'Проигрыш'
+      message.value = t('ui.s_dice_lose')
     }
 
     // Fire-and-forget: result is already shown, don't hold the play button
@@ -937,7 +937,7 @@ onBeforeUnmount(() => stopAnim())
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  min-height: 360px; /* подбери под свой дизайн */
+  min-height: 360px;
 }
 
 @media (max-width: 520px) {

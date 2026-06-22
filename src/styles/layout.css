@@ -204,6 +204,7 @@
 .user-pill .nick{
   font-weight: 900;
   font-size: 13px;
+  max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -306,6 +307,14 @@
   .search{ display:none; }
   .top-right{ gap: 8px; }
   .chip{ padding: 0 10px; }
+}
+
+/* Tablets / large phones: let the fixed-height topbar grow and wrap so a long
+   nickname + balance + action buttons never overflow horizontally. */
+@media (max-width: 768px){
+  .app-topbar{ height: auto; flex-wrap: wrap; row-gap: 8px; }
+  .top-right{ flex-wrap: wrap; justify-content: flex-end; }
+  .user-pill{ max-width: 42vw; }
 }
 
 @media (max-width: 480px){

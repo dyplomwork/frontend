@@ -370,13 +370,13 @@ function logout() {
                 <span class="strip-rarity-dot" :style="{ color: d.color }">⬤</span>
                 <span class="strip-nick">{{ d.nick }}</span>
                 <template v-if="(d as any).type === 'bigwin'">
-                  <span class="strip-sep">отримав</span>
+                  <span class="strip-sep">{{ $t('ui.s_strip_got') }}</span>
                   <span class="strip-icon">{{ d.icon }}</span>
                   <span class="strip-name" :style="{ color: d.color }">{{ dropName(d) }}</span>
                   <span class="strip-tag strip-mult" :style="{ color: d.color }">×{{ (d as any).mult }}</span>
                 </template>
                 <template v-else>
-                  <span class="strip-sep">виграв</span>
+                  <span class="strip-sep">{{ $t('ui.s_strip_won') }}</span>
                   <span class="strip-icon">{{ d.icon }}</span>
                   <span class="strip-name" :style="{ color: d.color }">{{ dropName(d) }}</span>
                   <span class="strip-tag" :style="{ color: d.color }">{{ d.rarity }}</span>

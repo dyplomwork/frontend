@@ -285,4 +285,14 @@ onMounted(async () => {
 .hist-list { display: flex; flex-direction: column; gap: 6px; }
 .hist-row { display: flex; align-items: center; gap: 14px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
 .hist-coins { font-weight: 900; color: #34d399; min-width: 120px; }
+
+@media (max-width: 560px) {
+  .donate-head { padding: 14px; }
+  .notice-login { flex-direction: column; align-items: stretch; text-align: center; }
+  .notice-login .btn { width: 100%; }
+  .pkg-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .pkg-coins { font-size: 21px; }
+  .hist-row { flex-wrap: wrap; gap: 4px 12px; }
+  .hist-coins { min-width: 0; }
+}
 </style>

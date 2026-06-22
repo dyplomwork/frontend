@@ -244,7 +244,6 @@ export default {
     "s_3136a9f696": "Balls",
     "s_66d3a865e2": "Total bet:",
 
-    "s_amount_must_be_positive": "Amount must be greater than 0",
 
     "s_a46c372347": "Profile",
     "s_b5397350cb": "Balance:",
@@ -359,6 +358,62 @@ export default {
     "s_donate_loading": "Loading Google Pay…",
     "s_donate_note": "Payments run in the Google Pay test environment — no real money is charged.",
     "s_donate_history": "Top-up history",
-    "s_donate_history_empty": "No top-ups yet"
+    "s_donate_history_empty": "No top-ups yet",
+
+    "s_or": "or",
+    "s_save": "Save",
+    "s_enter_amount": "Enter amount",
+    "s_request_error": "Request error",
+    "s_strip_got": "got",
+    "s_strip_won": "won",
+    "s_in_play": "In play:",
+    "s_break_even": "Break even",
+    "s_profit_plus": "Profit +{p}",
+    "s_minus": "Minus {p}",
+
+    "s_home_clicker_desc": "Click, upgrade, earn K-coins",
+    "s_home_inventory_desc": "Browse items, sell on the auction",
+    "s_home_auction_desc": "Buy and sell items with players",
+
+    "s_login_failed": "Failed to sign in",
+    "s_login_error": "Sign-in error",
+    "s_login_google_error": "Google sign-in error",
+    "s_login_submitting": "Signing in…",
+    "s_login_submit": "Sign in",
+
+    "s_reg_pw_min8": "Password must be at least 8 characters",
+    "s_reg_failed": "Failed to register",
+    "s_reg_error": "Registration error",
+    "s_reg_google_error": "Google registration error",
+    "s_reg_pw_hint_min": "At least 8 characters",
+    "s_reg_pw_ok": "OK",
+    "s_reg_pw_short": "Password too short",
+    "s_reg_submitting": "Creating…",
+    "s_reg_submit": "Create account",
+    "s_reg_or_via": "or sign up via",
+
+    "s_avatar_pick_image": "Choose an image (jpg, png, webp…)",
+    "s_avatar_change": "Change photo",
+    "s_avatar_title": "Profile photo",
+    "s_avatar_upload": "Upload from PC",
+    "s_avatar_or_url": "or paste a URL",
+    "s_avatar_remove": "Remove",
+
+    "s_inv_vendor_sold": "Sold to vendor for {amount} K",
+    "s_inv_vendor_title50": "Sell to vendor for 50%",
+    "s_inv_vendor_heading": "Sell to vendor",
+    "s_inv_vendor_desc": "The vendor buys items for 50% of base value.",
+    "s_inv_base_price": "Base price",
+    "s_inv_you_get": "You get",
+    "s_inv_sell": "Sell",
+    "s_inv_selling": "Selling…",
+
+    "s_dice_win_amount": "Win: +{p} (x{x})",
+    "s_plinko_too_many_balls": "Too many balls on the board",
+    "s_mines_boom": "Boom! You lost",
+    "s_auction_bought": "Bought: {name}",
+    "s_search": "Search...",
+    "s_sort_rarity": "Rarity",
+    "s_auction_mine": "Mine"
   }
 }

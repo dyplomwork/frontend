@@ -168,7 +168,7 @@ async function fetchBattle() {
   try {
     battle.value = await battlesGet(id.value)
   } catch (e: any) {
-    error.value = e?.message || 'Помилка'
+    error.value = e?.message || t('ui.s_error')
   } finally {
     loading.value = false
   }
@@ -209,7 +209,7 @@ async function join() {
     void auth.fetchBalance({ force: true }).catch(() => {})
     battle.value = nb as any
   } catch (e: any) {
-    error.value = e?.message || 'Помилка'
+    error.value = e?.message || t('ui.s_error')
   } finally {
     joinBusy.value = false
   }
@@ -227,7 +227,7 @@ async function ready() {
     publishMockEvent({ type: 'battles' })
     battle.value = nb as any
   } catch (e: any) {
-    error.value = e?.message || 'Помилка'
+    error.value = e?.message || t('ui.s_error')
   } finally {
     readyBusy.value = false
   }
@@ -246,7 +246,7 @@ async function cancel() {
     void auth.fetchBalance({ force: true }).catch(() => {})
     await router.push({ name: 'coinflip' })
   } catch (e: any) {
-    error.value = e?.message || 'Помилка'
+    error.value = e?.message || t('ui.s_error')
   } finally {
     cancelBusy.value = false
   }

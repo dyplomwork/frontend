@@ -335,6 +335,62 @@ export default {
     "s_donate_loading": "Завантаження Google Pay…",
     "s_donate_note": "Платежі виконуються в тестовому середовищі Google Pay — реальні кошти не списуються.",
     "s_donate_history": "Історія поповнень",
-    "s_donate_history_empty": "Поки що поповнень немає"
+    "s_donate_history_empty": "Поки що поповнень немає",
+
+    "s_or": "або",
+    "s_save": "Зберегти",
+    "s_enter_amount": "Вкажи суму",
+    "s_request_error": "Помилка запиту",
+    "s_strip_got": "отримав",
+    "s_strip_won": "виграв",
+    "s_in_play": "У грі:",
+    "s_break_even": "В нуль",
+    "s_profit_plus": "Профіт +{p}",
+    "s_minus": "Мінус {p}",
+
+    "s_home_clicker_desc": "Клікай, апгрейдуй, заробляй K-монети",
+    "s_home_inventory_desc": "Переглядай предмети, продавай на аукціоні",
+    "s_home_auction_desc": "Купуй та продавай предмети з гравцями",
+
+    "s_login_failed": "Не вдалось увійти",
+    "s_login_error": "Помилка входу",
+    "s_login_google_error": "Помилка Google входу",
+    "s_login_submitting": "Входимо…",
+    "s_login_submit": "Увійти",
+
+    "s_reg_pw_min8": "Пароль повинен мати як мінімум 8 символів",
+    "s_reg_failed": "Не вдалось зареєструватися",
+    "s_reg_error": "Помилка реєстрації",
+    "s_reg_google_error": "Помилка Google реєстрації",
+    "s_reg_pw_hint_min": "Мінімум 8 символів",
+    "s_reg_pw_ok": "Ок",
+    "s_reg_pw_short": "Занадто короткий пароль",
+    "s_reg_submitting": "Створюємо…",
+    "s_reg_submit": "Створити акаунт",
+    "s_reg_or_via": "або зареєструйтесь через",
+
+    "s_avatar_pick_image": "Оберіть зображення (jpg, png, webp…)",
+    "s_avatar_change": "Змінити фото",
+    "s_avatar_title": "Фото профілю",
+    "s_avatar_upload": "Завантажити з ПК",
+    "s_avatar_or_url": "або вставте URL",
+    "s_avatar_remove": "Видалити",
+
+    "s_inv_vendor_sold": "Продано скупщику за {amount} K",
+    "s_inv_vendor_title50": "Продати скупщику за 50%",
+    "s_inv_vendor_heading": "Продати скупщику",
+    "s_inv_vendor_desc": "Скупщик купує предмети за 50% від базової ціни.",
+    "s_inv_base_price": "Базова ціна",
+    "s_inv_you_get": "Ви отримаєте",
+    "s_inv_sell": "Продати",
+    "s_inv_selling": "Продаємо…",
+
+    "s_dice_win_amount": "Перемога: +{p} (x{x})",
+    "s_plinko_too_many_balls": "Забагато кульок на полі",
+    "s_mines_boom": "Бомба! Програш",
+    "s_auction_bought": "Куплено: {name}",
+    "s_search": "Пошук...",
+    "s_sort_rarity": "Рідкість",
+    "s_auction_mine": "Моє"
   }
 }

@@ -17,7 +17,8 @@ import { useI18n } from 'vue-i18n'
 const auth = useAuthStore()
 const ui = useUiStore()
 const { requireAuth } = useRequireAuthAction()
-const { t } = useI18n()
+// aliased to `tr` — local `t` (time) variables shadow it inside animation loops
+const { t: tr } = useI18n()
 
 const amount = ref(0)
 const difficulty = ref<'LOW'|'MEDIUM'|'HIGH'>('MEDIUM')
@@ -34,9 +35,9 @@ const MAX_ACTIVE_BALLS = 11150
 const message = ref('')
 const messageType = ref<'info' | 'success' | 'error'>('info')
 
-function setError(e: unknown, fallback = t('ui.s_error')) {
+function setError(e: unknown, fallback = tr('ui.s_error')) {
   const n = normalizeError(e)
-  const text = userMessageForStatusI18n(n.status, n.message || fallback, t)
+  const text = userMessageForStatusI18n(n.status, n.message || fallback, tr)
   messageType.value = 'error'
   message.value = text
   if (n.status === 401) ui.toast(text, 'info')
@@ -70,9 +71,9 @@ const rowsList = [8, 12, 16]
 
 const difficultyOptions = computed(() =>
   [
-    { value: 'LOW', label: t('ui.s_low') },
-    { value: 'MEDIUM', label: t('ui.s_medium') },
-    { value: 'HIGH', label: t('ui.s_high') },
+    { value: 'LOW', label: tr('ui.s_low') },
+    { value: 'MEDIUM', label: tr('ui.s_medium') },
+    { value: 'HIGH', label: tr('ui.s_high') },
   ] as const
 )
 
@@ -542,9 +543,9 @@ function updateBall(b: BallState, tNow: number) {
       landedSinceSync.value += 1
       void maybeSyncBalance()
 
-      if (b.net > 0) message.value = `Профіт +${fmt(b.net, 2)}`
-      else if (b.net < 0) message.value = `Мінус ${fmt(-b.net, 2)}`
-      else message.value = 'В ноль'
+      if (b.net > 0) message.value = tr('ui.s_profit_plus', { p: fmt(b.net, 2) })
+      else if (b.net < 0) message.value = tr('ui.s_minus', { p: fmt(-b.net, 2) })
+      else message.value = tr('ui.s_break_even')
     }
     return
   }
@@ -750,11 +751,11 @@ async function dropInternal(count: number) {
   const freeSlots = Math.max(0, MAX_ACTIVE_BALLS - activeBallCount())
   const n = Math.min(count, freeSlots)
 
-  if (bet.value <= 0) { messageType.value = 'error'; message.value = 'Укажи Amount'; return }
-  if (n <= 0) { messageType.value = 'error'; message.value = 'Слишком много шаров на поле'; return }
+  if (bet.value <= 0) { messageType.value = 'error'; message.value = tr('ui.s_enter_amount'); return }
+  if (n <= 0) { messageType.value = 'error'; message.value = tr('ui.s_plinko_too_many_balls'); return }
 
   const totalCost = bet.value * n
-  if (availableBalance() < totalCost) { messageType.value = 'error'; message.value = 'Недостаточно баланса'; return }
+  if (availableBalance() < totalCost) { messageType.value = 'error'; message.value = tr('ui.s_insufficient_balance'); return }
 
   localBalance.value -= totalCost
   ui.setBalanceOverride(localBalance.value)
@@ -775,7 +776,7 @@ async function dropInternal(count: number) {
       }),
     })
   } catch (e) {
-    setError(e, t('ui.s_plinko_error_play'))
+    setError(e, tr('ui.s_plinko_error_play'))
     localBalance.value += totalCost
     ui.setBalanceOverride(localBalance.value)
     inFlightStake.value -= totalCost
@@ -917,7 +918,7 @@ function binRippleScale(mult: number) {
 
         <div class="field">
           <div class="mini">{{ $t('ui.s_66d3a865e2') }} <b class="num">{{ fmt(totalBet, 2) }}</b></div>
-          <div v-if="inFlightStake > 0" class="mini">В игре: <b class="num">{{ fmt(inFlightStake, 2) }}</b></div>
+          <div v-if="inFlightStake > 0" class="mini">{{ $t('ui.s_in_play') }} <b class="num">{{ fmt(inFlightStake, 2) }}</b></div>
         </div>
       </GamePanel>
     </template>

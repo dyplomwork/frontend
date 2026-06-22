@@ -70,7 +70,7 @@ async function saveAvatar() {
     auth.user = res.user
     editingAvatar.value = false
   } catch (e: any) {
-    avatarMsg.value = e?.message ?? 'Помилка'
+    avatarMsg.value = e?.message ?? t('ui.s_error')
   } finally {
     avatarLoading.value = false
   }
@@ -88,7 +88,7 @@ function handleFileChange(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
   if (!file.type.startsWith('image/')) {
-    avatarMsg.value = 'Оберіть зображення (jpg, png, webp…)'
+    avatarMsg.value = t('ui.s_avatar_pick_image')
     return
   }
   avatarMsg.value = ''
@@ -158,7 +158,7 @@ watch(() => auth.user?.id, (v) => { if (v) loadStats() })
       <!-- User info card -->
       <div class="card user-card">
         <div class="user-head">
-          <div class="user-avatar" @click="startAvatarEdit" title="Змінити фото">
+          <div class="user-avatar" @click="startAvatarEdit" :title="$t('ui.s_avatar_change')">
             <img v-if="auth.user.avatar_url" :src="auth.user.avatar_url" class="avatar-img" alt="Avatar" @error="($event.target as HTMLImageElement).style.display='none'" />
             <span v-else>{{ auth.user.nickname.slice(0,2).toUpperCase() }}</span>
             <div class="avatar-edit-overlay">✏️</div>
@@ -189,7 +189,7 @@ watch(() => auth.user?.id, (v) => { if (v) loadStats() })
       <!-- Avatar edit modal (fixed overlay) -->
       <div v-if="editingAvatar" class="avatar-modal-backdrop" @click.self="editingAvatar=false">
         <div class="avatar-modal">
-          <div class="avatar-modal-title">Фото профілю</div>
+          <div class="avatar-modal-title">{{ $t('ui.s_avatar_title') }}</div>
 
           <!-- Preview -->
           <div class="avatar-preview-wrap">
@@ -201,7 +201,7 @@ watch(() => auth.user?.id, (v) => { if (v) loadStats() })
 
           <!-- Upload from PC -->
           <button class="btn btn-upload" @click="pickFile" style="margin-top:14px; width:100%;">
-            📁 Завантажити з ПК
+            📁 {{ $t('ui.s_avatar_upload') }}
           </button>
           <input
             ref="fileInputRef"
@@ -212,7 +212,7 @@ watch(() => auth.user?.id, (v) => { if (v) loadStats() })
           />
 
           <!-- OR divider -->
-          <div class="avatar-divider">або вставте URL</div>
+          <div class="avatar-divider">{{ $t('ui.s_avatar_or_url') }}</div>
 
           <!-- URL input -->
           <input class="input" v-model="newAvatarUrl" placeholder="https://example.com/photo.jpg" />
@@ -220,10 +220,10 @@ watch(() => auth.user?.id, (v) => { if (v) loadStats() })
           <div v-if="avatarMsg" class="muted small" style="color:#f87171; margin-top:6px;">{{ avatarMsg }}</div>
 
           <div class="avatar-modal-btns">
-            <button class="btn btn-sm" @click="clearAvatar">🗑 Видалити</button>
-            <button class="btn btn-sm" @click="editingAvatar=false">Скасувати</button>
+            <button class="btn btn-sm" @click="clearAvatar">🗑 {{ $t('ui.s_avatar_remove') }}</button>
+            <button class="btn btn-sm" @click="editingAvatar=false">{{ $t('ui.s_cf_cancel') }}</button>
             <button class="btn btn-primary btn-sm" @click="saveAvatar" :disabled="avatarLoading">
-              {{ avatarLoading ? '…' : '✓ Зберегти' }}
+              {{ avatarLoading ? '…' : '✓ ' + $t('ui.s_save') }}
             </button>
           </div>
         </div>

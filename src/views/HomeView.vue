@@ -65,7 +65,7 @@ import { RouterLink } from 'vue-router'
         <div class="icon emoji-icon">🪙</div>
         <div class="meta">
           <div class="title">{{ $t('ui.s_clicker') }}</div>
-          <div class="muted">Клікай, апгрейдуй, заробляй K-монети</div>
+          <div class="muted">{{ $t('ui.s_home_clicker_desc') }}</div>
         </div>
       </RouterLink>
 
@@ -73,7 +73,7 @@ import { RouterLink } from 'vue-router'
         <div class="icon emoji-icon">🎒</div>
         <div class="meta">
           <div class="title">{{ $t('ui.s_inventory') }}</div>
-          <div class="muted">Переглядай предмети, продавай на аукціоні</div>
+          <div class="muted">{{ $t('ui.s_home_inventory_desc') }}</div>
         </div>
       </RouterLink>
 
@@ -81,7 +81,7 @@ import { RouterLink } from 'vue-router'
         <div class="icon emoji-icon">🏷️</div>
         <div class="meta">
           <div class="title">{{ $t('ui.s_auction') }}</div>
-          <div class="muted">Купуй та продавай предмети з гравцями</div>
+          <div class="muted">{{ $t('ui.s_home_auction_desc') }}</div>
         </div>
       </RouterLink>
     </div>

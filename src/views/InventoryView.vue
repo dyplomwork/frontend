@@ -44,7 +44,7 @@ async function confirmVendorSell() {
   msg.value = ''
   try {
     const res = await api<any>(`/api/v1/items/${vendorItem.value.id}/sell-vendor`, { method: 'POST' })
-    msg.value = `Продано скупщику за ${formatNumber(res.gained, 2)} K`
+    msg.value = t('ui.s_inv_vendor_sold', { amount: formatNumber(res.gained, 2) })
     msgType.value = 'success'
     if (auth.user) auth.user = { ...auth.user, balance: res.balance }
     vendorItem.value = null
@@ -181,11 +181,11 @@ onMounted(load)
             <button class="btn btn-sm" @click="delist(item.listingId!)">{{ $t('ui.s_auction_delist') }}</button>
           </div>
           <div v-else class="item-actions">
-            <button class="btn item-sell-btn" @click="startSell(item)" title="Виставити на аукціон">
-              🏷️ Аукціон
+            <button class="btn item-sell-btn" @click="startSell(item)" :title="$t('ui.s_inventory_sell')">
+              🏷️ {{ $t('ui.s_auction') }}
             </button>
-            <button class="btn item-vendor-btn" @click="startVendorSell(item)" title="Продати скупщику за 50%">
-              🛒 {{ vendorPrice(item) > 0 ? formatNumber(vendorPrice(item), 0) + ' K' : 'Продати' }}
+            <button class="btn item-vendor-btn" @click="startVendorSell(item)" :title="$t('ui.s_inv_vendor_title50')">
+              🛒 {{ vendorPrice(item) > 0 ? formatNumber(vendorPrice(item), 0) + ' K' : $t('ui.s_inv_sell') }}
             </button>
           </div>
         </div>
@@ -194,21 +194,21 @@ onMounted(load)
       <!-- Vendor sell modal -->
       <div v-if="vendorItem" class="modal-backdrop" @click.self="vendorItem = null">
         <div class="modal-box card">
-          <h3 style="margin:0 0 6px">🛒 Продати скупщику</h3>
-          <p class="muted small" style="margin:0 0 14px">Скупщик купує предмети за 50% від базової ціни.</p>
+          <h3 style="margin:0 0 6px">🛒 {{ $t('ui.s_inv_vendor_heading') }}</h3>
+          <p class="muted small" style="margin:0 0 14px">{{ $t('ui.s_inv_vendor_desc') }}</p>
           <div class="vendor-item-preview">
             <span style="font-size:32px">{{ vendorItem.icon }}</span>
             <div>
               <div class="item-name" :style="{ color: vendorItem.color }">{{ itemName(vendorItem) }}</div>
-              <div class="muted small">Базова ціна: {{ fmt(vendorItem.value) }} K</div>
-              <div style="font-weight:900; font-size:16px; color:#4ade80">Ви отримаєте: {{ fmt(vendorPrice(vendorItem)) }} K</div>
+              <div class="muted small">{{ $t('ui.s_inv_base_price') }}: {{ fmt(vendorItem.value) }} K</div>
+              <div style="font-weight:900; font-size:16px; color:#4ade80">{{ $t('ui.s_inv_you_get') }}: {{ fmt(vendorPrice(vendorItem)) }} K</div>
             </div>
           </div>
           <div class="row" style="gap:10px; margin-top:16px;">
             <button class="btn btn-primary" @click="confirmVendorSell" :disabled="vendorBusy">
-              {{ vendorBusy ? 'Продаємо…' : 'Продати' }}
+              {{ vendorBusy ? $t('ui.s_inv_selling') : $t('ui.s_inv_sell') }}
             </button>
-            <button class="btn" @click="vendorItem = null">Скасувати</button>
+            <button class="btn" @click="vendorItem = null">{{ $t('ui.s_cf_cancel') }}</button>
           </div>
         </div>
       </div>

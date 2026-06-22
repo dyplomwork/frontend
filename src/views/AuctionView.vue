@@ -86,7 +86,7 @@ async function doBuy(listing: Listing) {
   msg.value = ''
   try {
     await api(`/api/v1/auction/${listing.id}/buy`, { method: 'POST' })
-    msg.value = `Куплено: ${itemName(listing)}`
+    msg.value = t('ui.s_auction_bought', { name: itemName(listing) })
     msgType.value = 'success'
     // Balance refresh and listings reload are independent — run in parallel
     await Promise.all([auth.fetchBalance({ force: true }), load()])
@@ -114,11 +114,11 @@ onMounted(load)
         </div>
 
         <div class="controls" style="margin-top:12px;">
-          <input class="input search-input" v-model="searchQuery" placeholder="Search..." />
+          <input class="input search-input" v-model="searchQuery" :placeholder="$t('ui.s_search')" />
           <select class="input sort-select" v-model="sortBy">
-            <option value="price_asc">↑ Price</option>
-            <option value="price_desc">↓ Price</option>
-            <option value="rarity">Rarity</option>
+            <option value="price_asc">↑ {{ $t('ui.s_auction_price') }}</option>
+            <option value="price_desc">↓ {{ $t('ui.s_auction_price') }}</option>
+            <option value="rarity">{{ $t('ui.s_sort_rarity') }}</option>
           </select>
         </div>
 
@@ -178,7 +178,7 @@ onMounted(load)
               :disabled="!!buyBusy || l.sellerId === auth.user?.id"
               @click="buy(l)"
             >
-              {{ buyBusy === l.id ? '…' : (l.sellerId === auth.user?.id ? 'Mine' : $t('ui.s_auction_buy')) }}
+              {{ buyBusy === l.id ? '…' : (l.sellerId === auth.user?.id ? $t('ui.s_auction_mine') : $t('ui.s_auction_buy')) }}
             </button>
           </div>
         </div>

@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '../stores/auth'
 
+const { t } = useI18n()
 const router = useRouter()
 const auth = useAuthStore()
 
@@ -21,19 +23,19 @@ async function submit() {
 
   const nick = nickname.value.trim()
   if (password.value.length < 8) {
-    error.value = 'Пароль повинен мати як мінімум 8 символів'
+    error.value = t('ui.s_reg_pw_min8')
     return
   }
 
   try {
     const res = await auth.register({ nickname: nick, password: password.value })
     if (!res.ok) {
-      error.value = (res as any).message || 'Не вдалось зареєструватися'
+      error.value = (res as any).message || t('ui.s_reg_failed')
       return
     }
     await router.replace({ name: 'profile' })
   } catch (e: any) {
-    error.value = e?.message || 'Помилка реєстрації'
+    error.value = e?.message || t('ui.s_reg_error')
   }
 }
 
@@ -42,10 +44,10 @@ async function handleGoogleCredential(response: any) {
   googleLoading.value = true
   try {
     const res = await auth.loginWithGoogle(response.credential)
-    if (!res.ok) { error.value = 'Google sign-in failed'; return }
+    if (!res.ok) { error.value = t('ui.s_reg_google_error'); return }
     await router.replace({ name: 'profile' })
   } catch (e: any) {
-    error.value = e?.message || 'Помилка Google реєстрації'
+    error.value = e?.message || t('ui.s_reg_google_error')
   } finally {
     googleLoading.value = false
   }
@@ -91,18 +93,18 @@ onMounted(async () => {
           <span class="label">{{ $t('ui.s_5ebe553e01') }}</span>
           <input v-model="password" type="password" autocomplete="new-password" :placeholder="$t('ui.s_c7665a90a1')" required />
           <span class="tiny" :class="{ bad: password.length > 0 && !passwordOk }">
-            {{ password.length === 0 ? 'Мінімум 8 символів' : (passwordOk ? 'Ок' : 'Занадто короткий пароль') }}
+            {{ password.length === 0 ? $t('ui.s_reg_pw_hint_min') : (passwordOk ? $t('ui.s_reg_pw_ok') : $t('ui.s_reg_pw_short')) }}
           </span>
         </label>
 
         <div v-if="error" class="notice error" role="alert">{{ error }}</div>
 
         <button class="btn primary" type="submit" :disabled="!canSubmit">
-          {{ auth.loading ? 'Створюємо…' : 'Створити акаунт' }}
+          {{ auth.loading ? $t('ui.s_reg_submitting') : $t('ui.s_reg_submit') }}
         </button>
 
         <template v-if="GOOGLE_CLIENT_ID">
-          <div class="divider"><span>або зареєструйтесь через</span></div>
+          <div class="divider"><span>{{ $t('ui.s_reg_or_via') }}</span></div>
           <div id="google-btn-register" class="google-btn-wrap"></div>
         </template>
 

@@ -803,6 +803,9 @@ select.input option {
   .search-input { max-width: 100%; }
   .stats-mini-head { display: none; }
   .stats-mini-row { grid-template-columns: 1fr auto auto; }
+  .rarity-row { grid-template-columns: 60px 1fr 78px; gap: 8px; }
+  .rarity-name { font-size: 11px; }
+  .top-items { grid-template-columns: 1fr; }
 }
 
 /* ─── Battles history table ──────────────────────────────────────────── */
