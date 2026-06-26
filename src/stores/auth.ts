@@ -80,7 +80,6 @@ export const useAuthStore = defineStore('auth', {
       setToken(res.token)
       this.user = res.user
       setCachedUser(res.user)
-      // res.user already has fresh balance; background-refresh to sync role/nickname too
       void this.fetchBalance().catch(reportError)
       return { ok: true as const }
     },
@@ -166,7 +165,6 @@ export const useAuthStore = defineStore('auth', {
         const res = await api<{ ok: boolean; balance: number; role?: string; nickname?: string }>('/api/v1/accounts/users/me/balance', {
           method: 'GET',
         })
-        // Sync role and nickname from DB in case admin changed them
         this.user = {
           ...u,
           balance: Number(res.balance),
@@ -185,8 +183,6 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    // Set the balance to an authoritative value returned by the server
-    // (e.g. after a donation checkout). The server is the source of truth.
     setBalance(balance: number) {
       if (!this.user) return
       this.user = { ...this.user, balance: Number(balance) }

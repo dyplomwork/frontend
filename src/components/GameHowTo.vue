@@ -11,8 +11,6 @@ type Props = {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  // All callers pass a localized heading via $t(...); empty default avoids a
-  // hardcoded language leaking into either locale.
   heading: '',
   intro: '',
   sections: () => [],

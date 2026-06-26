@@ -1,4 +1,3 @@
-/* Global BIG WIN overlay (epic, but reusable across games) */
 .bigwin{
   position: fixed;
   inset: 0;
@@ -139,7 +138,6 @@
 .bigwin-sparks i:nth-child(3n){ background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.95), rgba(61,255,157,.85)); }
 .bigwin-sparks i:nth-child(4n){ width: 6px; height: 6px; opacity: .85; }
 
-/* spread */
 .bigwin-sparks i:nth-child(1){ --a:-70deg; --d:260px; }
 .bigwin-sparks i:nth-child(2){ --a:-40deg; --d:230px; }
 .bigwin-sparks i:nth-child(3){ --a:-15deg; --d:290px; }
@@ -167,7 +165,6 @@
 .bigwin-sparks i:nth-child(25){--a:-82deg; --d:360px; }
 .bigwin-sparks i:nth-child(26){--a:82deg;  --d:360px; }
 
-/* Tier intensity */
 .bigwin.tier-2 .bigwin-title{ text-shadow: 0 0 28px rgba(255,178,74,.36), 0 0 80px rgba(61,255,157,.18); }
 .bigwin.tier-2 .bigwin-card{ box-shadow: 0 30px 120px rgba(0,0,0,.62), 0 0 110px rgba(255,178,74,.22); }
 .bigwin.tier-3 .bigwin-title{ animation: bigwinTitleGlitch 1200ms ease-out both; }

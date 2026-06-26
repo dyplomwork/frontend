@@ -36,16 +36,12 @@ const sideText = (s: CoinSide | string | null | undefined) => {
   return String(s)
 }
 
-// For the "Creator: …" line in the lobby card —
-// shows what side the creator picked (or that it is random)
 const creatorSideLabel = (side: CoinSide | null | undefined) => {
   if (!side) return t('ui.s_cf_chosen_random')
   if (side === 'heads') return t('ui.s_cf_chosen_heads')
   return t('ui.s_cf_chosen_tails')
 }
 
-// showLoading = true only on the very first fetch; background polls are silent
-// so they don't shift / hide existing battle cards
 async function refreshList(showLoading = false) {
   if (showLoading) loading.value = true
   error.value = ''
@@ -53,7 +49,6 @@ async function refreshList(showLoading = false) {
     const all = await battlesList()
     list.value = all.filter((b) => b.status === 'OPEN')
   } catch (e: any) {
-    // Silent on background refresh — don't flash an error on every poll tick
     if (showLoading) error.value = e?.message || t('ui.s_error')
   } finally {
     if (showLoading) loading.value = false
@@ -108,9 +103,8 @@ async function joinBattle(b: BattleDTO) {
 }
 
 onMounted(() => {
-  void refreshList(true) // initial fetch — show spinner
-  unsubBattles = subscribeBattles(() => { void refreshList(false) }) // SSE event — silent update
-  // Background poll: update list every 3s without showing a spinner or clearing the list
+  void refreshList(true)
+  unsubBattles = subscribeBattles(() => { void refreshList(false) })
   listPollTimer = window.setInterval(() => refreshList(false), 3000)
 })
 
@@ -221,22 +215,18 @@ onBeforeUnmount(() => {
 .cf-side{ height: 42px; border-radius: 14px; font-weight: 1000; }
 .cf-side.on{ background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.22); box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
 
-
 .cf-lobby{ width: min(980px, 100%); margin: 0 auto; padding: 14px; }
 .lobby-head{ display:flex; align-items:center; justify-content:space-between; gap: 12px; margin-bottom: 10px; }
 .lobby-left{ display:flex; flex-direction:column; gap: 2px; }
 .cf-refresh{ width: 44px; height: 44px; border-radius: 14px; }
 .title{ font-weight: 1000; letter-spacing: .2px; }
 
-/* TransitionGroup container — inherits the gap via margin-top on each card */
 .battle-list{ display: flex; flex-direction: column; }
 
-/* battle card enter / leave animation */
 .battle-list-enter-active,
 .battle-list-leave-active { transition: opacity 220ms ease, transform 220ms ease; }
 .battle-list-enter-from  { opacity: 0; transform: translateY(-6px); }
 .battle-list-leave-to    { opacity: 0; transform: translateY(6px); }
-/* keep layout stable while a leaving card animates out */
 .battle-list-leave-active { position: absolute; width: 100%; }
 
 .battle{ width: 100%; border-radius: 14px; border: 1px solid rgba(255,255,255,.08); background: rgba(0,0,0,.18); padding: 12px; margin-top: 10px; color: inherit; }

@@ -1,18 +1,13 @@
-/* ========= App layout (classic-ish shell) ========= */
 .app-shell{
   --sidebar-current: var(--sidebar-w-collapsed);
   min-height: 100vh;
   display:grid;
   grid-template-columns: var(--sidebar-current) 1fr;
-  overflow-x: hidden; /* prevent ticker from causing horizontal scroll */
-  position: relative; /* anchor ::before */
+  overflow-x: hidden;
+  position: relative;
 }
 .app-shell.open{ --sidebar-current: var(--sidebar-w); }
 
-/* Full-height background for the sidebar grid column.
-   Without this, the sidebar (position:sticky; height:100vh) creates a visual
-   gap at the bottom of tall pages — the left column below the sticky element
-   has no background. ::before fills the entire column height. */
 .app-shell::before{
   content: '';
   position: absolute;
@@ -41,13 +36,14 @@
   align-items:center;
   gap: 10px;
   transition: width .18s ease, transform .18s ease;
-  z-index: 1; /* sit above the ::before pseudo-element */
+  z-index: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .app-sidebar.open{ align-items:stretch; }
 
 .app-content{ min-width:0; display:flex; flex-direction:column; flex:1; }
 
-/* Drops strip — continuous marquee, multiple items scroll simultaneously */
 .drops-strip{
   display: flex;
   align-items: center;
@@ -90,14 +86,13 @@
 }
 .strip-scroll{
   flex: 1;
-  min-width: 0;          /* ← key: allows flex item to shrink below content size */
+  min-width: 0;
   overflow: hidden;
   height: 100%;
   position: relative;
 }
-/* Marquee track — absolutely positioned so it never affects parent width */
 .strip-track{
-  position: absolute;   /* ← key: out of flow, won't stretch parent */
+  position: absolute;
   top: 0; left: 0;
   display: flex;
   align-items: center;
@@ -135,7 +130,6 @@
   border: 1px solid currentColor;
   background: rgba(0,0,0,.2);
 }
-/* Big Win items in ticker */
 .strip-bigwin { background: rgba(255,255,255,.03); }
 .strip-mult {
   font-size: 11px; font-weight: 900;
@@ -218,8 +212,6 @@
 }
 .topbar-avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 999px; }
 .topbar-avatar-init { font-size: 9px; font-weight: 900; letter-spacing: .5px; }
-/* Topbar hamburger: hidden on desktop (sidebar has its own toggle),
-   shown on mobile where sidebar is off-canvas */
 .icon-btn.topbar-menu{ display: none; width: 44px; height: 44px; border-radius: 14px; flex-shrink: 0; }
 
 .app-main{
@@ -236,7 +228,6 @@
   margin-right: calc(var(--main-pad-x) * -1);
 }
 
-/* Sidebar nav */
 .side-nav{ display:flex; flex-direction:column; gap: 10px; margin-top: 14px; }
 .side-link{
   height: 48px;
@@ -273,9 +264,7 @@
 }
 
 @media (max-width: 980px){
-  /* Mobile: sidebar becomes off-canvas and is opened via the topbar menu button */
   .app-shell{ grid-template-columns: 1fr; }
-  /* Sidebar column pseudo-background not needed on mobile (off-canvas sidebar) */
   .app-shell::before{ display: none; }
 
   .app-sidebar{
@@ -285,14 +274,13 @@
     bottom: 0;
     width: 260px;
     transform: translateX(-105%);
-    z-index: 20;
+    z-index: 40;
     box-shadow: 0 22px 70px rgba(0,0,0,.55);
     border-right: 1px solid var(--c-border);
   }
   .app-sidebar.open{ transform: translateX(0); }
 
   .app-topbar{ z-index: 30; }
-  /* Show topbar hamburger on mobile — sidebar is off-canvas here */
   .icon-btn.topbar-menu{ display: flex; }
 
   .app-main{
@@ -308,8 +296,6 @@
   .chip{ padding: 0 10px; }
 }
 
-/* Tablets / large phones: let the fixed-height topbar grow and wrap so a long
-   nickname + balance + action buttons never overflow horizontally. */
 @media (max-width: 768px){
   .app-topbar{ height: auto; flex-wrap: wrap; row-gap: 8px; }
   .top-right{ flex-wrap: wrap; justify-content: flex-end; }
@@ -340,13 +326,9 @@
   .icon-btn{ width: 38px; height: 38px; }
 }
 
-
-
-/* Sidebar: no underline on hover (global anchors may underline) */
 .app-sidebar a:hover,
 .app-sidebar a:focus{ text-decoration: none; }
 
-/* Audio controls in sidebar */
 .side-bottom{ display:flex; flex-direction:column; gap:10px; padding-top: 10px; }
 .audio-row{ display:flex; align-items:center; gap:10px; }
 .icon-btn.audio-btn{ width: 42px; height: 42px; border-radius: 14px; }
@@ -387,7 +369,6 @@
   border: 1px solid rgba(255,255,255,.10);
 }
 
-/* Topbar balance coin smaller */
 .balance-pill .coin{
   width: 25px;
   height: 25px;

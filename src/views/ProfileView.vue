@@ -47,7 +47,6 @@ async function saveNickname() {
   }
 }
 
-// Avatar editing
 const editingAvatar = ref(false)
 const newAvatarUrl = ref('')
 const avatarMsg = ref('')
@@ -114,7 +113,6 @@ function handleFileChange(e: Event) {
   }
   reader.readAsDataURL(file)
 
-  // reset input so same file can be picked again
   ;(e.target as HTMLInputElement).value = ''
 }
 
@@ -155,7 +153,6 @@ watch(() => auth.user?.id, (v) => { if (v) loadStats() })
     </div>
 
     <template v-else>
-      <!-- User info card -->
       <div class="card user-card">
         <div class="user-head">
           <div class="user-avatar" @click="startAvatarEdit" :title="$t('ui.s_avatar_change')">
@@ -347,7 +344,6 @@ watch(() => auth.user?.id, (v) => { if (v) loadStats() })
   font-size: 18px; opacity: 0; transition: opacity 150ms;
 }
 
-/* Avatar modal */
 .avatar-modal-backdrop {
   position: fixed; inset: 0; z-index: 9999;
   background: rgba(0,0,0,.65); backdrop-filter: blur(4px);

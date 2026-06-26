@@ -9,7 +9,6 @@ import { api } from '../utils/api'
 import { formatNumber } from '../utils/format'
 import { reportError } from '../utils/errors'
 
-// Google Pay injects a global; type it loosely.
 declare global {
   interface Window { google?: any }
 }
@@ -32,9 +31,6 @@ const gpayError = ref(false)
 
 const fmt = (v: number) => formatNumber(v, 0)
 
-// ── Google Pay (TEST environment) ──────────────────────────────────────────
-// PAYMENT_GATEWAY + the 'example' gateway is Google's documented sandbox setup:
-// it returns a test token without needing a real merchant/payment processor.
 const baseRequest = { apiVersion: 2, apiVersionMinor: 0 }
 const tokenizationSpecification = {
   type: 'PAYMENT_GATEWAY',
@@ -128,7 +124,6 @@ async function pay(pkg: Package) {
     ui.toast(t('ui.s_donate_success', { coins: fmt(res.coinsCredited || pkg.coins) }), 'success')
     void loadHistory()
   } catch (e: any) {
-    // Google Pay throws { statusCode: 'CANCELED' } when the user closes the sheet.
     if (e?.statusCode === 'CANCELED') {
       ui.toast(t('ui.s_donate_cancelled'), 'info')
     } else {

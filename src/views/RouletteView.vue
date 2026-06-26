@@ -383,7 +383,6 @@ onBeforeUnmount(() => {
   if (highlightTimer !== null) window.clearTimeout(highlightTimer)
 })
 
-
 async function spinInternal() {
   if (spinning.value) return
 
@@ -464,7 +463,6 @@ async function spinInternal() {
       message.value = t('ui.s_roulette_result', { n: win })
     }
 
-    // Fire-and-forget: wheel animation finished, don't delay re-enable for a balance fetch
     if (shouldRefreshBalance) {
       auth.fetchBalance({ force: true }).catch(reportError)
     }
@@ -915,7 +913,6 @@ function betOf(key: BetKey) {
     </template>
   </GamePageLayout>
 </template>
-
 
 <style scoped>
 .panel-stack {

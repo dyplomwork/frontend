@@ -10,7 +10,6 @@
           <div class="contact">{{ $t('ui.s_3ff8fa6050') }} <span class="em">going.ru.gg@gmail.com</span></div>
           <div class="brand">{{ $t('ui.s_767d7243e6') }}</div>
 
-          <!-- Typical casino-style footer fine print (example) -->
           <div class="fine">
             {{ $t('ui.s_656526b120') }}
           </div>

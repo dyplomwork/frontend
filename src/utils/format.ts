@@ -3,7 +3,6 @@ type FormatNumberOpts = {
   trimZeros?: boolean
 }
 
-// Backward-compatible signature: formatNumber(x, 2)
 export function formatNumber(value: number | string, decimals?: number): string
 export function formatNumber(value: number | string, opts?: FormatNumberOpts): string
 export function formatNumber(value: number | string, optsOrDecimals?: FormatNumberOpts | number): string {

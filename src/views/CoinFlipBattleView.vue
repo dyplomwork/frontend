@@ -25,10 +25,10 @@ const readyBusy = ref(false)
 const cancelBusy = ref(false)
 
 let unsub: (() => void) | null = null
-let pollTimer: number | null = null    // fallback polling when SSE absent
-let nowTicker: number | null = null    // reactive clock for countdown display
+let pollTimer: number | null = null
+let nowTicker: number | null = null
 
-const now = ref(Date.now())            // reactive — drives countdownLeft
+const now = ref(Date.now())
 
 const coinState = ref<'idle' | 'countdown' | 'flipping' | 'result'>('idle')
 const coinResult = ref<CoinSide | ''>('')
@@ -43,22 +43,16 @@ const isCreator = computed(() => !!battle.value && battle.value.creatorId === my
 const isJoiner = computed(() => !!battle.value && String(battle.value.joinerId || '') === myId.value)
 const isParticipant = computed(() => isCreator.value || isJoiner.value)
 
-// When both players chose random sides, the backend doesn't assign sides in the DB —
-// it just picks a random winner. After FINISHED we can *derive* each player's side:
-// the winner gets resultSide, the loser gets the opposite.
 function deriveRandomSide(
   playerId: string,
   winnerId: string | null | undefined,
   resultSide: CoinSide | null | undefined
 ): CoinSide | null {
-  if (!resultSide || !winnerId) return null   // battle not finished yet
+  if (!resultSide || !winnerId) return null
   if (winnerId === playerId) return resultSide
   return resultSide === 'heads' ? 'tails' : 'heads'
 }
 
-// Resolved side for the creator:
-// • explicit choice  → use it directly
-// • random (null)    → derive from result once FINISHED, null before that
 const creatorResolvedSide = computed<CoinSide | null>(() => {
   const b = battle.value
   if (!b) return null
@@ -66,8 +60,6 @@ const creatorResolvedSide = computed<CoinSide | null>(() => {
   return deriveRandomSide(b.creatorId, b.winnerId, b.resultSide as CoinSide | null)
 })
 
-// Same for the joiner (joinerSide is also null only when BOTH chose random;
-// if creator picked a side, backend auto-assigned the opposite to joiner)
 const joinerResolvedSide = computed<CoinSide | null>(() => {
   const b = battle.value
   if (!b) return null
@@ -142,7 +134,7 @@ const countdownLeft = computed(() => {
   if (!b?.countdownStartedAt) return 0
   const start = new Date(b.countdownStartedAt).getTime()
   const end = start + 3000
-  const left = end - now.value   // now.value is reactive — updates every 150ms
+  const left = end - now.value
   return Math.max(0, Math.ceil(left / 1000))
 })
 
@@ -154,11 +146,8 @@ const sideText = (s: CoinSide | string | null | undefined) => {
   return String(s)
 }
 
-// Side label shown inside the arena player badge.
-// Null means "random, not yet revealed" → show a dice emoji + label.
-// After FINISHED the resolved computed fills in the real side.
 const arenaSideText = (side: CoinSide | null) => {
-  if (!side) return t('ui.s_cf_side_pending')   // 🎲 Рандом / 🎲 Random
+  if (!side) return t('ui.s_cf_side_pending')
   return sideText(side)
 }
 
@@ -272,8 +261,7 @@ function playFlip(result: CoinSide) {
   coinSeed.value = Math.floor(Math.random() * 1e9)
   coinState.value = 'flipping'
   coinResult.value = ''
-  // Always use even base spins so front face (heads) = 0°, back face (tails) = 180°
-  const spinsBase = (10 + Math.floor(Math.random() * 5)) * 2  // 20,22,24,26,28
+  const spinsBase = (10 + Math.floor(Math.random() * 5)) * 2
   const tilt = (Math.random() * 12 - 6).toFixed(2)
   const rot = result === 'heads' ? spinsBase * 180 : spinsBase * 180 + 180
   const root = document.documentElement
@@ -368,14 +356,12 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="arena" v-if="battle.status !== 'CANCELLED' && battle.status !== 'ABANDONED'">
-        <!-- Left player: me (participant view) or creator (spectator view) -->
         <div class="player left">
           <div class="nick">{{ isParticipant ? myNick : battle.creatorNick }}</div>
           <div class="meta">
             <span class="badge" :class="{ on: isParticipant ? myReady : !!battle.creatorReady }">
               {{ (isParticipant ? myReady : !!battle.creatorReady) ? '✓' : '…' }}
             </span>
-            <!-- arenaSideText: shows "🎲 Рандом" until FINISHED, then the resolved side -->
             <span class="muted small side-label" :class="{ 'side-revealed': !!(isParticipant ? mySide : creatorResolvedSide) }">
               {{ arenaSideText(isParticipant ? mySide : creatorResolvedSide) }}
             </span>
@@ -402,7 +388,6 @@ onBeforeUnmount(() => {
           <div class="muted small" v-if="coinState === 'result'">{{ $t('ui.s_cf_result') }}: <b>{{ sideText(coinResult) }}</b></div>
         </div>
 
-        <!-- Right player: opponent (participant view) or joiner (spectator view) -->
         <div class="player right">
           <div class="nick">{{ isParticipant ? oppNick : battle.joinerNick || '…' }}</div>
           <div class="meta">
@@ -486,7 +471,6 @@ onBeforeUnmount(() => {
 .result{ margin-top: 12px; border: 1px solid rgba(255,255,255,.08); background: rgba(0,0,0,.18); border-radius: 16px; padding: 12px; text-align:center; }
 .winner{ font-weight: 1100; font-size: 22px; }
 
-/* Side label in player badge: muted while still random, highlighted once revealed */
 .side-label { transition: color 300ms ease; }
 .side-revealed { color: rgba(255,210,80,.9); font-weight: 900; }
 </style>

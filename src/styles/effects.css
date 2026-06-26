@@ -1,4 +1,3 @@
-/* ========= Subtle grid overlay like classic ========= */
 body::before{
   content:'';
   position: fixed;

@@ -80,7 +80,6 @@ const sfxOn = ref(isSfxOn())
 watch(sfxOn, (v) => setSfxOn(!!v), { immediate: true })
 function toggleSfx() { sfxOn.value = !sfxOn.value }
 
-// Drops strip — continuous marquee showing multiple items simultaneously
 import { api } from './utils/api'
 type Drop = { nick: string; icon: string; name: string; nameUa: string; rarity: string; color: string; ts: number; type?: string; mult?: number; amount?: number }
 
@@ -101,7 +100,6 @@ async function fetchDrops() {
     if (!Array.isArray(res) || res.length === 0) return
 
     if (!tickerInit) {
-      // First load: fill pool with top items by rarity (idle mode)
       for (const d of res) seenDropTs.add(d.ts)
       tickerPool.value = [...res]
         .sort((a, b) => (RARITY_ORDER[b.rarity] ?? 0) - (RARITY_ORDER[a.rarity] ?? 0))
@@ -110,7 +108,6 @@ async function fetchDrops() {
       return
     }
 
-    // Subsequent loads: prepend truly new drops to pool
     const newDrops = res
       .filter(d => !seenDropTs.has(d.ts))
       .sort((a, b) => a.ts - b.ts)
@@ -147,7 +144,6 @@ function logout() {
 <template>
   <SeoHead />
   <div class="app-shell" :class="{ open: sidebarOpen }">
-    <!-- Left Sidebar -->
     <aside class="app-sidebar" :class="{ open: sidebarOpen }">
       <div class="side-top">
         <button class="icon-btn" @click="toggleSidebar" :title="$t('ui.s_menu')">
@@ -333,7 +329,6 @@ function logout() {
               <span class="coin" :aria-label="$t('ui.s_d940a38dce')">K</span>
               <button class="balance-add" :title="$t('ui.s_donate_tooltip')" :aria-label="$t('ui.s_donate_tooltip')" @click="router.push('/donate')">+</button>
             </div>
-            <!-- Admin button — only visible to admins -->
             <button
               v-if="auth.isAdmin"
               class="btn btn-admin"

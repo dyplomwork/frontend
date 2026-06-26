@@ -9,21 +9,15 @@ export type BigWinState = {
   amount: number
   displayValue: number
   displayText: string
-  tier: 1 | 2 | 3 // 1=big, 2=mega, 3=super
+  tier: 1 | 2 | 3
 }
 
 export type UseBigWinOverlayOptions = {
-  /** Formats a number for display (e.g. 1234.56 -> "1,234.56") */
   formatNumber: (v: number | string, digits?: number) => string
-  /** Optional: play a site-wide sfx key (e.g. 'win') */
   sfx?: (key: string) => void
-  /** If you have a global sound toggle, pass it here. Defaults to true. */
   soundOn?: () => boolean
-  /** Overall overlay volume multiplier. Defaults to 0.35 */
   volume?: () => number
-  /** Money shortener, optional. If omitted, a compact "K/M/B/T" formatter is used */
   shortMoney?: (v: number) => string
-  /** Tier resolver. If omitted, uses multiplier thresholds (>=100 super, >=50 mega) */
   getTier?: (mult: number) => { tier: 1 | 2 | 3; title: string }
 }
 
@@ -55,7 +49,6 @@ export function useBigWinOverlay(opts: UseBigWinOverlayOptions) {
   const soundCache = new Map<string, HTMLAudioElement>()
 
   function getSoundUrl(key: SoundKey, tier: number) {
-    // tier: 1=BIG,2=MEGA,3=SUPER
     const imp = 'mp3'
     const ext = 'wav'
     if (key === 'impact') {
@@ -170,7 +163,6 @@ export function useBigWinOverlay(opts: UseBigWinOverlayOptions) {
     bigWin.value.displayText = (opts.shortMoney ?? defaultShortMoney)(0)
     animateCounter(amount, t.tier === 3 ? 1200 : t.tier === 2 ? 1050 : 900)
 
-    // site-wide sfx fallback
     try {
       opts.sfx?.('big_win')
     } catch {

@@ -22,7 +22,6 @@ const clickAnim = ref(false)
 const clickParticles = ref<{ id: number; x: number; y: number; val: number }[]>([])
 let particleId = 0
 
-// Click batching — accumulate clicks, flush every 400ms
 let pendingClicks = 0
 let batchTimer: number | null = null
 let isSending = false
@@ -39,7 +38,7 @@ function upgDesc(u: any) { return locale.value === 'ua' ? u.descUa : u.desc }
 function getLevel(id: string) { return Number(upgrades.value[id] ?? 0) }
 function isMaxed(u: any) { return getLevel(u.id) >= u.maxLevel }
 function canAffordCoin(u: any): boolean {
-  if (u.itemReq) return true // can't pre-check items on frontend
+  if (u.itemReq) return true
   const lvl = getLevel(u.id)
   return Number(coins.value) >= u.coinCost * (lvl + 1)
 }
@@ -66,7 +65,6 @@ function upgCoinCost(u: any) {
   return fmt(u.coinCost * (lvl + 1))
 }
 
-// Active visuals from purchased upgrades
 const activeVisuals = computed(() => {
   const v = new Set<string>()
   for (const u of upgradeList.value) {
@@ -115,14 +113,12 @@ async function flushClicks() {
   pendingClicks = 0
   try {
     const res = await api<any>('/api/v1/clicker/click', { method: 'POST', json: true, body: { clicks: toSend } })
-    // Server is the source of truth — reconcile if diff is large
     const serverCoins = Number(res.coins)
     if (Math.abs(serverCoins - Number(coins.value)) > Number(clickPower.value) * 10) {
       coins.value = serverCoins
     }
   } catch {} finally {
     isSending = false
-    // Schedule next flush if more clicks accumulated while we were sending
     if (pendingClicks > 0) {
       batchTimer = window.setTimeout(flushClicks, 400)
     }
@@ -137,14 +133,12 @@ function spawnParticle() {
 
 function click() {
   if (!auth.user) { ui.toast(t('ui.s_need_login'), 'info'); return }
-  // Optimistic update — always numeric
   coins.value = Number(coins.value) + Number(clickPower.value)
   pendingClicks++
   clickAnim.value = false
   void Promise.resolve().then(() => { clickAnim.value = true })
   spawnParticle()
 
-  // Schedule batch flush
   if (!batchTimer) {
     batchTimer = window.setTimeout(() => {
       batchTimer = null
@@ -192,7 +186,6 @@ const TIER_COLORS: Record<number, string> = {
   1: '#9ca3af', 2: '#34d399', 3: '#3b82f6', 4: '#a855f7', 5: '#f59e0b', 6: '#ec4899',
 }
 
-// Auto tick (visual only — server accumulates real coins via last_auto_at)
 let autoTimer: number | null = null
 onMounted(async () => {
   await fetchState()
@@ -210,7 +203,6 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="clicker-page">
-    <!-- ─── Left: stats + convert ─────────────────────── -->
     <aside class="c-panel c-left">
       <div class="coin-stats">
         <div class="stat-lbl muted">{{ $t('ui.s_clicker_coins') }}</div>
@@ -229,20 +221,16 @@ onBeforeUnmount(() => {
       <div v-if="message" class="msg-box" :class="messageType">{{ message }}</div>
     </aside>
 
-    <!-- ─── Right: clicker + upgrades ─────────────────── -->
     <div class="c-main">
 
-    <!-- ─── Center: click coin ───────────────────────── -->
     <div class="c-center c-panel">
       <div class="click-zone">
         <div class="click-outer" @click="click">
-          <!-- Coin with dynamic skin -->
           <div
             class="click-coin"
             :class="{ bump: clickAnim, cosmos: isCosmos, dragon: isDragon, phoenix: isPhoenix, void: isVoid, shadow: isShadow, sapphire: isSapphire, lucky: isLucky, emerald: isEmerald, relic: isRelic, divine: isDivine, spark: isSpark, ice: isIce, storm: isStorm }"
             @animationend="clickAnim = false"
           >
-            <!-- Cosmos stars -->
             <template v-if="isCosmos">
               <div v-for="s in 20" :key="s" class="star" :style="{ '--a': s * 18 + 'deg', '--d': (0.3 + Math.random() * 0.7).toFixed(2) + 's', '--r': (25 + Math.random() * 40) + '%' }" />
             </template>
@@ -398,7 +386,6 @@ onBeforeUnmount(() => {
 .small { font-size: 12px; }
 .sep { height: 1px; background: rgba(255,255,255,.06); margin: 12px 0; }
 
-/* Left */
 .c-left { display: flex; flex-direction: column; gap: 10px; }
 .stat-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
 .stat-row { }
@@ -411,14 +398,12 @@ onBeforeUnmount(() => {
 .msg-box.error { border-color: rgba(248,81,73,.35); background: rgba(248,81,73,.08); }
 .msg-box.info { }
 
-/* Center */
 .c-center { display: flex; align-items: center; justify-content: center; min-height: 480px; }
 .click-zone { position: relative; display: flex; flex-direction: column; align-items: center; gap: 14px; }
 .click-outer { position: relative; cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: center; }
 .click-outer:hover .click-coin { transform: scale(1.04); }
 .click-outer:active .click-coin { transform: scale(0.96); }
 
-/* Coin base */
 .click-coin {
   width: 190px; height: 190px; border-radius: 999px;
   background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.22), rgba(0,0,0,.40) 60%), radial-gradient(circle at 65% 70%, rgba(255,210,80,.20), transparent 55%);
@@ -431,7 +416,6 @@ onBeforeUnmount(() => {
 .click-coin.bump { animation: coinBump 120ms ease-out; }
 @keyframes coinBump { 0%{ transform: scale(1); } 45%{ transform: scale(0.91); } 100%{ transform: scale(1); } }
 
-/* Cosmos skin */
 .click-coin.cosmos {
   background: radial-gradient(circle at 50% 50%, #0a0a2e, #06041a);
   border-color: rgba(100,100,255,.7);
@@ -447,7 +431,6 @@ onBeforeUnmount(() => {
 }
 @keyframes twinkle { 0%{ opacity:.2; } 100%{ opacity:1; } }
 
-/* Dragon skin */
 .click-coin.dragon {
   background: radial-gradient(circle at 50% 50%, #1a0500, #0d0200);
   border-color: rgba(255,80,0,.7);
@@ -460,7 +443,6 @@ onBeforeUnmount(() => {
 }
 @keyframes spinFire { to{ transform: rotate(360deg); } }
 
-/* Phoenix skin */
 .click-coin.phoenix {
   background: radial-gradient(circle at 50% 50%, #1a0d00, #0d0600);
   border-color: rgba(255,178,74,.8);
@@ -473,7 +455,6 @@ onBeforeUnmount(() => {
 }
 @keyframes haloBreath { 0%,100%{ opacity:.4; transform: scale(1); } 50%{ opacity:.9; transform: scale(1.04); } }
 
-/* Void skin */
 .click-coin.void {
   background: radial-gradient(circle at 50% 50%, #070010, #020004);
   border-color: rgba(168,85,247,.7);
@@ -485,14 +466,12 @@ onBeforeUnmount(() => {
   animation: spinFire 6s linear infinite reverse;
 }
 
-/* Shadow skin */
 .click-coin.shadow {
   background: radial-gradient(circle at 50% 50%, #0a0010, #030006);
   border-color: rgba(50,0,100,.7);
   box-shadow: 0 0 40px rgba(80,0,180,.3);
 }
 
-/* Sapphire glow */
 .click-coin.sapphire {
   box-shadow: 0 0 60px rgba(59,130,246,.35), 0 0 20px rgba(100,180,255,.2);
   border-color: rgba(59,130,246,.7);
@@ -502,7 +481,6 @@ onBeforeUnmount(() => {
 .glyph { font-size: 66px; font-weight: 1200; color: #ffd700; text-shadow: 0 4px 18px rgba(0,0,0,.7); }
 .coin-ring { position: absolute; inset: -60px; border-radius: 999px; border: 2px solid rgba(255,210,80,.20); pointer-events: none; }
 
-/* Robots — wrapper sets orbit angle (no animation var()), inner div animates independently */
 .robots { position: absolute; inset: 0; pointer-events: none; }
 .robot-orbit {
   position: absolute;
@@ -522,7 +500,6 @@ onBeforeUnmount(() => {
   50% { transform: scale(1.22) translateX(-8px); filter: drop-shadow(0 0 10px rgba(100,255,100,.9)); }
 }
 
-/* Shield guards — orbit around coin */
 .shields { position: absolute; inset: 0; pointer-events: none; }
 .shield-orbit {
   position: absolute;
@@ -540,7 +517,6 @@ onBeforeUnmount(() => {
 @keyframes shieldOrbit { to { transform: rotate(360deg); } }
 @keyframes shieldCounter { to { transform: rotate(-360deg); } }
 
-/* Spark skin */
 .click-coin.spark {
   border-color: rgba(180,180,220,.7);
   box-shadow: 0 0 40px rgba(160,160,210,.25);
@@ -552,7 +528,6 @@ onBeforeUnmount(() => {
 }
 @keyframes sparkSpin { to { transform: rotate(360deg); } }
 
-/* Ice skin */
 .click-coin.ice {
   border-color: rgba(100,200,255,.7);
   box-shadow: 0 0 50px rgba(100,200,255,.3), 0 0 20px rgba(180,240,255,.15);
@@ -565,7 +540,6 @@ onBeforeUnmount(() => {
 }
 @keyframes iceRotate { to { transform: rotate(360deg); } }
 
-/* Storm skin */
 .click-coin.storm {
   border-color: rgba(147,51,234,.75);
   box-shadow: 0 0 65px rgba(147,51,234,.45), 0 0 25px rgba(200,80,255,.2);
@@ -591,7 +565,6 @@ onBeforeUnmount(() => {
   100% { opacity: 1; width: 22px; }
 }
 
-/* Lucky skin */
 .click-coin.lucky {
   border-color: rgba(255,215,0,.65);
   box-shadow: 0 0 55px rgba(255,215,0,.45), inset 0 0 20px rgba(255,215,0,.07);
@@ -602,7 +575,6 @@ onBeforeUnmount(() => {
   animation: spinFire 4s linear infinite;
 }
 
-/* Emerald skin */
 .click-coin.emerald {
   border-color: rgba(52,211,153,.7);
   box-shadow: 0 0 50px rgba(52,211,153,.35);
@@ -614,7 +586,6 @@ onBeforeUnmount(() => {
   animation: iceRotate 6s linear infinite;
 }
 
-/* Relic skin */
 .click-coin.relic {
   border-color: rgba(251,191,36,.78);
   box-shadow: 0 0 70px rgba(251,191,36,.5), 0 0 30px rgba(255,165,0,.3);
@@ -636,7 +607,6 @@ onBeforeUnmount(() => {
   animation: spinFire 8s linear infinite;
 }
 
-/* Divine skin */
 .click-coin.divine {
   background: radial-gradient(circle at 40% 35%, rgba(255,255,255,.28), rgba(255,248,200,.18) 55%, rgba(255,200,100,.12));
   border-color: rgba(255,255,220,.88);
@@ -648,7 +618,6 @@ onBeforeUnmount(() => {
   animation: haloBreath 1.6s ease-in-out infinite;
 }
 
-/* Sword orbit */
 .swords { position: absolute; inset: 0; pointer-events: none; }
 .sword-orbit {
   position: absolute; top: 50%; left: 50%; width: 0; height: 0;
@@ -662,7 +631,6 @@ onBeforeUnmount(() => {
 @keyframes swordOrbit { to { transform: rotate(360deg); } }
 @keyframes swordOrbitCounter { to { transform: rotate(-360deg); } }
 
-/* Crystal orbit */
 .crystals { position: absolute; inset: 0; pointer-events: none; }
 .crystal-orbit {
   position: absolute; top: 50%; left: 50%; width: 0; height: 0;
@@ -676,7 +644,6 @@ onBeforeUnmount(() => {
 @keyframes crystalOrbit { to { transform: rotate(360deg); } }
 @keyframes crystalOrbitCounter { to { transform: rotate(-360deg); } }
 
-/* Divine sparks orbit */
 .divine-sparks { position: absolute; inset: 0; pointer-events: none; }
 .divine-orbit {
   position: absolute; top: 50%; left: 50%; width: 0; height: 0;
@@ -701,7 +668,6 @@ onBeforeUnmount(() => {
 .click-label { font-size: 14px; font-weight: 900; letter-spacing: 2px; color: rgba(255,255,255,.65); }
 .click-sub { }
 
-/* Bottom — upgrades (full width, grid layout) */
 .c-right {
   display: flex; flex-direction: column; gap: 14px;
 }

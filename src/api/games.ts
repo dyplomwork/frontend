@@ -1,6 +1,5 @@
 import { api } from '../utils/api'
 
-
 export type DicePlayRequest = { bet: number; rollOver: number }
 export type DicePlayResponse = { roll: number; isWin: boolean; payout: number }
 export type DicePayoutResponse = { winChancePercentage: number; payout: number }
@@ -20,7 +19,7 @@ export async function dicePayout(rollOver: number) {
 
 export type RouletteBet = { key: string; amount: number }
 export type RoulettePlayRequest = { bets: RouletteBet[] }
-export type RoulettePlayResponse = { number: number; amount: number } // backend uses `amount` = payout
+export type RoulettePlayResponse = { number: number; amount: number }
 
 export function normalizeRouletteKey(key: string): string {
   const k = key.trim()
@@ -98,7 +97,6 @@ export async function casesPlay(type: string) {
   })
 }
 
-// cases-service public DTOs
 export type CaseItemDTO = { name: string; chance: number; prize: number }
 export type CaseDTO = { id?: string; name: string; price: number; items: CaseItemDTO[] }
 

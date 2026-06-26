@@ -1,4 +1,3 @@
-// ── Auth & user ───────────────────────────────────────────────────────────
 
 export type Role = 'guest' | 'user' | 'admin'
 
@@ -10,13 +9,11 @@ export type User = {
   avatar_url?: string | null
 }
 
-// ── Cases ─────────────────────────────────────────────────────────────────
-
 export type LootItem = {
   id: string
   label: string
   amount: number
-  chance: number // 0..1
+  chance: number
 }
 
 export type CaseDef = {

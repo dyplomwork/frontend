@@ -1,4 +1,3 @@
-/* ========= Reusable components ========= */
 .card, .card2{
   background:
     linear-gradient(145deg, rgba(255,255,255,.05) 0%, rgba(255,255,255,.02) 60%, rgba(0,0,0,.04) 100%);
@@ -35,7 +34,6 @@
   line-height: 1;
 }
 
-/* Currency coin (K) */
 .coin{
   display:inline-block;
   width: 32px;
@@ -49,8 +47,6 @@
   line-height: 0;
 }
 
-
-/* Coin size in input rows */
 .amount-row .coin{
   width: var(--control-h);
   height: var(--control-h);
@@ -58,7 +54,6 @@
   font-size: 0;
   line-height: 0;
 }
-/* Buttons */
 .btn{
   height: var(--control-h);
   border-radius: 12px;
@@ -102,7 +97,6 @@
   transform: translateY(-1px);
 }
 
-/* Back-compat class name used across the project */
 .btn-blue{ 
   background: linear-gradient(180deg, rgba(255,178,74,.98), rgba(255,122,24,.88));
   border-color: rgba(255,178,74,.38);
@@ -127,7 +121,6 @@
 }
 .icon-btn:hover{ transform: translateY(-1px); background: rgba(255,255,255,.06); border-color: var(--c-border-2); }
 
-/* Inputs */
 .input, .select{
   height: var(--control-h);
   border-radius: 12px;
@@ -144,7 +137,6 @@
 }
 .input::placeholder{ color: rgba(255,255,255,.32); }
 
-/* Alerts */
 .alert{
   border-radius: 14px;
   border: 1px solid var(--c-border);
@@ -161,7 +153,6 @@
 
 .net{ display:inline-flex; align-items:center; gap: 6px; }
 
-/* Focus + disabled */
 .btn:focus-visible, .icon-btn:focus-visible, .input:focus-visible, .select:focus-visible{
   outline: 2px solid rgba(255,178,74,.55);
   outline-offset: 2px;
@@ -177,7 +168,6 @@
   cursor: not-allowed;
 }
 
-/* Game status */
 .game-status{
   margin-top: 10px;
   border-radius: 12px;
@@ -190,7 +180,6 @@
 .game-status.success{ border-color: rgba(61,255,157,.35); background: rgba(61,255,157,.08); color: rgba(255,248,236,.92); }
 .game-status.error{ border-color: rgba(255,77,77,.35); background: rgba(255,77,77,.08); color: rgba(255,248,236,.92); }
 
-/* Toasts */
 .toast-host{
   position: fixed;
   right: 18px;
@@ -229,7 +218,6 @@
 }
 .toast-x:hover{ background: rgba(255,255,255,.06); }
 
-/* How-to accordion */
 .howto{
   border: 1px solid rgba(255,255,255,.08);
   background: rgba(0,0,0,.18);
@@ -255,7 +243,6 @@
 .howto-list{ margin: 0; padding-left: 18px; color: rgba(255,255,255,.78); }
 .howto-list li{ margin: 6px 0; }
 
-/* Game layout */
 .game-page-container{ width: 100%; max-width: var(--page-max); margin: 0 auto; padding: 0 18px; box-sizing: border-box; }
 .game-page{ width: 100%; display: flex; flex-direction: column; gap: 16px; }
 .game-shell{ width: 100%; display: grid; grid-template-columns: 360px 1fr; gap: 16px; padding: 16px; }

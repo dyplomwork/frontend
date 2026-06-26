@@ -35,7 +35,6 @@ function triggerJackpotFx(amount: number) {
   jackpotFxTick.value += 1
 }
 
-
 const reelEl = ref<HTMLElement | null>(null)
 const stripEl = ref<HTMLElement | null>(null)
 
@@ -48,7 +47,6 @@ const animEasing = 'cubic-bezier(.15,.9,.2,1)'
 
 const quickOpen = ref(false)
 const QUICK_KEY = 'cases_quick_open'
-
 
 function waitFrame(){
   return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
@@ -67,7 +65,6 @@ function rarity(amount: number){
 }
 function lootIcon(l: any){
   if(l?.icon) return l.icon
-  // l can be a number (amount) or an object with .amount
   const a = typeof l === 'number' ? l : (l?.amount ?? 0)
   if(a >= 2000000) return '✨'
   if(a >= 250000)  return '⚜️'
@@ -107,7 +104,6 @@ function buildStrip(winItem: ReelItem){
   return { winIndex }
 }
 
-
 function buildQuickStrip(winItem: ReelItem){
   const SIDE = 6
   const arr: ReelItem[] = []
@@ -122,7 +118,6 @@ function buildQuickStrip(winItem: ReelItem){
   winIndexRef.value = winIndex
   return { winIndex }
 }
-
 
 function computeTargetX(winIndex: number){
   const reel = reelEl.value
@@ -251,7 +246,6 @@ async function openOne(){
 
     const x = computeTargetX(winIndex)
     snapToX(x)
-
 
     sfx('case_stop')
     sfx('win')
@@ -508,7 +502,6 @@ watch(quickOpen, (v) => {
 .pill.err{ border-color: rgba(248,81,73,.45); background: rgba(248,81,73,.10); }
 .pill.muted{ opacity:.85; }
 
-
 .main-panel{ flex:1; padding: 18px; position: relative; }
 
 .reel-wrap{
@@ -650,7 +643,6 @@ watch(quickOpen, (v) => {
   100%{ transform: translateX(30%) rotate(12deg); opacity:0;}
 }
 
-
 .jackpot-fx{
   position:absolute;
   inset:-40px;
@@ -694,7 +686,6 @@ watch(quickOpen, (v) => {
   100%{ opacity:0; transform: scale(1.06); }
 }
 
-/* Responsive */
 @media (max-width: 860px) {
   .case-layout { flex-direction: column; }
   .left-panel { width: 100%; border-right: none; border-bottom: 1px solid rgba(255,178,74,.10); }

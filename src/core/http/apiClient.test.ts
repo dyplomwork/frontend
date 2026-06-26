@@ -1,13 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { api, ApiError } from './apiClient'
 
-// Mock localStorage (storage module)
 vi.mock('../auth/storage', () => ({
   canUseStorage: () => true,
   getToken: () => 'mock-jwt-token',
 }))
 
-// Mock config
 vi.mock('../config/env', () => ({
   getApiBaseUrl: () => '',
 }))

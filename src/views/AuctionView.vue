@@ -88,7 +88,6 @@ async function doBuy(listing: Listing) {
     await api(`/api/v1/auction/${listing.id}/buy`, { method: 'POST' })
     msg.value = t('ui.s_auction_bought', { name: itemName(listing) })
     msgType.value = 'success'
-    // Balance refresh and listings reload are independent — run in parallel
     await Promise.all([auth.fetchBalance({ force: true }), load()])
   } catch (e: any) {
     msg.value = e?.message ?? t('ui.s_error')
@@ -134,7 +133,6 @@ onMounted(load)
         <div v-if="msg" class="notice" :class="msgType" style="margin-top:10px;">{{ msg }}</div>
       </div>
 
-      <!-- Custom buy confirmation modal -->
     <div v-if="confirmListing" class="modal-backdrop" @click.self="confirmListing = null">
       <div class="modal-box">
         <div class="modal-header">

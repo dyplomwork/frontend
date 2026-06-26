@@ -228,8 +228,6 @@ async function playInternal() {
       message.value = t('ui.s_dice_lose')
     }
 
-    // Fire-and-forget: result is already shown, don't hold the play button
-    // hostage to a network round-trip for a balance display update
     auth.fetchBalance({ force: true }).catch(reportError)
     running.value = false
   }
@@ -497,7 +495,6 @@ onBeforeUnmount(() => stopAnim())
     </template>
   </GamePageLayout>
 </template>
-
 
 <style scoped>
 .dial {

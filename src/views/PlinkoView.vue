@@ -17,7 +17,6 @@ import { useI18n } from 'vue-i18n'
 const auth = useAuthStore()
 const ui = useUiStore()
 const { requireAuth } = useRequireAuthAction()
-// aliased to `tr` — local `t` (time) variables shadow it inside animation loops
 const { t: tr } = useI18n()
 
 const amount = ref(0)
@@ -63,7 +62,6 @@ watch(
 onBeforeUnmount(() => {
   ui.setBalanceOverride(null)
 })
-
 
 const fmt = (v: number | string, d = 2) => formatNumber(v, d)
 
@@ -137,10 +135,8 @@ async function loadMultipliers() {
   }
 }
 
-
 onMounted(() => { void loadMultipliers() })
 watch([rows, difficulty], () => { void loadMultipliers() }, { immediate: true })
-
 
 const table = computed(() =>
   (Array.isArray(multipliers.value) && multipliers.value.length === rows.value + 1)
@@ -289,7 +285,6 @@ function setGlow(i: number){
   }, 420)
 }
 
-
 function easeInOutCubic(t: number){ return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3)/2 }
 
 function jitter01(seed: number){
@@ -324,7 +319,6 @@ function multHue(mult: number) {
   const t = Math.max(0, Math.min(1, Math.log(mult + 1) / Math.log(maxM + 1)))
   return 140 + 180 * t
 }
-
 
 function rebuildCanvas() {
   const el = canvasEl.value
@@ -710,7 +704,6 @@ function traceToBallResult(trace: ApiTrace): BallResult {
   return { rights, landing, payout, multiplier }
 }
 
-
 async function syncBalanceFromServer() {
   const fn = (auth as any)?.fetchBalance
   if (typeof fn !== 'function') return
@@ -851,9 +844,6 @@ function binGradient(mult: number) {
   return `linear-gradient(180deg, ${c1}, ${c2})`
 }
 
-
-
-
 function binGlowColor(mult: number) {
   if (mult >= 50) return 'rgba(170, 255, 255, .95)'
   if (mult >= 12) return 'rgba(255, 178, 74, .95)'
@@ -875,7 +865,6 @@ function binRippleScale(mult: number) {
   return 1.06
 }
 </script>
-
 
 <template>
   <GamePageLayout>
@@ -1079,7 +1068,6 @@ function binRippleScale(mult: number) {
   20%{ filter: brightness(1.20); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 0 20px color-mix(in srgb, var(--g, rgba(61,255,157,.95)) 55%, transparent), 0 0 44px color-mix(in srgb, var(--g, rgba(61,255,157,.95)) 30%, transparent); }
   100%{ filter: brightness(1.0); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08), 0 0 0 rgba(0,0,0,0); }
 }
-
 
 .bin-mult{ font-weight: 1000; position: relative; z-index: 2; text-shadow: 0 8px 20px rgba(0,0,0,.55); }
 

@@ -8,7 +8,6 @@ import { formatNumber } from '../utils/format'
 const { t, locale } = useI18n()
 const auth = useAuthStore()
 
-// ─── State ────────────────────────────────────────────────────────────
 const tab = ref<'dashboard' | 'users' | 'battles' | 'games' | 'drops' | 'audit' | 'donations'>('dashboard')
 const loading = ref(false)
 const globalMsg = ref('')
@@ -27,8 +26,8 @@ const donations = ref<{ summary: any; donations: any[] } | null>(null)
 const donationsLoading = ref(false)
 
 const searchUsers = ref('')
-const filterRole = ref('')      // '' | 'user' | 'admin'
-const filterStatus = ref('')    // '' | 'active' | 'banned'
+const filterRole = ref('')
+const filterStatus = ref('')
 const userPage = ref(1)
 const userPageSize = 20
 const userTotal = ref(0)
@@ -36,21 +35,18 @@ const expandedUser = ref<string | null>(null)
 const userDetail = ref<any>(null)
 const userDetailLoading = ref(false)
 
-// Confirmation modal for destructive actions (delete / ban)
 const pendingAction = ref<{ kind: 'delete' | 'ban'; id: string; nick: string } | null>(null)
 const pendingReason = ref('')
 const pendingBusy = ref(false)
 
 const totalPages = computed(() => Math.max(1, Math.ceil(userTotal.value / userPageSize)))
 
-// Give forms
 const giveAmount = ref(0)
 const giveItemDef = ref('')
 const giveAchId = ref('')
 const giveClickerCoins = ref(0)
 const giveBusy = ref(false)
 
-// Edit user
 const editNick = ref('')
 const editRole = ref<'user'|'admin'>('user')
 const editBalance = ref(0)
@@ -64,7 +60,6 @@ function showMsg(text: string, type: 'ok'|'err' = 'ok') {
   setTimeout(() => { globalMsg.value = '' }, 3000)
 }
 
-// ─── Load data ─────────────────────────────────────────────────────────
 async function loadDashboard() {
   try {
     const res = await api<any>('/api/v1/admin/dashboard', { method: 'GET' })
@@ -88,7 +83,6 @@ async function loadUsers() {
   finally { loading.value = false }
 }
 
-// Reset to page 1 and reload (used by search / filter changes)
 function applyUserFilters() {
   userPage.value = 1
   loadUsers()
@@ -113,7 +107,6 @@ async function refreshAll() {
 
 onMounted(refreshAll)
 
-// ─── User detail ───────────────────────────────────────────────────────
 async function toggleUser(id: string) {
   if (expandedUser.value === id) { expandedUser.value = null; userDetail.value = null; return }
   expandedUser.value = id
@@ -134,7 +127,6 @@ async function toggleUser(id: string) {
   finally { userDetailLoading.value = false }
 }
 
-// ─── User actions ─────────────────────────────────────────────────────
 async function saveUser(id: string) {
   editBusy.value = true
   try {
@@ -197,7 +189,6 @@ async function revokeAchievement(userId: string, achId: string) {
   } catch (e: any) { showMsg(e?.message ?? 'Error', 'err') }
 }
 
-// ─── Ban / unban + confirmation modal ─────────────────────────────────
 function askConfirm(kind: 'delete' | 'ban', id: string, nick: string) {
   pendingAction.value = { kind, id, nick }
   pendingReason.value = ''
@@ -229,7 +220,6 @@ async function unbanUser(id: string, nick: string) {
   } catch (e: any) { showMsg(e?.message ?? 'Error', 'err') }
 }
 
-// ─── Audit log + donations ─────────────────────────────────────────────
 async function loadAudit() {
   auditLoading.value = true
   try {
@@ -255,7 +245,6 @@ async function loadBattles() {
   finally { battlesLoading.value = false }
 }
 
-// ─── Analytics (game modes + drop distribution) ───────────────────────
 async function loadAnalytics() {
   if (analytics.value) return
   analyticsLoading.value = true
@@ -285,7 +274,6 @@ function itemDef(id: string) { return meta.value.items.find(i => i.id === id) ??
     403 — Access Denied
   </div>
   <div v-else class="admin-shell">
-    <!-- ─── Left nav ─── -->
     <nav class="admin-nav">
       <div class="admin-logo">⚙️ ADMIN</div>
       <button class="nav-btn" :class="{ on: tab==='dashboard' }" @click="tab='dashboard'">
@@ -315,15 +303,11 @@ function itemDef(id: string) { return meta.value.items.find(i => i.id === id) ??
       </button>
     </nav>
 
-    <!-- ─── Content ─── -->
     <div class="admin-content">
-      <!-- Global message -->
       <div v-if="globalMsg" class="global-msg" :class="globalMsgType">{{ globalMsg }}</div>
 
-      <!-- ╔═ DASHBOARD ═════════════════════════════════════════════════╗ -->
       <div v-if="tab === 'dashboard'" class="dash-grid">
         <template v-if="dashboard">
-          <!-- Stat cards -->
           <div class="stat-card blue">
             <div class="sc-icon">👥</div>
             <div class="sc-num">{{ dashboard.totalUsers }}</div>
@@ -345,7 +329,6 @@ function itemDef(id: string) { return meta.value.items.find(i => i.id === id) ??
             <div class="sc-lbl">Biggest Win Ever (K)</div>
           </div>
 
-          <!-- Top balances -->
           <div class="dash-card top-balances">
             <div class="dc-title">💎 Top Balances</div>
             <div v-for="(u, i) in dashboard.topBalance" :key="u.nickname" class="top-row">
@@ -355,7 +338,6 @@ function itemDef(id: string) { return meta.value.items.find(i => i.id === id) ??
             </div>
           </div>
 
-          <!-- Quick actions -->
           <div class="dash-card quick-actions">
             <div class="dc-title">⚡ Quick Actions</div>
             <button class="btn btn-primary qa-btn" @click="tab='users'; loadUsers()">
@@ -366,7 +348,6 @@ function itemDef(id: string) { return meta.value.items.find(i => i.id === id) ??
             </button>
           </div>
 
-          <!-- House edge -->
           <div class="dash-card">
             <div class="dc-title">📈 Economy</div>
             <div class="eco-row"><span class="muted">Wagered</span><span>{{ fmt(dashboard.totalWagered, 0) }} K</span></div>
@@ -763,7 +744,6 @@ function itemDef(id: string) { return meta.value.items.find(i => i.id === id) ??
 </template>
 
 <style scoped>
-/* ─── Shell ──────────────────────────────────────────────────────────── */
 .admin-shell {
   display: grid;
   grid-template-columns: 200px 1fr;
@@ -771,7 +751,6 @@ function itemDef(id: string) { return meta.value.items.find(i => i.id === id) ??
   overflow: hidden;
 }
 
-/* ─── Left nav ───────────────────────────────────────────────────────── */
 .admin-nav {
   background: rgba(0,0,0,.35);
   border-right: 1px solid rgba(255,255,255,.06);
@@ -807,7 +786,6 @@ function itemDef(id: string) { return meta.value.items.find(i => i.id === id) ??
 .refresh-btn { opacity: .7; }
 .refresh-btn:hover { opacity: 1; }
 
-/* ─── Content ────────────────────────────────────────────────────────── */
 .admin-content {
   overflow-y: auto; padding: 16px;
   display: flex; flex-direction: column; gap: 14px;
@@ -823,7 +801,6 @@ function itemDef(id: string) { return meta.value.items.find(i => i.id === id) ??
 .global-msg.ok { border-color: rgba(34,197,94,.5); background: rgba(10,40,20,.95); color: #4ade80; }
 .global-msg.err { border-color: rgba(248,81,73,.5); background: rgba(40,10,10,.95); color: #f87171; }
 
-/* Styled select — matches site dark theme */
 select.input {
   appearance: none;
   -webkit-appearance: none;
@@ -847,7 +824,6 @@ select.input option {
 .mt-12 { margin-top: 12px; }
 .gold { color: #ffd700; font-weight: 900; }
 
-/* ─── Dashboard ──────────────────────────────────────────────────────── */
 .dash-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -882,7 +858,6 @@ select.input option {
 .qa-btn { width: 100%; height: 42px; border-radius: 12px; margin-top: 4px; }
 .eco-row { display: flex; justify-content: space-between; font-size: 13px; }
 
-/* ─── Panel head ─────────────────────────────────────────────────────── */
 .panel-head {
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 4px;
 }
@@ -890,7 +865,6 @@ select.input option {
 .pending-badge { padding: 4px 12px; border-radius: 999px; background: rgba(250,204,21,.2); border: 1px solid rgba(250,204,21,.4); font-size: 12px; font-weight: 900; color: #fcd34d; }
 .search-input { flex: 1; min-width: 200px; max-width: 400px; }
 
-/* ─── Users ──────────────────────────────────────────────────────────── */
 .users-list { display: flex; flex-direction: column; gap: 6px; }
 .user-row { border: 1px solid rgba(255,255,255,.06); border-radius: 14px; overflow: hidden; }
 .ur-head {
@@ -923,7 +897,6 @@ select.input option {
 .btn-approve { border-color: rgba(34,197,94,.35); background: rgba(34,197,94,.12); color: #34d399; }
 .btn-approve:hover { background: rgba(34,197,94,.22); }
 
-/* Users: filters, status, pagination */
 .user-filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .user-filters .input { height: 34px; }
 .row-banned { opacity: .75; }
@@ -931,11 +904,9 @@ select.input option {
 .pager { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 14px; }
 .audit-action { font-weight: 800; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.08); }
 
-/* Confirmation modal */
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; z-index: 300; }
 .modal-box { width: min(420px, 92vw); padding: 22px; border-radius: 16px; }
 
-/* Detail grid */
 .ur-detail { padding: 14px; border-top: 1px solid rgba(255,255,255,.05); background: rgba(0,0,0,.12); }
 .detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 @media (max-width: 1000px) { .detail-grid { grid-template-columns: 1fr; } }
@@ -957,7 +928,6 @@ select.input option {
 .game-name { font-weight: 900; text-transform: capitalize; }
 .clicker-mini { border-top: 1px solid rgba(255,255,255,.06); padding-top: 8px; }
 
-/* ─── Drops analytics ────────────────────────────────────────────────── */
 .rarity-bars { display: flex; flex-direction: column; gap: 8px; }
 .rarity-row { display: grid; grid-template-columns: 90px 1fr 120px; align-items: center; gap: 12px; }
 .rarity-name { font-weight: 900; text-transform: capitalize; font-size: 13px; }
@@ -970,7 +940,6 @@ select.input option {
 .ti-name { font-weight: 800; flex: 1; }
 .ti-count { font-weight: 900; color: rgba(255,255,255,.85); }
 
-/* Mobile responsive */
 @media (max-width: 720px) {
   .admin-shell { grid-template-columns: 1fr; height: auto; overflow: visible; }
   .admin-nav {
@@ -999,7 +968,6 @@ select.input option {
   .top-items { grid-template-columns: 1fr; }
 }
 
-/* ─── Battles history table ──────────────────────────────────────────── */
 .battles-table-wrap { overflow-x: auto; }
 .battles-table {
   width: 100%; border-collapse: collapse; font-size: 13px;

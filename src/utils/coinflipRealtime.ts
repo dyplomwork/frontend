@@ -73,7 +73,6 @@ export function subscribeBattle(id: string, onBattle: (b: BattleLike) => void): 
           if (destroyed) return
           try { es.close() } catch {}
           es = null
-          // Reconnect after 2s unless battle is terminal
           reconnectTimer = setTimeout(connect, 2000)
         }
       }

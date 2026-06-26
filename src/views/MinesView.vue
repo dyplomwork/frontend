@@ -67,8 +67,6 @@ function triggerBoardFlash(kind: 'mine' | 'cash') {
   }, 620)
 }
 
-
-
 const roundId = ref(0)
 const timeouts: number[] = []
 const bumpRound = () => { roundId.value += 1 }
@@ -106,13 +104,11 @@ onMounted(async () => {
     lost.value = false
     message.value = ''
     nextMultiplier.value = null
-    // Both multiplier fetches are independent (same inputs) — run in parallel
     await Promise.all([refreshMultiplierFromServer(), refreshNextMultiplierFromServer()])
   } catch (e) {
     reportError(e)
   }
 })
-
 
 const payoutAmount = computed(() => {
   if (!inGame.value || safePicks.value <= 0) return 0
@@ -187,7 +183,6 @@ async function startInternal() {
   messageType.value = 'info'
   sfx('click')
 
-
   bumpRound()
   clearAllTimeouts()
   explodingId.value = null
@@ -204,7 +199,6 @@ async function startInternal() {
     multiplier.value = 1
     nextMultiplier.value = null
 
-    // Balance is display-only here — game already started server-side
     void auth.fetchBalance({ force: true }).catch(() => {})
 
     try {
@@ -495,7 +489,6 @@ buildGrid()
   100%{ opacity:0; transform: scale(1.03); }
 }
 
-
 .cash-btn{
   position: relative;
   overflow: hidden;
@@ -564,7 +557,6 @@ buildGrid()
   transform: translateY(-1px);
 }
 
-/* Subtle green hover outline (only if not revealed) */
 .tile:not(.revealed):hover .face.front {
   box-shadow:
     inset 0 0 0 1px rgba(0, 231, 1, 0.55),
@@ -652,7 +644,6 @@ buildGrid()
   filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35));
 }
 
-/* --- Explosion VFX (only when clicked mine) --- */
 .tile-fx{ position:absolute; inset:0; pointer-events:none; opacity:0; }
 .tile.boom .tile-fx{ opacity:1; }
 
@@ -735,7 +726,6 @@ buildGrid()
   }
 }
 
-/* Win pulse on cashout button */
 .cash-pulse{
   animation: cashPulse 520ms ease-out;
 }
@@ -759,8 +749,6 @@ buildGrid()
   }
 }
 
-
-/* Keep amounts + coin inline */
 .amount, .value, .bal, .net, .summary .value { display:inline-flex; align-items:center; gap:6px; }
 .summary .value{ white-space: nowrap; }
 

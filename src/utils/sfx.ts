@@ -127,7 +127,6 @@ export function sfx(kind: SfxKey | string) {
   }
   const mi = minInterval[kind as SfxKey]
 
-  // per-kind last played timestamp
   ;(sfx as any)._last = (sfx as any)._last || new Map<string, number>()
   const last: Map<string, number> = (sfx as any)._last
   if(mi){
@@ -143,7 +142,6 @@ export function sfx(kind: SfxKey | string) {
       beep(520, 70, 'triangle')
       break
 
-    // roulette
     case 'spin':
       noise(220)
       beep(220, 120, 'sawtooth')
@@ -152,7 +150,6 @@ export function sfx(kind: SfxKey | string) {
       beep(280, 90, 'square')
       break
 
-    // generic
     case 'win':
       beep(660, 110, 'triangle')
       beep(880, 170, 'sine')
@@ -161,7 +158,6 @@ export function sfx(kind: SfxKey | string) {
       beep(180, 210, 'sawtooth')
       break
 
-    // plinko
     case 'plinko_drop':
       beep(220, 120, 'sawtooth')
       break
@@ -180,7 +176,6 @@ export function sfx(kind: SfxKey | string) {
       break
     }
 
-    // mines
     case 'mine_safe':
       beep(620, 80, 'triangle')
       break
@@ -193,7 +188,6 @@ export function sfx(kind: SfxKey | string) {
       beep(740, 120, 'triangle')
       break
 
-    // cases
     case 'case_spin':
       noise(360)
       beep(240, 140, 'sawtooth')
@@ -202,7 +196,6 @@ export function sfx(kind: SfxKey | string) {
       beep(320, 90, 'square')
       break
 
-    // dice
     case 'dice_tick':
       beep(460, 50, 'triangle')
       break
@@ -210,20 +203,17 @@ export function sfx(kind: SfxKey | string) {
       beep(300, 90, 'square')
       break
 
-    // reserved
     case 'bonus':
       beep(900, 80, 'sine')
       beep(1200, 120, 'triangle')
       break
 
-    // overlay / misc
     case 'big_win':
       beep(740, 120, 'triangle')
       beep(980, 160, 'sine')
       break
 
     default:
-      // ignore unknown keys
       break
   }
 }

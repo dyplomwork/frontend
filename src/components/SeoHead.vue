@@ -37,6 +37,5 @@ useHead(() => {
 </script>
 
 <template>
-  <!-- Head-only component -->
   <span style="display:none" aria-hidden="true" />
 </template>

@@ -26,14 +26,13 @@ const sellBusy = ref(false)
 const msg = ref('')
 const msgType = ref<'success'|'error'>('success')
 
-// Vendor sell (50% of base value)
 const vendorItem = ref<InventoryItem | null>(null)
 const vendorBusy = ref(false)
 
 function vendorPrice(item: InventoryItem) { return Math.floor(item.value * 0.5) }
 
 function startVendorSell(item: InventoryItem) {
-  if (item.listingId) return // can't sell listed items
+  if (item.listingId) return
   vendorItem.value = item
   msg.value = ''
 }
@@ -191,7 +190,6 @@ onMounted(load)
         </div>
       </div>
 
-      <!-- Vendor sell modal -->
       <div v-if="vendorItem" class="modal-backdrop" @click.self="vendorItem = null">
         <div class="modal-box card">
           <h3 style="margin:0 0 6px">🛒 {{ $t('ui.s_inv_vendor_heading') }}</h3>
@@ -213,7 +211,6 @@ onMounted(load)
         </div>
       </div>
 
-      <!-- Sell modal -->
       <div v-if="sellItemId" class="modal-backdrop" @click.self="sellItemId = null">
         <div class="modal-box card">
           <h3 style="margin:0 0 12px">{{ $t('ui.s_auction_list_item') }}</h3>
@@ -233,7 +230,6 @@ onMounted(load)
     </div>
   </GamePageLayout>
 </template>
-
 
 <style scoped>
 .inv-wrap { width: min(1200px, 100%); margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }

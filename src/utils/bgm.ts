@@ -16,7 +16,6 @@ function getSrc(): string {
 }
 
 export function isBgmOn(): boolean {
-  // Default: ON
   return localStorage.getItem(KEY_ON) !== '0'
 }
 
@@ -31,7 +30,6 @@ export function setBgmOn(v: boolean): void {
 }
 
 export function getBgmVolume(): number {
-  // Default 0.15
   return clamp(parseFloat(localStorage.getItem(KEY_VOL) ?? '0.15'), 0, 1)
 }
 
@@ -67,7 +65,6 @@ export function stopBgm(): void {
   try {
     audio.pause()
   } catch {
-    // ignore
   }
 }
 
