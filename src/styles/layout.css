@@ -252,7 +252,6 @@
 }
 .side-ic{ width: 48px; height: 48px; display:grid; place-items:center; }
 .side-ic .nav-ic{ width: 43px; height: 43px; display:block; object-fit: contain; }
-.side-emoji{ font-size: 26px; line-height: 1; }
 .topbar-menu-ic{ width: 69px; height: 47px; display:block; object-fit: contain; }
 
 .side-top .icon-btn{ width: 48px; height: 48px; border-radius: 18px; }

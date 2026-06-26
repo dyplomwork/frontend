@@ -62,7 +62,7 @@ import { RouterLink } from 'vue-router'
       </RouterLink>
 
       <RouterLink class="game card game-card-clicker" to="/clicker">
-        <div class="icon emoji-icon">🪙</div>
+        <div class="icon"><img src="/icon/clicker.png" alt="Clicker" /></div>
         <div class="meta">
           <div class="title">{{ $t('ui.s_clicker') }}</div>
           <div class="muted">{{ $t('ui.s_home_clicker_desc') }}</div>
@@ -70,7 +70,7 @@ import { RouterLink } from 'vue-router'
       </RouterLink>
 
       <RouterLink class="game card game-card-inventory" to="/inventory">
-        <div class="icon emoji-icon">🎒</div>
+        <div class="icon"><img src="/icon/inventory.png" alt="Inventory" /></div>
         <div class="meta">
           <div class="title">{{ $t('ui.s_inventory') }}</div>
           <div class="muted">{{ $t('ui.s_home_inventory_desc') }}</div>
@@ -78,7 +78,7 @@ import { RouterLink } from 'vue-router'
       </RouterLink>
 
       <RouterLink class="game card game-card-auction" to="/auction">
-        <div class="icon emoji-icon">🏷️</div>
+        <div class="icon"><img src="/icon/auction.png" alt="Auction" /></div>
         <div class="meta">
           <div class="title">{{ $t('ui.s_auction') }}</div>
           <div class="muted">{{ $t('ui.s_home_auction_desc') }}</div>
@@ -152,16 +152,6 @@ import { RouterLink } from 'vue-router'
   height: 50px;
   object-fit: contain;
   filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.35));
-}
-.emoji-icon {
-  font-size: 46px;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 50px;
-  height: 50px;
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
 }
 .game-card-clicker:hover { border-color: rgba(255, 215, 0, 0.3); box-shadow: 0 16px 40px rgba(0,0,0,.32), 0 0 26px rgba(255,215,0,.12); }
 .game-card-inventory:hover { border-color: rgba(52, 211, 153, 0.3); box-shadow: 0 16px 40px rgba(0,0,0,.32), 0 0 26px rgba(52,211,153,.12); }

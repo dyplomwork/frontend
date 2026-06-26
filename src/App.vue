@@ -171,7 +171,7 @@ function logout() {
           :class="{ active: route.path.startsWith('/clicker') }"
           :title="$t('ui.s_clicker')"
         >
-          <span class="side-ic side-emoji">🪙</span>
+          <span class="side-ic"><img class="nav-ic" src="/icon/clicker.png" alt="Clicker" /></span>
           <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_clicker') }}</span>
         </RouterLink>
         <RouterLink
@@ -180,7 +180,7 @@ function logout() {
           :class="{ active: route.path.startsWith('/donate') }"
           :title="$t('ui.s_donate')"
         >
-          <span class="side-ic side-emoji">💎</span>
+          <span class="side-ic"><img class="nav-ic" src="/icon/donate.png" alt="Donate" /></span>
           <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_donate') }}</span>
         </RouterLink>
         <RouterLink
@@ -245,7 +245,7 @@ function logout() {
           :class="{ active: route.path.startsWith('/inventory') }"
           :title="$t('ui.s_inventory')"
         >
-          <span class="side-ic side-emoji">🎒</span>
+          <span class="side-ic"><img class="nav-ic" src="/icon/inventory.png" alt="Inventory" /></span>
           <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_inventory') }}</span>
         </RouterLink>
         <RouterLink
@@ -254,7 +254,7 @@ function logout() {
           :class="{ active: route.path.startsWith('/auction') }"
           :title="$t('ui.s_auction')"
         >
-          <span class="side-ic side-emoji">🏷️</span>
+          <span class="side-ic"><img class="nav-ic" src="/icon/auction.png" alt="Auction" /></span>
           <span class="side-txt" v-if="sidebarOpen">{{ $t('ui.s_auction') }}</span>
         </RouterLink>
         <RouterLink

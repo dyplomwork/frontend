@@ -61,6 +61,10 @@ function upgCostLabel(u: any) {
   const lvl = getLevel(u.id)
   return `${fmt(u.coinCost * (lvl + 1))} 🪙`
 }
+function upgCoinCost(u: any) {
+  const lvl = getLevel(u.id)
+  return fmt(u.coinCost * (lvl + 1))
+}
 
 // Active visuals from purchased upgrades
 const activeVisuals = computed(() => {
@@ -210,7 +214,7 @@ onBeforeUnmount(() => {
     <aside class="c-panel c-left">
       <div class="coin-stats">
         <div class="stat-lbl muted">{{ $t('ui.s_clicker_coins') }}</div>
-        <div class="coins-big">{{ fmt(coins) }} <span class="c-ic">🪙</span></div>
+        <div class="coins-big">{{ fmt(coins) }} <img class="c-ic" src="/icon/clicker_coin.png" alt="" /></div>
         <div class="stat-row"><span class="muted small">{{ $t('ui.s_clicker_click_power', { n: clickPower }) }}</span></div>
         <div class="stat-row" v-if="autoPower > 0"><span class="muted small">{{ $t('ui.s_clicker_auto', { n: autoPower }) }}</span></div>
       </div>
@@ -357,7 +361,8 @@ onBeforeUnmount(() => {
             @click="buyUpgrade(u.id)"
           >
             <span v-if="isMaxed(u)">{{ $t('ui.s_clicker_maxed') }}</span>
-            <span v-else>{{ upgCostLabel(u) }}</span>
+            <span v-else-if="u.itemReq">{{ upgCostLabel(u) }}</span>
+            <span v-else class="upg-cost">{{ upgCoinCost(u) }} <img class="upg-coin" src="/icon/clicker_coin.png" alt="" /></span>
           </button>
         </div>
         </div><!-- /.upg-cards -->
@@ -398,7 +403,7 @@ onBeforeUnmount(() => {
 .stat-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
 .stat-row { }
 .coins-big { font-size: 24px; font-weight: 1000; color: #ffd700; display: flex; align-items: center; gap: 8px; }
-.c-ic { font-size: 20px; }
+.c-ic { width: 24px; height: 24px; object-fit: contain; }
 .cvt-btn { width: 100%; height: 42px; border-radius: 12px; }
 .cvt-hint { font-size: 11px; margin-top: 4px; }
 .msg-box { padding: 8px 12px; border-radius: 10px; font-size: 12px; border: 1px solid rgba(255,255,255,.08); margin-top: 8px; }
@@ -723,4 +728,6 @@ onBeforeUnmount(() => {
 .upg-desc { font-size: 11px; }
 .upg-bonus { display: flex; gap: 8px; font-size: 11px; color: rgba(255,255,255,.45); }
 .upg-btn { height: 34px; border-radius: 10px; font-size: 12px; width: 100%; margin-top: 4px; }
+.upg-cost { display: inline-flex; align-items: center; gap: 4px; }
+.upg-coin { width: 16px; height: 16px; object-fit: contain; }
 </style>
