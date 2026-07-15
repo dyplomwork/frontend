@@ -1,16 +1,18 @@
 {
   "rewrites": [
-    { "source": "/api/v1/accounts/:path*",  "destination": "https://dyplomworkbackend-production.up.railway.app/api/v1/accounts/:path*" },
-    { "source": "/api/v1/admin/:path*",     "destination": "https://dyplomworkbackend-production.up.railway.app/api/v1/admin/:path*" },
-    { "source": "/api/v1/stats/:path*",     "destination": "https://dyplomworkbackend-production.up.railway.app/api/v1/stats/:path*" },
-    { "source": "/api/v1/donations/:path*",  "destination": "https://dyplomworkbackend-production.up.railway.app/api/v1/donations/:path*" },
-    { "source": "/api/me",                  "destination": "https://dyplomworkbackend-production.up.railway.app/api/me" },
-    { "source": "/api/v1/games/:path*",     "destination": "https://game-service-production-d5e1.up.railway.app/api/v1/games/:path*" },
-    { "source": "/api/v1/items/:path*",     "destination": "https://game-service-production-d5e1.up.railway.app/api/v1/items/:path*" },
-    { "source": "/api/v1/auction/:path*",   "destination": "https://game-service-production-d5e1.up.railway.app/api/v1/auction/:path*" },
-    { "source": "/api/v1/drops/:path*",     "destination": "https://game-service-production-d5e1.up.railway.app/api/v1/drops/:path*" },
-    { "source": "/api/v1/clicker/:path*",   "destination": "https://game-service-production-d5e1.up.railway.app/api/v1/clicker/:path*" },
-    { "source": "/api/v1/battles/:path*",   "destination": "https://game-service-production-d5e1.up.railway.app/api/v1/battles/:path*" },
-    { "source": "/(.*)",                    "destination": "/index.html" }
+    { "source": "/api/v1/accounts/:path*",  "destination": "https://dyplom-work-backend.onrender.com/api/v1/accounts/:path*" },
+    { "source": "/api/v1/admin/:path*",     "destination": "https://dyplom-work-backend.onrender.com/api/v1/admin/:path*" },
+    { "source": "/api/v1/stats/:path*",     "destination": "https://dyplom-work-backend.onrender.com/api/v1/stats/:path*" },
+    { "source": "/api/v1/donations/:path*", "destination": "https://dyplom-work-backend.onrender.com/api/v1/donations/:path*" },
+    { "source": "/api/me",                  "destination": "https://dyplom-work-backend.onrender.com/api/me" },
+
+    { "source": "/api/v1/games/:path*",   "destination": "https://dyplom-work-backend-game-service.onrender.com/api/v1/games/:path*" },
+    { "source": "/api/v1/items/:path*",   "destination": "https://dyplom-work-backend-game-service.onrender.com/api/v1/items/:path*" },
+    { "source": "/api/v1/auction/:path*", "destination": "https://dyplom-work-backend-game-service.onrender.com/api/v1/auction/:path*" },
+    { "source": "/api/v1/drops/:path*",   "destination": "https://dyplom-work-backend-game-service.onrender.com/api/v1/drops/:path*" },
+    { "source": "/api/v1/clicker/:path*", "destination": "https://dyplom-work-backend-game-service.onrender.com/api/v1/clicker/:path*" },
+    { "source": "/api/v1/battles/:path*", "destination": "https://dyplom-work-backend-game-service.onrender.com/api/v1/battles/:path*" },
+
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
